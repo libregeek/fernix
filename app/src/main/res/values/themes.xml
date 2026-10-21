@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<resources>
+    <!-- Platform theme only for the window; all UI styling comes from Compose Material 3. -->
+    <style name="Theme.Fernix" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

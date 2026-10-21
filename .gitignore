@@ -1,0 +1,27 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+
+# Native build
+.cxx/
+.externalNativeBuild/
+
+# Local configuration (SDK path)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Signing
+*.jks
+*.keystore
+keystore.properties
+
+# OS
+.DS_Store
+
+# Claude
+CLAUDE.md
