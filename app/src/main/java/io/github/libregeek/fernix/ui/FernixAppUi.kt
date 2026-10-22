@@ -4,13 +4,28 @@ package io.github.libregeek.fernix.ui
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,14 +69,13 @@ fun FernixAppUi() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
+            CompactNavBar {
                 Screen.entries.filter { it.isTab }.forEach { tab ->
-                    NavigationBarItem(
+                    CompactNavItem(
                         selected = tab == backStack.stack.first(),
                         onClick = { backStack.switchTab(tab) },
-                        icon = {
-                            Icon(painterResource(tab.icon), contentDescription = stringResource(tab.label))
-                        },
+                        icon = tab.icon,
+                        description = stringResource(tab.label),
                     )
                 }
             }
@@ -76,3 +90,65 @@ fun FernixAppUi() {
         }
     }
 }
+
+/** Icon-only bottom bar, shorter than Material 3's 80 dp NavigationBar (which is sized for labels). */
+@Composable
+private fun CompactNavBar(content: @Composable RowScope.() -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .height(BAR_HEIGHT),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun RowScope.CompactNavItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    @DrawableRes icon: Int,
+    description: String,
+) {
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .height(BAR_HEIGHT)
+            .selectable(selected = selected, onClick = onClick, role = Role.Tab),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(INDICATOR_WIDTH)
+                .height(INDICATOR_HEIGHT)
+                .clip(CircleShape)
+                .then(
+                    if (selected) {
+                        Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
+                    } else {
+                        Modifier
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = description,
+                modifier = Modifier.size(24.dp),
+                tint = if (selected) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
+    }
+}
+
+private val BAR_HEIGHT = 56.dp
+private val INDICATOR_WIDTH = 64.dp
+private val INDICATOR_HEIGHT = 32.dp
