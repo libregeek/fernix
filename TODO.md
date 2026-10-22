@@ -13,14 +13,13 @@ Phases are ordered so each one ends in something runnable and testable.
 
 ## Phase 0 — Foundation (scaffold already in the repo, needs sign-off)
 
-- [ ] Gradle project, version catalog with pinned versions, wrapper with `distributionSha256Sum` [§10]
-- [ ] `dependenciesInfo` disabled, R8 enabled for release [§10]
-- [ ] TagLib submodule (+ utfcpp) pinned; `CMakeLists.txt` builds a static TagLib with only MPEG/Vorbis/RIFF/APE/zlib [§7]
-- [ ] JNI bridge `tag_reader.cpp` + `TagReader.kt` (fd → flat `String[]` → `Map<String, List<String>>`, no exceptions across JNI) [§7]
-- [ ] Instrumented `TagReaderTest` (MP3 ID3v2.4, Ogg Vorbis, FLAC, non-audio, invalid fd) passing on API 29 (and API 36)
-- [ ] Theme (Material 3, dynamic color on 12+, light/dark) and placeholder `MainActivity`
-- [ ] Verify: `./gradlew assembleDebug` and `assembleRelease` pass; merged manifest has no `INTERNET`
-- [ ] Add missing deps to the catalog/Gradle as phases need them: `ksp` plugin applied, Room, Media3, Coil, coroutines, lifecycle-viewmodel-compose, `room-testing` [§2]
+- [x] Gradle project, version catalog with pinned versions, wrapper with `distributionSha256Sum` [§10]
+- [x] `dependenciesInfo` disabled, R8 enabled for release [§10]
+- [x] TagLib submodule (+ utfcpp) pinned; `CMakeLists.txt` builds a static TagLib with only MPEG/Vorbis/RIFF/APE/zlib [§7]
+- [x] JNI bridge `tag_reader.cpp` + `TagReader.kt` (fd → flat `String[]` → `Map<String, List<String>>`, no exceptions across JNI) [§7]
+- [x] Instrumented `TagReaderTest` (MP3 ID3v2.4, Ogg Vorbis, FLAC, non-audio, invalid fd) passing on API 29 (and API 36)
+- [x] Theme (Material 3, dynamic color on 12+, light/dark) and placeholder `MainActivity`
+- [x] Verify: `./gradlew assembleDebug` and `assembleRelease` pass; merged manifest has no `INTERNET`
 
 ## Phase 1 — App skeleton
 
