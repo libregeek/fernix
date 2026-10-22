@@ -2,4 +2,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <resources>
     <string name="app_name">Fernix</string>
+    <string name="tab_folders">Folders</string>
+    <string name="tab_search">Search</string>
+    <string name="tab_albums">Albums</string>
+    <string name="tab_playlists">Playlists</string>
+    <string name="tab_people">People</string>
 </resources>

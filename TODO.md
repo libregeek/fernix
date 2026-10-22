@@ -23,11 +23,11 @@ Phases are ordered so each one ends in something runnable and testable.
 
 ## Phase 1 — App skeleton
 
-- [ ] `AppContainer` owned by `FernixApp` (manual DI) [§2, §4]
-- [ ] `TagValues` codec: join/split on `U+001F` + unit tests [§5]
-- [ ] Hand-rolled back stack + bottom navigation shell (Folders, Search, Albums, Playlists, People) with empty screens [§2, §9]
-- [ ] `SharedPreferences` wrapper for settings (Now Playing slots, last split choice) [§2]
-- [ ] People-tag-keys constant (incl. `PERFORMER:*` matching) + unit tests [§5]
+- [x] `AppContainer` owned by `FernixApp` (manual DI) [§2, §4]
+- [x] `TagValues` codec: join/split on `U+001F` + unit tests [§5]
+- [x] Hand-rolled back stack + bottom navigation shell (Folders, Search, Albums, Playlists, People) with empty screens [§2, §9]
+- [x] `SharedPreferences` wrapper for settings (Now Playing slots, last split choice) [§2]
+- [x] People-tag-keys constant (incl. `PERFORMER:*` matching) + unit tests [§5]
 
 ## Phase 2 — Database (Room)
 
