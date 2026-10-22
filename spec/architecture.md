@@ -146,7 +146,7 @@ Fernix never writes to audio files; splitting changes only the database. Rules a
 
 ### People tag keys
 
-One constant in code: `ARTIST`, `ALBUMARTIST`, `COMPOSER`, `LYRICIST`, `WRITER`, `CONDUCTOR`, `REMIXER`, `ARRANGER`, `PRODUCER`, `ENGINEER`, `MIXER`, `DJMIXER`, `ORIGINALARTIST`, `ORIGINALLYRICIST`, `PERFORMER`, and every `PERFORMER:*` key (TagLib maps ID3v2.4 `TMCL` musician credits to `PERFORMER:<instrument>` and `TIPL` to `ARRANGER`/`ENGINEER`/`PRODUCER`/`MIXER`/`DJMIXER`).
+One constant in code: `ARTIST`, `ALBUMARTIST`, `AUTHOR`, `COMPOSER`, `LYRICIST`, `WRITER`, `CONDUCTOR`, `REMIXER`, `ARRANGER`, `PRODUCER`, `ENGINEER`, `MIXER`, `DJMIXER`, `ORIGINALARTIST`, `ORIGINALLYRICIST`, `PERFORMER`, and every `PERFORMER:*` key (TagLib maps ID3v2.4 `TMCL` musician credits to `PERFORMER:<instrument>` and `TIPL` to `ARRANGER`/`ENGINEER`/`PRODUCER`/`MIXER`/`DJMIXER`).
 
 ### Tables
 

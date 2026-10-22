@@ -6,7 +6,7 @@ object PeopleTags {
 
     /** Exact keys, as TagLib's PropertyMap reports them (uppercase). */
     val KEYS: Set<String> = linkedSetOf(
-        "ARTIST", "ALBUMARTIST", "COMPOSER", "LYRICIST", "WRITER", "CONDUCTOR", "REMIXER",
+        "ARTIST", "ALBUMARTIST", "AUTHOR", "COMPOSER", "LYRICIST", "WRITER", "CONDUCTOR", "REMIXER",
         "ARRANGER", "PRODUCER", "ENGINEER", "MIXER", "DJMIXER", "ORIGINALARTIST",
         "ORIGINALLYRICIST", "PERFORMER",
     )

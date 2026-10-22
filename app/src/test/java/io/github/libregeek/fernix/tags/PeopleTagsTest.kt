@@ -10,7 +10,7 @@ class PeopleTagsTest {
 
     @Test
     fun plainKeys_arePeopleKeys() {
-        listOf("ARTIST", "ALBUMARTIST", "COMPOSER", "LYRICIST", "PERFORMER", "DJMIXER")
+        listOf("ARTIST", "ALBUMARTIST", "AUTHOR", "COMPOSER", "LYRICIST", "PERFORMER", "DJMIXER")
             .forEach { assertTrue(it, PeopleTags.isPeopleKey(it)) }
     }
 
@@ -27,7 +27,7 @@ class PeopleTagsTest {
     }
 
     @Test
-    fun specHasFifteenPlainKeys() {
-        assertEquals(15, PeopleTags.KEYS.size)
+    fun specHasSixteenPlainKeys() {
+        assertEquals(16, PeopleTags.KEYS.size)
     }
 }
