@@ -45,8 +45,11 @@ Phases are ordered so each one ends in something runnable and testable.
 
 - [ ] Approved permissions in the manifest: `READ_MEDIA_AUDIO`, `READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) [§3]
 - [ ] Runtime permission flow + denied/rationale state
-- [ ] MediaStore discovery cursor ordered by `_ID` [§6.1]
-- [ ] Constant-memory merge-walk diff against `tracks` cursor (new / changed / vanished) [§6.2]
+- [ ] Scan scope settings: `scan_scope` (`all` | `selected`) and `scan_folders` in `Settings` + tests [§6]
+- [ ] Library folders screen: in-app chooser (volumes → folder tree, reads only `VOLUME_NAME` + `RELATIVE_PATH`), shown on first launch before the first scan [§6, §9]
+- [ ] MediaStore discovery cursor ordered by `_ID`, limited to mounted volumes and the scan scope (folder test in code) [§6.1]
+- [ ] Constant-memory merge-walk diff against `tracks` cursor (new / changed / vanished / out of scope) [§6.2]
+- [ ] Unmounted volumes: skip them, keep their tracks (and playlist entries), show as unavailable [§6]
 - [ ] Folder tree builder from `VOLUME_NAME` + `RELATIVE_PATH` [§5]
 - [ ] Tag ingestion: `openFileDescriptor` → `TagReader`; derive `trackNumber`, `discNumber`, `year`, album link [§6.3]
 - [ ] Batched persistence (~500 tracks/transaction), id caches, `track_tags` replace on re-parse, `key_values` and `people` recompute [§6.4]
@@ -55,6 +58,7 @@ Phases are ordered so each one ends in something runnable and testable.
 - [ ] Trigger: first launch after permission + manual rescan action
 - [ ] Tests: diff logic (JVM), ingestion with fixture files (instrumented), interrupted-scan resume
 - [ ] Verify on emulator with MP3 (ID3v2.4 multi-value), Ogg Vorbis, Opus, FLAC, WAV fixtures
+- [ ] Verify with an emulated SD card: its files appear as their own volume, and `MediaStore` `_ID`s don't collide with the primary volume's (if they do, key `tracks` by volume + id and update §5)
 
 ## Phase 4 — Playback
 
@@ -103,6 +107,7 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 ## Phase 8 — Settings
 
 - [ ] Settings screen reached from the library top-bar overflow menu
+- [ ] Library folders: change scope with the chooser; confirm before narrowing (count of tracks and playlist entries removed) [§6, §9]
 - [ ] Now Playing tag slots: set / clear / restore defaults (any `tag_keys` except `TITLE`, `ALBUM`, `DATE`)
 - [ ] Split rules list (paged); delete re-reads affected files to undo the split
 

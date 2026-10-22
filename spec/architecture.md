@@ -234,8 +234,23 @@ The value picker for a tag key lists its `key_values` joined to `tag_values`, so
 
 Direct file paths (`/storage/emulated/0/...`) are never used. Content URIs from MediaStore are passed to ExoPlayer, TagLib (via file descriptor) and Coil.
 
-1. **Discovery** — query `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI` for `_ID`, `SIZE`, `DATE_MODIFIED`, `DURATION`, `VOLUME_NAME`, `RELATIVE_PATH`, `DISPLAY_NAME`, ordered by `_ID`.
-2. **Diff** — merge-walk the MediaStore cursor and a `tracks` cursor (joined to `folders`), both ordered by `mediaStoreId`, in constant memory (no map of the whole library). New or changed files (size, date, folder or name) are queued for parsing; vanished ones are deleted.
+### Scan scope
+
+Fernix **never walks the file system**. It only reads MediaStore's index of audio files on **external storage**: the primary shared storage plus any mounted SD card or USB volume (listed with `MediaStore.getExternalVolumeNames`). App-private directories, system directories and the rest of the device are never read; MediaStore itself honours `.nomedia`. Within that, the user chooses what is indexed:
+
+- **All external storage** (the default): every audio file MediaStore reports on a mounted external volume.
+- **Selected folders**: only files whose volume and `RELATIVE_PATH` lie inside one of the chosen folders, sub-folders included. Choosing the scope but no folder indexes nothing.
+
+The scope is stored in `SharedPreferences`: `scan_scope` (`all` or `selected`) and `scan_folders` (a set of `<volume>/<relativePath>` strings, the same format as `folders.path`).
+
+- **First launch:** after the storage permission is granted, a short screen asks what to index (*All external storage*, preselected, or *Choose folders*) before the first scan starts. The same screen is in Settings (§9, *Library folders*).
+- **In-app folder chooser:** reads only `VOLUME_NAME` and `RELATIVE_PATH` from the MediaStore audio table and collects the distinct folders into a tree (memory grows with the number of folders, not tracks). It lists each volume with its audio folders and a checkbox per folder; ticking a folder includes its sub-folders. It uses no system file-picker intent and no permission beyond §3. Paths are used only as values to filter MediaStore rows, never to open files.
+- **Filtering:** the discovery query is limited to the mounted volumes by `VOLUME_NAME` (bound arguments). Whether a row's folder is inside the selected folders is tested in code during the merge-walk, so no long `OR` selection is built.
+- **Unmounted volumes:** a volume that is not mounted (e.g. a removed SD card) is skipped. Its tracks stay in the database, and so do their playlist entries; they are shown as unavailable and cannot be played until the volume is back. A track is deleted only when its volume is mounted and the file is gone or out of scope.
+- **Changing the scope:** widening it only adds tracks on the next scan. Narrowing it deletes the tracks that fall outside, like vanished files, and since playlist entries cascade (§5) it removes them from playlists too. Settings therefore shows how many tracks would be removed and asks for confirmation before saving.
+
+1. **Discovery** — query `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI` (which spans all external volumes) for `_ID`, `SIZE`, `DATE_MODIFIED`, `DURATION`, `VOLUME_NAME`, `RELATIVE_PATH`, `DISPLAY_NAME`, ordered by `_ID`, restricted to the mounted volumes and the scan scope above.
+2. **Diff** — merge-walk the MediaStore cursor and a `tracks` cursor (joined to `folders`), both ordered by `mediaStoreId`, in constant memory (no map of the whole library). New or changed files (size, date, folder or name) are queued for parsing; vanished or out-of-scope ones are deleted (except tracks on unmounted volumes).
 3. **Tag ingestion** — `ContentResolver.openFileDescriptor(uri, "r")` → fd passed to native code → TagLib reads through a file-descriptor stream (`TagLib::FileStream(fd, true)` or a custom `IOStream`) → returns the `PropertyMap` as `Map<String, List<String>>`.
 4. **Persist** — values are normalised and existing split rules applied (§5), then each batch of ~500 tracks is written in one Room transaction (`folders`, `albums`, `tracks`, `tag_keys`, `tag_values`, `track_tags`, `split_rule_tracks`, `key_values`, `people`). A re-parsed track has its `track_tags` rows replaced. Key and value ids and the split rules are cached in memory for the duration of the scan.
 5. **Clean up** — after the scan, unused folders, albums and tag values are deleted.
@@ -294,6 +309,7 @@ Every track list (Search results, album detail, folder, playlist detail) has **S
 6. **Playlists** — create, rename, delete; add tracks from any track list; remove entries (no reordering). Playlist detail has **Play** (in playlist order) and **Shuffle** (same queue with ExoPlayer shuffle mode on).
 7. **People** — every person once (no grouping by role), sorted by name, with their track count. Tapping a person opens Search with that person's filter, as from Now Playing.
 8. **Settings** — reached from the overflow menu in the library screens' top app bar.
+   - **Library folders:** choose *All external storage* or *Selected folders* with the in-app chooser (§6), and rescan. Saving a narrower scope shows how many tracks and playlist entries will be removed and asks for confirmation.
    - **Now Playing tags:** set, change or clear each of the 3 tag slots shown on Now Playing, and restore the defaults.
    - **Split rules:** lists the rules (tag, joined value → parts), paged; deleting a rule undoes it (§5).
 
