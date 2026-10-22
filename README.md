@@ -10,16 +10,19 @@ Fernix plays the music stored on your phone. It never connects to the internet, 
 
 - **Plays your local music:** MP3, Ogg Vorbis, Opus, FLAC and WAV, with gapless playback.
 - **Reads your tags properly:** full support for ID3v2.4 and Vorbis comments, including tags with several values, such as a track with two artists.
+- **Splits combined values when you ask:** in any track list, tap *Split tags* to turn a value such as `Simon; Garfunkel` or `Rock/Pop` into separate entries. You choose the separators (`;`, `/`, `,` or your own) and which values to split, so names like `AC/DC` stay whole. Fernix remembers your choice, never changes your files, and lets you undo it in Settings.
+- **Handles large libraries:** built to stay fast with hundreds of thousands of tracks.
 - **Filter by any tag:** besides artist, album and genre, you can filter on any tag in your files (BPM, label, release type, MusicBrainz IDs, your own custom tags…).
 - **Simple screens:**
-  - **Now Playing:** album art, playback controls, shuffle/repeat, equalizer
+  - **Now Playing:** album art, playback controls, shuffle/repeat, and the track's title, album and date, plus three tags of your choice — composers, lyricists and artists by default; swap any of them for others such as conductor, genre or BPM in Settings. Tap a name to see every track that person worked on, or any other value to see all tracks that share it.
   - **Folders:** browse your music the way it's stored on your device
-  - **Search & Filter:** search, and combine tag filters
+  - **Search:** search, and combine tag filters
   - **Queue:** see, reorder and edit what's playing next
   - **Albums:** albums grouped by name and year
-  - **Playlists:** create and manage your own playlists
+  - **Playlists:** create and manage your own playlists; play them in order or shuffled
+  - **People:** everyone credited on your tracks — artists, composers, lyricists, conductors, performers and more. Tap a name to see all their tracks.
 - **Background playback:** controls in the notification and on the lock screen.
-- **Built-in equalizer.**
+- **Built-in equalizer:** open it from the Now Playing screen.
 
 ## Privacy
 

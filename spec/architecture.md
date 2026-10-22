@@ -56,7 +56,8 @@ Exact versions are pinned in `gradle/libs.versions.toml` (libraries, plugins), `
 | Instead of | We use | Why |
 |---|---|---|
 | Hilt / Koin / Dagger | Manual DI via an `AppContainer` owned by the `Application` | Smaller APK, faster builds; the object graph is small. |
-| navigation-compose | Small hand-rolled back stack | Only six screens. |
+| navigation-compose | Small hand-rolled back stack | Only eight screens. |
+| androidx.paging | Hand-written keyset paging (§5) | A few `LIMIT` queries; no extra library. |
 | DataStore | `SharedPreferences` | A handful of simple settings. |
 | Media3 HLS/DASH/RTSP/SmoothStreaming, Cast, FFmpeg, `datasource-okhttp` | — | Offline, local files only; platform decoders cover all formats. |
 | `MediaMetadataRetriever` for tags | TagLib | It drops custom fields and mangles multi-value ID3v2.4 tags. |
@@ -105,15 +106,47 @@ UI state: coroutines + `StateFlow`, one ViewModel per screen.
 
 ## 5. Database (Room)
 
-### Approach: hybrid fixed columns + tag table
+### Scale target
 
-Pure Entity-Attribute-Value (EAV) storage turns every list screen into a pivot query. Instead, six frequently displayed/sorted tags are **fixed columns** on `tracks`, and **all** tags (including those six) are also stored one-value-per-row in the EAV table `track_tags` for arbitrary filtering.
+Expected library: ~16K tracks today, ~25K within 2–3 years. The schema and every query must stay usable at **1,000,000 tracks**. This drives the rules below:
+
+- **No string is stored once per track-tag row.** Tag keys and values live in dictionary tables; the high-volume row table `track_tags` holds integers only.
+- **Every list is paged** with hand-written keyset paging (`WHERE (sortKey, id) > (?, ?) ORDER BY sortKey, id LIMIT 200`; row values need SQLite 3.15, Android 10 ships 3.22). No screen loads a whole table into memory. (`androidx.paging` is not used — it is not an approved dependency.)
+- **Every filter, sort and lookup is served by an index**; filters are evaluated from the index side (`t.id IN (…)`), never as a correlated subquery per track row.
+- **Free-text search uses FTS4** (part of the platform SQLite; Room `@Fts4`, no extra library), not `LIKE '%…%'`.
+- Counts shown in lists are stored in small summary tables (`key_values`, `people`), recomputed only for the rows a scan batch or a split touched.
+- Rough size: ~2 KB per track (≈50 MB at 25K, ≈2 GB at 1M), dominated by `track_tags` and the FTS index.
+
+### Approach: hybrid fixed columns + normalised tag tables
+
+Pure Entity-Attribute-Value (EAV) storage turns every list screen into a pivot query. Instead, six frequently displayed/sorted tags are **fixed columns** on `tracks`, and **all** tags (including those six) are also stored in normalised tag tables for arbitrary filtering.
 
 Fixed fields (TagLib `PropertyMap` keys): `TITLE`, `ALBUM`, `DATE`, `ARTIST`, `COMPOSER`, `LYRICIST`.
 
 ### Multi-value encoding
 
-All six fixed fields are multi-value (ID3v2.4 null-separated text frames; repeated Vorbis comment keys). The column stores the full list joined with the unit separator **`U+001F`** — never `\0`, which truncates in SQLite and JNI string APIs. A shared `TagValues` codec does join/split; the UI renders lists as `"A; B"`.
+All six fixed fields are multi-value (ID3v2.4 null-separated text frames; repeated Vorbis comment keys). The column stores the track's values for that key — after any split rules (below) are applied — joined with the unit separator **`U+001F`**, never `\0`, which truncates in SQLite and JNI string APIs. A shared `TagValues` codec does join/split; list rows render them as `"A; B"`.
+
+### Value normalisation
+
+At ingestion every value is trimmed and empty values are dropped, once, before anything is written. Not stored in the tag tables (still readable from the file through TagLib when needed): the keys `LYRICS` and `ACOUSTID_FINGERPRINT`, and any value longer than 512 characters.
+
+### Tag splitting (manual, user-controlled)
+
+A single tag value may hold several entries written with a separator, e.g. `ARTIST=Simon; Garfunkel`. **Scanning never splits values on its own.** The user splits them from a track list (§9):
+
+1. **Split tags** in a track list's overflow menu acts on the tracks in that list.
+2. A dialog picks the **separators** (`;`, `/`, `,`, plus any custom string such as ` feat. `) and the **tags** to split (default: people tag keys + `GENRE`; `TITLE`, `ALBUM` and `DATE` cannot be split). The last choice is remembered in `SharedPreferences`.
+3. A **preview** lists each distinct (tag, value) in those tracks that contains a chosen separator, the parts it would become, and how many tracks in the whole library carry it. Each row has a checkbox, so values such as `AC/DC` can be left whole.
+4. **Apply** creates one **split rule** per checked row and applies it library-wide: on every track carrying that (tag, value), the joined value is replaced by its parts in `track_tags` and in the fixed column, and the joined value is deleted from the dictionary once unused. Parts are trimmed, empties dropped, case-insensitive duplicates dropped, order kept.
+
+Split rules are stored (`split_rules`) so the decision survives rescans: when a file is ingested, a value matching a rule is stored as its parts. A rule is keyed by (tag, value), so a new file carrying the same joined value is split the same way.
+
+Fernix never writes to audio files; splitting changes only the database. Rules are listed in **Settings**, where deleting one re-reads the files of the tracks it was applied to (`split_rule_tracks`), restoring the joined value.
+
+### People tag keys
+
+One constant in code: `ARTIST`, `ALBUMARTIST`, `COMPOSER`, `LYRICIST`, `WRITER`, `CONDUCTOR`, `REMIXER`, `ARRANGER`, `PRODUCER`, `ENGINEER`, `MIXER`, `DJMIXER`, `ORIGINALARTIST`, `ORIGINALLYRICIST`, `PERFORMER`, and every `PERFORMER:*` key (TagLib maps ID3v2.4 `TMCL` musician credits to `PERFORMER:<instrument>` and `TIPL` to `ARRANGER`/`ENGINEER`/`PRODUCER`/`MIXER`/`DJMIXER`).
 
 ### Tables
 
@@ -121,36 +154,78 @@ All six fixed fields are multi-value (ID3v2.4 null-separated text frames; repeat
 
 | Column | Notes |
 |---|---|
-| `id` | PK, autogenerate |
-| `mediaStoreId` | MediaStore `_ID`; unique index |
-| `contentUri` | e.g. `content://media/external/audio/media/12345` |
-| `relativePath`, `displayName` | MediaStore `RELATIVE_PATH` (e.g. `Music/Artist/Album/`) and file name; drive the Folders screen |
+| `id` | PK, autogenerate. Also the Media3 `MediaItem.mediaId`, so the playing item maps back to its row. |
+| `mediaStoreId` | MediaStore `_ID`; unique index. The content URI is derived (`ContentUris.withAppendedId(EXTERNAL_CONTENT_URI, mediaStoreId)`), not stored. |
+| `folderId` | FK → `folders.id`; index |
+| `displayName` | File name |
 | `durationMs`, `dateModified`, `sizeBytes` | From MediaStore; used for change detection |
-| `title`, `album`, `date`, `artist`, `composer`, `lyricist` | Fixed multi-value fields (`U+001F`-joined) |
+| `title`, `album`, `date`, `artist`, `composer`, `lyricist` | Fixed multi-value fields (`U+001F`-joined). `title` is `COLLATE NOCASE` with an index, used to sort search results. |
 | `trackNumber`, `discNumber` | Parsed from `TRACKNUMBER` / `DISCNUMBER` |
 | `year` | INTEGER, nullable; parsed from the first `DATE` value |
-| `albumId` | FK → `albums.id`, nullable |
+| `albumId` | FK → `albums.id` (`ON DELETE SET NULL`), nullable; index `(albumId, discNumber, trackNumber)` for album detail |
+
+**`tracks_fts`** — Room `@Fts4(contentEntity = TrackEntity::class)` over `title`, `album`, `artist`, `composer`, `lyricist`; tokenizer `unicode61` with `remove_diacritics=1` (so `Beyonce` finds `Beyoncé`). External-content table: Room keeps it in sync with triggers, and text is not stored twice. Each word typed by the user becomes a quoted prefix term (`"beat"*`); the whole MATCH expression is bound as an argument.
+
+**`folders`** — `(id, parentId, name, path)`
+
+- Built from MediaStore `VOLUME_NAME` + `RELATIVE_PATH`; `path` (`<volume>/<relativePath>`) has a unique index; index `(parentId, name)` lists a folder's children in order.
+- Volumes are the root nodes; with a single volume the UI starts one level down.
+- Folders left without tracks or sub-folders are deleted after each scan.
 
 **`albums`** — `(id, album, year)` with a **unique index on `(album, year)`**: an album is identified by album name + year.
 
 - `album` is the full stored `ALBUM` value.
-- Tracks without a year form an album with `year = NULL`. SQLite `UNIQUE` permits duplicate NULLs, so album lookup/upsert must treat NULL as a single value in code.
+- `year` is `NOT NULL`; **`0` means unknown**. Tracks with `tracks.year = NULL` belong to the album with `year = 0`, so the unique index alone prevents duplicate albums. The UI shows no year for `0`.
 - Tracks with an empty/missing album get `albumId = NULL`.
 - Albums left without tracks are deleted after each scan.
 
-**`track_tags`** — `(tagId, trackId, tagKey, tagValue)`
+**`tag_keys`** — `(id, key)`; `key` is the uppercase tag key, unique. Small (hundreds of rows).
 
-- One row **per value**; `tagKey` normalised to uppercase.
-- Includes the six fixed fields, so all filtering — including matching a single value of a multi-value field — uses one code path.
-- Indices: `(tagKey, tagValue, trackId)` for filtering, `(trackId)` for cascades. FK to `tracks` with `ON DELETE CASCADE`.
+**`tag_values`** — `(id, value)`; `value` is `COLLATE NOCASE` with a unique index. One row per **distinct value across all keys**, so `AC/DC` and `Ac/Dc` are one value (the first spelling seen is kept), and the same name under `COMPOSER` and `CONDUCTOR` is one value — which is what makes a person a single entity.
+
+**`track_tags`** — `(trackId, keyId, valueId, ord)`, PK `(trackId, keyId, valueId)`; index `(valueId, keyId, trackId)` for filtering. FK `trackId` → `tracks` `ON DELETE CASCADE`.
+
+- One row per value of a tag on a track, integers only. `ord` is the value's position among the track's values for that key (preserves tag order).
+- Includes the six fixed fields and all people tags, so every filter uses one path.
+
+**`key_values`** — `(keyId, valueId, trackCount)`, PK `(keyId, valueId)`. Which values occur under each key and on how many tracks; drives the filter value picker.
+
+**`people`** — `(valueId, trackCount)`, PK `valueId`, FK → `tag_values` `ON DELETE CASCADE`.
+
+- A person is a value that occurs under at least one people tag key, regardless of role: one person can be artist on one track and composer + lyricist on another.
+- `trackCount` is the number of distinct tracks the person is credited on.
+
+**`split_rules`** — `(id, keyId, value, parts, createdAt)`; unique index `(keyId, value)`, `value` `COLLATE NOCASE`; `parts` is the `U+001F`-joined list of parts.
+
+**`split_rule_tracks`** — `(ruleId, trackId)`, PK `(ruleId, trackId)`; index `(trackId)`; cascading deletes from both `split_rules` and `tracks`. The tracks a rule was applied to, used to undo it.
 
 **`playlists`** — `(id, name, createdAt, updatedAt)`
 
-**`playlist_entries`** — `(playlistId, position, trackId)`, PK `(playlistId, position)`; cascading deletes from both `playlists` and `tracks`.
+**`playlist_entries`** — `(playlistId, position, trackId)`, PK `(playlistId, position)`; index `(trackId)`; cascading deletes from both `playlists` and `tracks`.
+
+- No reordering. Adding appends at `MAX(position) + 1`; removing deletes the row. Gaps in `position` are fine — entries are read `ORDER BY position`.
+- Duplicates are allowed (the same track twice in a playlist).
+
+`key_values` and `people` are recomputed for the (key, value) pairs a scan batch or a split touched. Unused `tag_values` are deleted after each scan and each split.
 
 ### Filtering
 
-Arbitrary filters are built with `@RawQuery` using `EXISTS` / `INTERSECT` subqueries over `track_tags`. Filters combine with AND. Values are always bound as arguments, never concatenated into SQL.
+Filters are built with `@RawQuery` as track-id subqueries combined with `INTERSECT`, and applied as `t.id IN (…)`. Values are always bound as arguments, never concatenated into SQL.
+
+| Filter | Track-id subquery |
+|---|---|
+| Tag filter: key `K`, value `V` | `SELECT trackId FROM track_tags WHERE valueId = ? AND keyId = ?` |
+| Person filter (any role) | `SELECT trackId FROM track_tags WHERE valueId = ? AND keyId IN (people key ids)` |
+| Free text | `SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ?` |
+
+Results are sorted by `title, id` and keyset-paged. With a person filter active, each result also shows that person's roles on the track (the tag keys of the matching rows).
+
+The value picker for a tag key lists its `key_values` joined to `tag_values`, sorted by value, paged, and narrowed by typing (`LIKE ? || '%'` on the `NOCASE` column, which uses the index).
+
+### People queries
+
+- **People list:** `SELECT v.id, v.value, p.trackCount FROM people p JOIN tag_values v ON v.id = p.valueId … ORDER BY v.value` — keyset-paged.
+- **Tags on the playing track** (Now Playing): `track_tags` joined to `tag_keys` and `tag_values` for `trackId = ?` and the user's Now Playing tag keys (bound as arguments, at most 3), ordered by key and `ord`. Each value carries its value id; for a people tag key that id is the person id. A `PERFORMER` slot also matches every `PERFORMER:*` key and shows the instrument as a label.
 
 ---
 
@@ -158,12 +233,13 @@ Arbitrary filters are built with `@RawQuery` using `EXISTS` / `INTERSECT` subque
 
 Direct file paths (`/storage/emulated/0/...`) are never used. Content URIs from MediaStore are passed to ExoPlayer, TagLib (via file descriptor) and Coil.
 
-1. **Discovery** — query `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI` for `_ID`, `SIZE`, `DATE_MODIFIED`, `DURATION`, `RELATIVE_PATH`, `DISPLAY_NAME`.
-2. **Diff** — compare with `tracks` by `mediaStoreId`; only new/changed files are re-parsed; vanished ones are deleted.
+1. **Discovery** — query `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI` for `_ID`, `SIZE`, `DATE_MODIFIED`, `DURATION`, `VOLUME_NAME`, `RELATIVE_PATH`, `DISPLAY_NAME`, ordered by `_ID`.
+2. **Diff** — merge-walk the MediaStore cursor and a `tracks` cursor (joined to `folders`), both ordered by `mediaStoreId`, in constant memory (no map of the whole library). New or changed files (size, date, folder or name) are queued for parsing; vanished ones are deleted.
 3. **Tag ingestion** — `ContentResolver.openFileDescriptor(uri, "r")` → fd passed to native code → TagLib reads through a file-descriptor stream (`TagLib::FileStream(fd, true)` or a custom `IOStream`) → returns the `PropertyMap` as `Map<String, List<String>>`.
-4. **Persist** — each batch is written in a single Room transaction (`tracks`, `albums`, `track_tags`).
+4. **Persist** — values are normalised and existing split rules applied (§5), then each batch of ~500 tracks is written in one Room transaction (`folders`, `albums`, `tracks`, `tag_keys`, `tag_values`, `track_tags`, `split_rule_tracks`, `key_values`, `people`). A re-parsed track has its `track_tags` rows replaced. Key and value ids and the split rules are cached in memory for the duration of the scan.
+5. **Clean up** — after the scan, unused folders, albums and tag values are deleted.
 
-Scanning runs on `Dispatchers.IO` and never blocks the UI.
+Each committed batch is final, so an interrupted scan resumes where it stopped on the next run (the diff skips what is already stored). The library is usable while a scan runs, and the UI shows progress. Scanning runs on `Dispatchers.IO` and never blocks the UI.
 
 ---
 
@@ -192,19 +268,33 @@ TagLib's `PropertyMap` interface normalises all formats to key → list-of-value
 - Only core and session Media3 modules are included (see §2).
 - Gapless playback uses ExoPlayer's built-in support (MP3 LAME/iTunes gapless info, Ogg, FLAC).
 - Equalizer: `android.media.audiofx.Equalizer` on ExoPlayer's audio session id.
+- The play queue is not capped: "Play" on any list queues all of its tracks. Queue items carry only the track id, content URI and the title/artist/album shown in the notification; anything else is loaded from the database when needed.
 
 ---
 
 ## 9. User Interface
 
-Material 3 defaults, dynamic color on Android 12+, light/dark themes. Bottom navigation for the library screens; Now Playing and Queue are reached from a persistent mini-player bar.
+Material 3 defaults, dynamic color on Android 12+, light/dark themes. Bottom navigation for the five library screens (Folders, Search, Albums, Playlists, People); Now Playing and Queue are reached from a persistent mini-player bar.
 
-1. **Now Playing** — album art, title/artist/album, seek bar, play/pause/next/previous, shuffle/repeat, equalizer entry.
-2. **Folders** — browse by `relativePath` hierarchy (built from the DB, not the filesystem); play/enqueue a folder or a track.
-3. **Search & Filter** — free-text search over the fixed fields plus arbitrary tag filters (pick any tag key present in the library, then one or more values; filters combine with AND). Results can be played or enqueued.
+All long lists (tracks, albums, people, folders, filter values) are keyset-paged from the database (§5) and rendered in `LazyColumn`s.
+
+Every track list (Search results, album detail, folder, playlist detail) has **Split tags** in its overflow menu, which runs the manual tag-splitting flow of §5 on the tracks in that list. The split runs in the background with progress shown.
+
+1. **Now Playing** — album art, title, album, date, the user's **Now Playing tags**, seek bar, play/pause/next/previous, shuffle/repeat.
+   - Title, album and date are always shown and cannot be changed.
+   - **Now Playing tags:** **3 slots**, each set in Settings to any tag key in the library (`tag_keys`) except `TITLE`, `ALBUM` and `DATE`, or left empty. Defaults, in order: `COMPOSER`, `LYRICIST`, `ARTIST`. With title, album and date, Now Playing shows at most **6 tags**. Stored in `SharedPreferences`. A tag the playing track doesn't have is hidden. Each tag is shown one entry per value, as stored in `track_tags` (after any split rules).
+   - All details come from the database, never from the file: the playing `MediaItem.mediaId` is `tracks.id`; title, album and date come from the `tracks` row, and the tags from the "tags on the playing track" query (§5), which reads only that track's rows via the `track_tags` PK. Both are observed as Room `Flow`s, so a split applied while the track plays updates the screen immediately.
+   - Every value is tappable and opens **Search** pushed onto the back stack (Back returns to Now Playing). A value of a people tag key opens a person filter (§5), listing every track the person contributed to in any role; any other tag (e.g. `GENRE`, `BPM`) opens a tag filter for that key and value.
+   - An equalizer icon in the top app bar opens the equalizer in a bottom sheet (not a separate screen).
+2. **Folders** — browse the `folders` tree (built from the DB, not the filesystem); play/enqueue a folder or a track.
+3. **Search** — free-text search (FTS) over title, album, artist, composer and lyricist, plus arbitrary tag filters (pick any tag key present in the library, then one or more values) and an optional person filter, shown as a removable chip with the person's name. All filters combine with AND. Results are sorted by title. With a person filter, each result shows the person's roles on that track. Results can be played or enqueued. If a person filter refers to a person deleted by a rescan or a split, the chip is dropped.
 4. **Queue** — current play queue from the `MediaController`; drag to reorder, remove, jump to item.
 5. **Albums** — albums (name + year), sorted by album then year; album detail lists tracks by disc/track number.
-6. **Playlists** — create, rename, delete; add from any track list; reorder/remove entries.
+6. **Playlists** — create, rename, delete; add tracks from any track list; remove entries (no reordering). Playlist detail has **Play** (in playlist order) and **Shuffle** (same queue with ExoPlayer shuffle mode on).
+7. **People** — every person once (no grouping by role), sorted by name, with their track count. Tapping a person opens Search with that person's filter, as from Now Playing.
+8. **Settings** — reached from the overflow menu in the library screens' top app bar.
+   - **Now Playing tags:** set, change or clear each of the 3 tag slots shown on Now Playing, and restore the defaults.
+   - **Split rules:** lists the rules (tag, joined value → parts), paged; deleting a rule undoes it (§5).
 
 ---
 
