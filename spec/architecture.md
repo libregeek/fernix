@@ -129,7 +129,7 @@ All six fixed fields are multi-value (ID3v2.4 null-separated text frames; repeat
 
 ### Value normalisation
 
-At ingestion every value is trimmed and empty values are dropped, once, before anything is written. Not stored in the tag tables (still readable from the file through TagLib when needed): the keys `LYRICS` and `ACOUSTID_FINGERPRINT`, and any value longer than 512 characters.
+At ingestion every value is trimmed and empty values are dropped, once, before anything is written. Keys are uppercased, and a value repeated under the same key (ignoring case) is kept once, in its first position, since `track_tags` has one row per (track, key, value). Not stored in the tag tables (still readable from the file through TagLib when needed): the keys `LYRICS` and `ACOUSTID_FINGERPRINT`, and any value longer than 512 characters.
 
 ### Tag splitting (manual, user-controlled)
 
@@ -164,17 +164,18 @@ One constant in code: `ARTIST`, `ALBUMARTIST`, `COMPOSER`, `LYRICIST`, `WRITER`,
 | `year` | INTEGER, nullable; parsed from the first `DATE` value |
 | `albumId` | FK → `albums.id` (`ON DELETE SET NULL`), nullable; index `(albumId, discNumber, trackNumber)` for album detail |
 
-**`tracks_fts`** — Room `@Fts4(contentEntity = TrackEntity::class)` over `title`, `album`, `artist`, `composer`, `lyricist`; tokenizer `unicode61` with `remove_diacritics=1` (so `Beyonce` finds `Beyoncé`). External-content table: Room keeps it in sync with triggers, and text is not stored twice. Each word typed by the user becomes a quoted prefix term (`"beat"*`); the whole MATCH expression is bound as an argument.
+**`tracks_fts`** — Room `@Fts4(contentEntity = TrackEntity::class)` over `title`, `album`, `artist`, `composer`, `lyricist`; tokenizer `unicode61` with `remove_diacritics=1` (so `Beyonce` finds `Beyoncé`). External-content table: Room keeps it in sync with triggers, and text is not stored twice. Each word typed by the user becomes a quoted prefix term (`"beat*"`; FTS4 needs the star inside the quotes); the whole MATCH expression is bound as an argument.
 
 **`folders`** — `(id, parentId, name, path)`
 
+- `name` is `COLLATE NOCASE`, so children sort case-insensitively.
 - Built from MediaStore `VOLUME_NAME` + `RELATIVE_PATH`; `path` (`<volume>/<relativePath>`) has a unique index; index `(parentId, name)` lists a folder's children in order.
 - Volumes are the root nodes; with a single volume the UI starts one level down.
 - Folders left without tracks or sub-folders are deleted after each scan.
 
 **`albums`** — `(id, album, year)` with a **unique index on `(album, year)`**: an album is identified by album name + year.
 
-- `album` is the full stored `ALBUM` value.
+- `album` is the full stored `ALBUM` value, `COLLATE NOCASE` (so the unique index and the album sort ignore case: `Abbey Road` and `abbey road` are one album).
 - `year` is `NOT NULL`; **`0` means unknown**. Tracks with `tracks.year = NULL` belong to the album with `year = 0`, so the unique index alone prevents duplicate albums. The UI shows no year for `0`.
 - Tracks with an empty/missing album get `albumId = NULL`.
 - Albums left without tracks are deleted after each scan.

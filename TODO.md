@@ -31,15 +31,15 @@ Phases are ordered so each one ends in something runnable and testable.
 
 ## Phase 2 — Database (Room)
 
-- [ ] Add Room + KSP dependencies [§2]
-- [ ] Entities: `tracks`, `folders`, `albums`, `tag_keys`, `tag_values`, `track_tags`, `key_values`, `people`, `split_rules`, `split_rule_tracks`, `playlists`, `playlist_entries` with the exact indexes/collations/FKs/cascades from §5
-- [ ] `tracks_fts` (`@Fts4`, external content, `unicode61 remove_diacritics=1`)
-- [ ] DAOs with keyset paging (`(sortKey, id) > (?, ?) … LIMIT 200`) for tracks, albums, people, folders, key values
-- [ ] Filter builder with `@RawQuery` + `INTERSECT` (tag, person, FTS), all values bound [§5]
-- [ ] FTS query builder (quoted prefix terms, bound MATCH expression)
-- [ ] Value normalisation (trim, drop empty, skip `LYRICS`, `ACOUSTID_FINGERPRINT`, values > 512 chars) + tests [§5]
-- [ ] Instrumented tests: schema, cascades, album `year = 0` uniqueness, FTS diacritics, paging, filter combos
-- [ ] Scale check: synthetic 1M-track DB; confirm queries use indexes (`EXPLAIN QUERY PLAN`) and stay responsive
+- [x] Add Room + KSP dependencies [§2]
+- [x] Entities: `tracks`, `folders`, `albums`, `tag_keys`, `tag_values`, `track_tags`, `key_values`, `people`, `split_rules`, `split_rule_tracks`, `playlists`, `playlist_entries` with the exact indexes/collations/FKs/cascades from §5
+- [x] `tracks_fts` (`@Fts4`, external content, `unicode61 remove_diacritics=1`)
+- [x] DAOs with keyset paging (`(sortKey, id) > (?, ?) … LIMIT 200`) for tracks, albums, people, folders, key values
+- [x] Filter builder with `@RawQuery` + `INTERSECT` (tag, person, FTS), all values bound [§5]
+- [x] FTS query builder (quoted prefix terms, bound MATCH expression)
+- [x] Value normalisation (trim, drop empty, skip `LYRICS`, `ACOUSTID_FINGERPRINT`, values > 512 chars) + tests [§5]
+- [x] Instrumented tests: schema, cascades, album `year = 0` uniqueness, FTS diacritics, paging, filter combos
+- [x] Scale check: synthetic 1M-track DB; confirm queries use indexes (`EXPLAIN QUERY PLAN`) and stay responsive
 
 ## Phase 3 — Storage permission & scanning
 
