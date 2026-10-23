@@ -3,6 +3,7 @@ package io.github.libregeek.fernix.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import io.github.libregeek.fernix.data.scan.ScanScope
 import io.github.libregeek.fernix.tags.TagValues
 
 /** User settings in SharedPreferences (spec/architecture.md §2, §5, §9). */
@@ -46,6 +47,27 @@ class Settings(context: Context) {
             }.apply()
         }
 
+    /**
+     * What the scanner indexes (spec/architecture.md §6). Null until the user has chosen on the
+     * first-launch screen; the first scan waits for that choice.
+     */
+    var scanScope: ScanScope?
+        get() = when (prefs.getString(KEY_SCAN_SCOPE, null)) {
+            SCOPE_ALL -> ScanScope.All
+            SCOPE_SELECTED -> ScanScope.Selected(prefs.getStringSet(KEY_SCAN_FOLDERS, null).orEmpty().toSet())
+            else -> null
+        }
+        set(value) {
+            prefs.edit().apply {
+                when (value) {
+                    null -> remove(KEY_SCAN_SCOPE).remove(KEY_SCAN_FOLDERS)
+                    ScanScope.All -> putString(KEY_SCAN_SCOPE, SCOPE_ALL).remove(KEY_SCAN_FOLDERS)
+                    is ScanScope.Selected -> putString(KEY_SCAN_SCOPE, SCOPE_SELECTED)
+                        .putStringSet(KEY_SCAN_FOLDERS, value.folders.toSet())
+                }
+            }.apply()
+        }
+
     private fun List<String>.padEnd(size: Int): List<String> =
         take(size) + List((size - this.size).coerceAtLeast(0)) { "" }
 
@@ -61,5 +83,9 @@ class Settings(context: Context) {
         private const val KEY_NOW_PLAYING_SLOTS = "now_playing_slots"
         private const val KEY_SPLIT_SEPARATORS = "split_separators"
         private const val KEY_SPLIT_KEYS = "split_keys"
+        private const val KEY_SCAN_SCOPE = "scan_scope"
+        private const val KEY_SCAN_FOLDERS = "scan_folders"
+        private const val SCOPE_ALL = "all"
+        private const val SCOPE_SELECTED = "selected"
     }
 }

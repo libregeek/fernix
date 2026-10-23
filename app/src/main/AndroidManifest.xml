@@ -5,6 +5,11 @@
     <!-- Permissions are added together with the features that need them (spec/architecture.md §3).
          Never add the network permission (CLAUDE.md, hard rule 3). -->
 
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
         android:name=".FernixApp"
         android:allowBackup="true"
