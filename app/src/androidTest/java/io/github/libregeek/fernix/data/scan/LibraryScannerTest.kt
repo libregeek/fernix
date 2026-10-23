@@ -20,6 +20,7 @@ class LibraryScannerTest {
         var mounted = setOf("external_primary")
         val rows = sortedMapOf<Long, MediaRow>()
         override fun mountedVolumes() = mounted
+        override fun folders(volumes: Set<String>) = rows.values.map { it.folderPath }.toSet()
         override fun query(volumes: Set<String>) = object : MediaRowIterator {
             private val it = rows.values.filter { ScanScope.volumeOf(it.folderPath) in volumes }.iterator()
             override fun hasNext() = it.hasNext()

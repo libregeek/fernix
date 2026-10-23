@@ -12,6 +12,10 @@ interface MediaRowIterator : Iterator<MediaRow>, AutoCloseable
 /** Where the scanner finds audio files; MediaStore in the app, a fake in tests. */
 interface MediaSource {
     fun mountedVolumes(): Set<String>
+
+    /** The distinct folders (see [ScanScope.folderPath]) holding audio on [volumes]. */
+    fun folders(volumes: Set<String>): Set<String>
+
     fun query(volumes: Set<String>): MediaRowIterator
 }
 
@@ -44,6 +48,31 @@ class MediaStoreSource(context: Context) : MediaSource {
             "${MediaStore.Audio.Media._ID} ASC",
         )
         return MediaRows(cursor)
+    }
+
+    /**
+     * For the folder chooser (spec/architecture.md §6): reads only `VOLUME_NAME` and
+     * `RELATIVE_PATH`. Memory grows with the number of distinct folders, not tracks.
+     */
+    override fun folders(volumes: Set<String>): Set<String> {
+        if (volumes.isEmpty()) return emptySet()
+        val names = volumes.toList()
+        val cursor = resolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            arrayOf(MediaStore.Audio.Media.VOLUME_NAME, MediaStore.Audio.Media.RELATIVE_PATH),
+            "${MediaStore.Audio.Media.VOLUME_NAME} IN (${names.joinToString(",") { "?" }})",
+            names.toTypedArray(),
+            null,
+        ) ?: return emptySet()
+        val result = HashSet<String>()
+        cursor.use {
+            val volume = it.getColumnIndexOrThrow(MediaStore.Audio.Media.VOLUME_NAME)
+            val relativePath = it.getColumnIndexOrThrow(MediaStore.Audio.Media.RELATIVE_PATH)
+            while (it.moveToNext()) {
+                result += ScanScope.folderPath(it.getString(volume).orEmpty(), it.getString(relativePath).orEmpty())
+            }
+        }
+        return result
     }
 
     /** Iterates a MediaStore cursor as [MediaRow]s. A null cursor (query failed) is empty. */

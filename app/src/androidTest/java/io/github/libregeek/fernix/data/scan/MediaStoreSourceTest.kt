@@ -66,6 +66,14 @@ class MediaStoreSourceTest {
     }
 
     @Test
+    fun folders_listsDistinctFolderPaths() {
+        val folders = source.folders(setOf(MediaStore.VOLUME_EXTERNAL_PRIMARY))
+        assertTrue("external_primary/Music/FernixTest" in folders)
+        assertTrue(source.folders(emptySet()).isEmpty())
+        assertTrue(source.folders(setOf("no-such-volume")).isEmpty())
+    }
+
+    @Test
     fun query_noVolumes_isEmpty() {
         source.query(emptySet()).use { assertTrue(!it.hasNext()) }
     }

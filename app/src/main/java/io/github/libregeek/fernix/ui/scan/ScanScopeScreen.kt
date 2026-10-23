@@ -15,6 +15,10 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,10 +29,22 @@ import io.github.libregeek.fernix.data.scan.ScanScope
 
 /**
  * First-launch screen (spec/architecture.md §6): what to index. "All external storage" is
- * preselected. "Choose folders" is shown but disabled until the in-app folder chooser exists.
+ * preselected; "Choose folders" continues to the in-app [FolderChooserScreen].
  */
 @Composable
 fun ScanScopeScreen(onChosen: (ScanScope) -> Unit) {
+    var chooseFolders by rememberSaveable { mutableStateOf(false) }
+    var choosing by rememberSaveable { mutableStateOf(false) }
+
+    if (choosing) {
+        FolderChooserScreen(
+            initialSelection = emptySet(),
+            onDone = { onChosen(ScanScope.Selected(it)) },
+            onCancel = { choosing = false },
+        )
+        return
+    }
+
     Surface(Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -37,19 +53,19 @@ fun ScanScopeScreen(onChosen: (ScanScope) -> Unit) {
             Text(stringResource(R.string.scope_title), style = MaterialTheme.typography.headlineSmall)
             Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ScopeOption(
-                    selected = true,
-                    enabled = true,
+                    selected = !chooseFolders,
+                    onSelect = { chooseFolders = false },
                     title = stringResource(R.string.scope_all),
                     detail = stringResource(R.string.scope_all_detail),
                 )
                 ScopeOption(
-                    selected = false,
-                    enabled = false,
+                    selected = chooseFolders,
+                    onSelect = { chooseFolders = true },
                     title = stringResource(R.string.scope_selected),
                     detail = stringResource(R.string.scope_selected_detail),
                 )
             }
-            Button(onClick = { onChosen(ScanScope.All) }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { if (chooseFolders) choosing = true else onChosen(ScanScope.All) }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.scope_continue))
             }
         }
@@ -57,14 +73,14 @@ fun ScanScopeScreen(onChosen: (ScanScope) -> Unit) {
 }
 
 @Composable
-private fun ScopeOption(selected: Boolean, enabled: Boolean, title: String, detail: String) {
+private fun ScopeOption(selected: Boolean, onSelect: () -> Unit, title: String, detail: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = {}),
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = selected, enabled = enabled, onClick = null)
+        RadioButton(selected = selected, onClick = null)
         Column(Modifier.padding(start = 12.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

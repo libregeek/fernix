@@ -17,11 +17,15 @@
     <string name="scope_all">All external storage</string>
     <string name="scope_all_detail">Every audio file on your phone and any SD card or USB drive.</string>
     <string name="scope_selected">Choose folders</string>
-    <string name="scope_selected_detail">Only the folders you pick. Coming soon.</string>
+    <string name="scope_selected_detail">Only the folders you pick, including their sub-folders.</string>
     <string name="scope_continue">Continue</string>
     <string name="rescan">Rescan</string>
     <string name="scan_idle">Library not scanned yet</string>
     <string name="scan_running">Scanning… %1$d files processed</string>
     <string name="scan_finished">Scan finished (%1$d files changed)</string>
     <string name="scan_failed">Scan failed: %1$s</string>
+    <string name="chooser_title">Choose folders to index</string>
+    <string name="chooser_empty">No audio files found on this device.</string>
+    <string name="chooser_cancel">Back</string>
+    <string name="chooser_done">Done</string>
 </resources>
