@@ -9,6 +9,8 @@ data class MediaRow(
     val displayName: String,
     /** See [ScanScope.folderPath]. */
     val folderPath: String,
+    /** Not used for change detection; stored when the track is (re)parsed. */
+    val durationMs: Long = 0,
 )
 
 /** A row of the `tracks` cursor joined to `folders`, with the fields used for change detection. */
@@ -41,12 +43,12 @@ object ScanDiff {
      * differences to [onEvent]. Media rows outside [scope] are treated as absent. Stored rows on a
      * volume not in [mountedVolumes] are left alone, whatever MediaStore says.
      */
-    fun walk(
+    suspend fun walk(
         media: Iterator<MediaRow>,
         stored: Iterator<StoredRow>,
         scope: ScanScope,
         mountedVolumes: Set<String>,
-        onEvent: (DiffEvent) -> Unit,
+        onEvent: suspend (DiffEvent) -> Unit,
     ): DiffCounts {
         var new = 0
         var changed = 0

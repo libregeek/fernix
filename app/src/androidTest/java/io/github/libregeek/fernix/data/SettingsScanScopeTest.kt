@@ -51,4 +51,11 @@ class SettingsScanScopeTest {
         settings.scanScope = ScanScope.Selected(emptySet())
         assertEquals(ScanScope.Selected(emptySet()), settings.scanScope)
     }
+
+    @Test
+    fun scanCompleted_defaultsFalse_andRoundTrips() {
+        assertEquals(false, settings.scanCompleted)
+        settings.scanCompleted = true
+        assertEquals(true, settings.scanCompleted)
+    }
 }

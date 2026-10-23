@@ -30,6 +30,7 @@ abstract class FernixDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun splitRuleDao(): SplitRuleDao
     abstract fun playlistDao(): PlaylistDao
+    abstract fun maintenanceDao(): MaintenanceDao
 
     companion object {
         const val FILE_NAME = "fernix.db"

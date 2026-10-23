@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.data.db
 
+import android.database.Cursor
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.RawQuery
+import androidx.room.Update
 import androidx.sqlite.db.SupportSQLiteQuery
 
 @Dao
@@ -16,11 +18,35 @@ interface TrackDao {
     @Insert
     suspend fun insertAll(tracks: List<TrackEntity>): List<Long>
 
+    @Update
+    suspend fun update(track: TrackEntity)
+
+    @Query("SELECT id FROM tracks WHERE mediaStoreId = :mediaStoreId")
+    suspend fun idByMediaStoreId(mediaStoreId: Long): Long?
+
+    /** The (key, value) pairs of a track's tags, to recompute their summaries when it changes. */
+    @Query("SELECT keyId, valueId FROM track_tags WHERE trackId = :trackId")
+    suspend fun tagPairs(trackId: Long): List<TagPair>
+
+    @Query("DELETE FROM track_tags WHERE trackId = :trackId")
+    suspend fun deleteTags(trackId: Long)
+
     @Query("SELECT * FROM tracks WHERE id = :id")
     suspend fun byId(id: Long): TrackEntity?
 
     @Query("DELETE FROM tracks WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    /**
+     * Every track with its folder path, ordered by `mediaStoreId`, for the scan diff (spec §6.2).
+     * Blocking and unpaged on purpose: the caller walks it row by row and closes it. Call from
+     * `Dispatchers.IO`.
+     */
+    @Query(
+        "SELECT t.mediaStoreId, t.sizeBytes, t.dateModified, t.displayName, f.path AS folderPath " +
+            "FROM tracks t JOIN folders f ON f.id = t.folderId ORDER BY t.mediaStoreId",
+    )
+    fun storedCursor(): Cursor
 
     @Query("SELECT COUNT(*) FROM tracks")
     suspend fun count(): Int
@@ -62,3 +88,5 @@ interface TrackDao {
     )
     suspend fun roles(personId: Long, trackIds: List<Long>, peopleKeyIds: List<Long>): List<RoleRow>
 }
+
+data class TagPair(val keyId: Long, val valueId: Long)

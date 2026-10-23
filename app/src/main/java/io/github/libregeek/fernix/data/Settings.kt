@@ -68,6 +68,26 @@ class Settings(context: Context) {
             }.apply()
         }
 
+    /**
+     * Whether the storage permission has been requested before. Android reports "don't ask
+     * again" the same way as "never asked" (no rationale), so this tells them apart.
+     */
+    var storagePermissionAsked: Boolean
+        get() = prefs.getBoolean(KEY_STORAGE_ASKED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_STORAGE_ASKED, value).apply()
+        }
+
+    /**
+     * Whether the last scan ran to the end. False from the moment a scan starts until it finishes,
+     * so an interrupted scan is resumed on the next launch.
+     */
+    var scanCompleted: Boolean
+        get() = prefs.getBoolean(KEY_SCAN_COMPLETED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_SCAN_COMPLETED, value).apply()
+        }
+
     private fun List<String>.padEnd(size: Int): List<String> =
         take(size) + List((size - this.size).coerceAtLeast(0)) { "" }
 
@@ -83,6 +103,8 @@ class Settings(context: Context) {
         private const val KEY_NOW_PLAYING_SLOTS = "now_playing_slots"
         private const val KEY_SPLIT_SEPARATORS = "split_separators"
         private const val KEY_SPLIT_KEYS = "split_keys"
+        private const val KEY_STORAGE_ASKED = "storage_permission_asked"
+        private const val KEY_SCAN_COMPLETED = "scan_completed"
         private const val KEY_SCAN_SCOPE = "scan_scope"
         private const val KEY_SCAN_FOLDERS = "scan_folders"
         private const val SCOPE_ALL = "all"

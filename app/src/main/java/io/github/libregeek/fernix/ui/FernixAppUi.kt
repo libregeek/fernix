@@ -7,6 +7,8 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Button
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.ui.nav.BackStack
 import io.github.libregeek.fernix.ui.nav.Screen
 
@@ -60,7 +63,7 @@ private val Screen.icon: Int
 
 /** App shell: bottom navigation for the five library screens plus the back stack. */
 @Composable
-fun FernixAppUi() {
+fun FernixAppUi(scanState: ScanState, onRescan: () -> Unit) {
     val backStack = rememberSaveable(saver = BackStack.Saver) { BackStack() }
     val current = backStack.current
 
@@ -85,10 +88,25 @@ fun FernixAppUi() {
             Modifier.fillMaxSize().padding(padding),
             contentAlignment = Alignment.Center,
         ) {
-            // Placeholder until each screen is built (Phase 5).
-            Text(stringResource(current.label), style = MaterialTheme.typography.titleLarge)
+            // Placeholder until each screen is built (Phase 5); the scan status and Rescan button
+            // move to the library top bar and Settings (Phases 5 and 8).
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(current.label), style = MaterialTheme.typography.titleLarge)
+                Text(scanState.describe(), style = MaterialTheme.typography.bodyMedium)
+                Button(onClick = onRescan, enabled = scanState !is ScanState.Running) {
+                    Text(stringResource(R.string.rescan))
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun ScanState.describe(): String = when (this) {
+    ScanState.Idle -> stringResource(R.string.scan_idle)
+    is ScanState.Running -> stringResource(R.string.scan_running, processed)
+    is ScanState.Finished -> stringResource(R.string.scan_finished, processed)
+    is ScanState.Failed -> stringResource(R.string.scan_failed, message)
 }
 
 /** Icon-only bottom bar, shorter than Material 3's 80 dp NavigationBar (which is sized for labels). */

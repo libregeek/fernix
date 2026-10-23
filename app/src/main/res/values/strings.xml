@@ -7,4 +7,21 @@
     <string name="tab_albums">Albums</string>
     <string name="tab_playlists">Playlists</string>
     <string name="tab_people">People</string>
+    <string name="permission_title">Allow access to your music</string>
+    <string name="permission_explanation">Fernix needs permission to read the audio files on your device to build your library. Everything stays on your device; Fernix has no internet access.</string>
+    <string name="permission_rationale">Without access to your audio files Fernix has nothing to play. Please allow it to build your library.</string>
+    <string name="permission_blocked">Access was denied and Android won\'t ask again. Open the app settings, choose Permissions, and allow access to music and audio.</string>
+    <string name="permission_allow">Allow access</string>
+    <string name="permission_open_settings">Open app settings</string>
+    <string name="scope_title">What should Fernix index?</string>
+    <string name="scope_all">All external storage</string>
+    <string name="scope_all_detail">Every audio file on your phone and any SD card or USB drive.</string>
+    <string name="scope_selected">Choose folders</string>
+    <string name="scope_selected_detail">Only the folders you pick. Coming soon.</string>
+    <string name="scope_continue">Continue</string>
+    <string name="rescan">Rescan</string>
+    <string name="scan_idle">Library not scanned yet</string>
+    <string name="scan_running">Scanning… %1$d files processed</string>
+    <string name="scan_finished">Scan finished (%1$d files changed)</string>
+    <string name="scan_failed">Scan failed: %1$s</string>
 </resources>

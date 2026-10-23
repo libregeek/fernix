@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.data.scan
 
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -22,7 +23,7 @@ class ScanDiffTest {
         mountedVolumes: Set<String> = mounted,
     ): Pair<List<DiffEvent>, DiffCounts> {
         val events = mutableListOf<DiffEvent>()
-        val counts = ScanDiff.walk(media.iterator(), stored.iterator(), scope, mountedVolumes, events::add)
+        val counts = runBlocking { ScanDiff.walk(media.iterator(), stored.iterator(), scope, mountedVolumes) { events += it } }
         return events to counts
     }
 

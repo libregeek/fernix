@@ -61,6 +61,18 @@ interface TagDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertPeople(rows: List<PersonEntity>)
 
+    @Query("SELECT COUNT(DISTINCT trackId) FROM track_tags WHERE keyId = :keyId AND valueId = :valueId")
+    suspend fun countTracks(keyId: Long, valueId: Long): Int
+
+    @Query("DELETE FROM key_values WHERE keyId = :keyId AND valueId = :valueId")
+    suspend fun deleteKeyValue(keyId: Long, valueId: Long)
+
+    @Query("SELECT COUNT(DISTINCT trackId) FROM track_tags WHERE valueId = :valueId AND keyId IN (:peopleKeyIds)")
+    suspend fun countPersonTracks(valueId: Long, peopleKeyIds: List<Long>): Int
+
+    @Query("DELETE FROM people WHERE valueId = :valueId")
+    suspend fun deletePerson(valueId: Long)
+
     @Query("SELECT id FROM tag_keys WHERE `key` = :key")
     suspend fun keyId(key: String): Long?
 
@@ -146,4 +158,22 @@ interface PlaylistDao {
 
     @Query("DELETE FROM playlists WHERE id = :id")
     suspend fun delete(id: Long)
+}
+
+/** Post-scan cleanup (spec/architecture.md §6.5). */
+@Dao
+interface MaintenanceDao {
+
+    /** Deletes folders with no tracks and no sub-folders; returns how many. Repeat until 0 to climb the tree. */
+    @Query(
+        "DELETE FROM folders WHERE id NOT IN (SELECT folderId FROM tracks) " +
+            "AND id NOT IN (SELECT parentId FROM folders WHERE parentId IS NOT NULL)",
+    )
+    suspend fun deleteUnusedFolders(): Int
+
+    @Query("DELETE FROM albums WHERE id NOT IN (SELECT albumId FROM tracks WHERE albumId IS NOT NULL)")
+    suspend fun deleteUnusedAlbums(): Int
+
+    @Query("DELETE FROM tag_values WHERE id NOT IN (SELECT valueId FROM track_tags)")
+    suspend fun deleteUnusedTagValues(): Int
 }
