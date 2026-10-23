@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.libregeek.fernix.ui.FernixAppUi
 import io.github.libregeek.fernix.ui.scan.ScanScopeScreen
+import io.github.libregeek.fernix.ui.permission.NotificationPermissionEffect
 import io.github.libregeek.fernix.ui.permission.StoragePermissionGate
 import io.github.libregeek.fernix.ui.theme.FernixTheme
 
@@ -31,6 +32,8 @@ class MainActivity : ComponentActivity() {
                         // First launch after the scope is chosen, or resuming an interrupted scan.
                         LaunchedEffect(scope) { if (!container.settings.scanCompleted) container.startScan() }
                         val scanState by container.scanner.state.collectAsStateWithLifecycle()
+                        val playback by container.playback.state.collectAsStateWithLifecycle()
+                        NotificationPermissionEffect(container.settings, playback.isPlaying)
                         FernixAppUi(scanState = scanState, onRescan = container::startScan)
                     }
                 }

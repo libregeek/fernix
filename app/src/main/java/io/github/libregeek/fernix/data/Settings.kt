@@ -78,6 +78,13 @@ class Settings(context: Context) {
             prefs.edit().putBoolean(KEY_STORAGE_ASKED, value).apply()
         }
 
+    /** Whether the notification permission (Android 13+) has been requested; asked once, not nagged. */
+    var notificationPermissionAsked: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_NOTIFICATION_ASKED, value).apply()
+        }
+
     /**
      * Whether the last scan ran to the end. False from the moment a scan starts until it finishes,
      * so an interrupted scan is resumed on the next launch.
@@ -104,6 +111,7 @@ class Settings(context: Context) {
         private const val KEY_SPLIT_SEPARATORS = "split_separators"
         private const val KEY_SPLIT_KEYS = "split_keys"
         private const val KEY_STORAGE_ASKED = "storage_permission_asked"
+        private const val KEY_NOTIFICATION_ASKED = "notification_permission_asked"
         private const val KEY_SCAN_COMPLETED = "scan_completed"
         private const val KEY_SCAN_SCOPE = "scan_scope"
         private const val KEY_SCAN_FOLDERS = "scan_folders"

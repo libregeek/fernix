@@ -87,4 +87,32 @@ class PlaybackServiceTest {
         assertEquals(7L, MediaItems.trackId(onMain { controller.currentMediaItem!!.mediaId }))
         assertTrue(onMain { controller.playbackState } != Player.STATE_IDLE)
     }
+
+    @Test
+    fun playing_postsANotificationThatOpensTheApp() {
+        val item = MediaItem.Builder()
+            .setMediaId(MediaItems.mediaId(8))
+            .setUri(android.net.Uri.fromFile(file))
+            .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder().setTitle("Notified").setArtist("Someone").build())
+            .build()
+        onMain {
+            controller.setMediaItem(item)
+            controller.prepare()
+            controller.play()
+        }
+        waitFor { controller.currentPosition > 300 }
+
+        val manager = context.getSystemService(android.app.NotificationManager::class.java)
+        val end = System.currentTimeMillis() + 5_000
+        var posted = manager.activeNotifications.toList()
+        while (posted.isEmpty() && System.currentTimeMillis() < end) {
+            Thread.sleep(100)
+            posted = manager.activeNotifications.toList()
+        }
+        assertTrue("no notification posted", posted.isNotEmpty())
+        val notification = posted.first().notification
+        assertEquals("Notified", notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString())
+        assertTrue("notification has no content intent", notification.contentIntent != null)
+        assertTrue("notification has no play/pause/skip actions", notification.actions.orEmpty().isNotEmpty())
+    }
 }
