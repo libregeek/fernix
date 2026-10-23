@@ -81,8 +81,12 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [ ] Folders: tree browse (volume roots; skip level when single volume), play/enqueue folder or track
 - [ ] Albums: list (name + year, year hidden when 0) and album detail by disc/track
 - [ ] Search: FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
-- [ ] People: paged list with track counts; tap → Search with person filter
+- [ ] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter
 - [ ] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
+- [ ] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row
+- [ ] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
+- [ ] Album details via album name: tapping an album name anywhere (track rows, Now Playing, track details) opens album art, name, year (hidden when 0) and the track list by disc/track
+- [ ] JNI additions: `AudioProperties` call and `PICTURE` complex-properties call (picture type, description, MIME, bytes) in `tag_reader.cpp` / `TagReader.kt`, with instrumented tests on MP3, FLAC, Ogg incl. role-typed pictures [§7]
 - [ ] Coil (`coil-compose`) album art from embedded/local art via content URI [§2]
 - [ ] Vector icons copied in as drawables (no `material-icons-extended`)
 - [ ] Scan progress indicator

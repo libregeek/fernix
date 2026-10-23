@@ -43,7 +43,7 @@ Exact versions are pinned in `gradle/libs.versions.toml` (libraries, plugins), `
 | TagLib build dep | utfcpp (header-only) | BSL 1.0 | Required by TagLib 2.x; comes as TagLib's own pinned submodule (`external/taglib/3rdparty/utfcpp`). Compiled in, no runtime component. |
 | Compression | zlib (NDK system `libz`) | zlib | Used by TagLib for compressed ID3v2 frames. Part of the platform; nothing bundled. |
 | Database | AndroidX Room (runtime, ktx, compiler via KSP) | Apache 2.0 | Hybrid fixed-column + tag-table storage (§5). |
-| Image loading | Coil 3 (`coil-compose` only) | Apache 2.0 | Embedded/local album art. No `coil-network-*` module. |
+| Image loading | Coil 3 (`coil-compose` only) | Apache 2.0 | Embedded album art and role pictures (§7). No `coil-network-*` module. |
 | UI | Jetpack Compose (BOM) + Material 3 | Apache 2.0 | Declarative UI. No `material-icons-extended`; needed icons are copied in as vector drawables. |
 | Basics | `kotlinx-coroutines-android`, `androidx.core:core-ktx`, `androidx.activity:activity-compose`, `androidx.lifecycle` (runtime/viewmodel compose) | Apache 2.0 | |
 | Build only | Kotlin, Android Gradle Plugin, Compose compiler plugin, KSP | Apache 2.0 | Not shipped in the APK. |
@@ -274,7 +274,19 @@ TagLib's `PropertyMap` interface normalises all formats to key → list-of-value
 - Compiled-in TagLib modules: MPEG (MP3), Vorbis/Opus/FLAC/Ogg (`WITH_VORBIS`), RIFF/WAV (`WITH_RIFF`), APE (`WITH_APE`, needed for APEv2 tags in MP3 files), zlib. Disabled: ASF, DSF, Matroska, MOD, MP4, Shorten, TrueAudio, C bindings.
 - Files are opened from Kotlin with `ParcelFileDescriptor.detachFd()`; ownership of the fd passes to native code, where TagLib's `FileStream(fd, true)` closes it.
 - NDK and CMake versions are pinned in `app/build.gradle.kts` (`ndkVersion`, `externalNativeBuild.cmake.version`); the SDK-provided CMake is used, not the system one.
+- **Audio properties:** the track details screen (§9) shows technical details from TagLib's `AudioProperties` (length, bitrate, sample rate, channels, bits per sample where the format has it), read on demand through a second JNI call on the same fd. They are not stored in the database. The codec/format is derived from the MIME type or file extension, since `AudioProperties` does not name it.
+- **Pictures:** embedded pictures are read on demand through TagLib's complex properties (`PICTURE`: picture type, description, MIME type, bytes) via another JNI call, and handed to Coil as bytes. Nothing is stored in the database or written to disk; Coil's memory cache holds decoded images. Picture types follow ID3v2 `APIC` types (and the FLAC/Vorbis `METADATA_BLOCK_PICTURE` types, which are the same list).
 - The JNI layer returns a flat `String[]` of alternating key/value pairs (a multi-value tag repeats its key once per value); Kotlin groups it into `Map<String, List<String>>`. No exceptions cross the boundary: failures return null and are logged.
+
+---
+
+### Person images
+
+A person's image is an embedded picture whose type is a role: Lead artist (7), Artist (8), Conductor (9), Band (10), Composer (11) or Lyricist (12). Such pictures are imported by tag editors such as foobar2000 and are read from the person's tracks when the person screen opens (§9).
+
+- Picture type → people tag key: 7, 8, 10 → `ARTIST`; 9 → `CONDUCTOR`; 11 → `COMPOSER`; 12 → `LYRICIST`. Cover (3) and other types are never used for people.
+- A picture belongs to a person if the track has a single value under the mapped key and it is that person, or if the picture's description equals the person's name (case-insensitive). When several people share the key and the description is empty, the picture is ignored rather than guessed.
+- The screen looks at the person's tracks in `id` order, tries at most 20 files, and uses the first match, preferring the type that matches the person's most frequent role. No match → a placeholder with the person's initials.
 
 ---
 
@@ -307,7 +319,14 @@ Every track list (Search results, album detail, folder, playlist detail) has **S
 4. **Queue** — current play queue from the `MediaController`; drag to reorder, remove, jump to item.
 5. **Albums** — albums (name + year), sorted by album then year; album detail lists tracks by disc/track number.
 6. **Playlists** — create, rename, delete; add tracks from any track list; remove entries (no reordering). Playlist detail has **Play** (in playlist order) and **Shuffle** (same queue with ExoPlayer shuffle mode on).
-7. **People** — every person once (no grouping by role), sorted by name, with their track count. Tapping a person opens Search with that person's filter, as from Now Playing.
+7. **People** — every person once (no grouping by role), sorted by name, with their track count. Tapping a person opens the **person details** screen (below).
+   - **Person details:** image (from a role-typed embedded picture, §7 *Person images*, else initials), name, roles (each people tag key the person appears under, with the track count per role, from `track_tags`) and the paged list of all their tracks (the person filter of §5, sorted by title, each row showing the roles on that track). Play/enqueue the list; **Show in Search** opens Search with the person filter. The screen is also reached by tapping a people value in Now Playing and track details.
+9. **Album details** — opened by tapping an album name anywhere (track rows, Now Playing, track details, Albums list): album art, name, year (hidden when 0) and the tracks by disc/track number; Play/enqueue the album. Art is the front-cover picture (type 3, else the first picture) of the first track that has one.
+10. **Track details** — opened from the overflow menu of any track row, or from Now Playing. Read from the file on demand (the fd of the content URI) plus the database:
+   - cover art (front cover, else first picture);
+   - **all tags:** every `track_tags` key with its values in `ord` order (after split rules); people and album values are tappable (person details, album details), other values open a tag filter in Search;
+   - **technical details:** format, duration, bitrate, sample rate, channels, bits per sample (§7 *Audio properties*; fields TagLib doesn't report are hidden);
+   - **file details:** file name, folder, volume, size, modified date, content URI, from the `tracks` and `folders` rows.
 8. **Settings** — reached from the overflow menu in the library screens' top app bar.
    - **Library folders:** choose *All external storage* or *Selected folders* with the in-app chooser (§6), and rescan. Saving a narrower scope shows how many tracks and playlist entries will be removed and asks for confirmation.
    - **Now Playing tags:** set, change or clear each of the 3 tag slots shown on Now Playing, and restore the defaults.
