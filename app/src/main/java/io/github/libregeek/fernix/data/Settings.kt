@@ -78,6 +78,22 @@ class Settings(context: Context) {
             prefs.edit().putBoolean(KEY_STORAGE_ASKED, value).apply()
         }
 
+    /** Whether the equalizer is switched on. */
+    var equalizerEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EQ_ENABLED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_EQ_ENABLED, value).apply()
+        }
+
+    /** Band levels in millibels, lowest band first; null until the user changes them. */
+    var equalizerLevels: List<Int>?
+        get() = prefs.getString(KEY_EQ_LEVELS, null)?.let { s -> s.split(',').mapNotNull { it.toIntOrNull() } }
+        set(value) {
+            prefs.edit().apply {
+                if (value == null) remove(KEY_EQ_LEVELS) else putString(KEY_EQ_LEVELS, value.joinToString(","))
+            }.apply()
+        }
+
     /** Whether the notification permission (Android 13+) has been requested; asked once, not nagged. */
     var notificationPermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false)
@@ -111,6 +127,8 @@ class Settings(context: Context) {
         private const val KEY_SPLIT_SEPARATORS = "split_separators"
         private const val KEY_SPLIT_KEYS = "split_keys"
         private const val KEY_STORAGE_ASKED = "storage_permission_asked"
+        private const val KEY_EQ_ENABLED = "equalizer_enabled"
+        private const val KEY_EQ_LEVELS = "equalizer_levels"
         private const val KEY_NOTIFICATION_ASKED = "notification_permission_asked"
         private const val KEY_SCAN_COMPLETED = "scan_completed"
         private const val KEY_SCAN_SCOPE = "scan_scope"

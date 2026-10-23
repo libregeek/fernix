@@ -3,11 +3,15 @@ package io.github.libregeek.fernix.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.AudioManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import io.github.libregeek.fernix.FernixApp
 import io.github.libregeek.fernix.MainActivity
 
 /**
@@ -18,7 +22,10 @@ import io.github.libregeek.fernix.MainActivity
 class PlaybackService : MediaSessionService() {
 
     private var session: MediaSession? = null
+    private var equalizer: EqualizerEngine? = null
 
+    // Player.setAudioSessionId and the session callback are marked unstable by Media3.
+    @OptIn(markerClass = [UnstableApi::class])
     override fun onCreate() {
         super.onCreate()
         val player = ExoPlayer.Builder(this)
@@ -33,7 +40,13 @@ class PlaybackService : MediaSessionService() {
             // CPU wake lock only; no Wi-Fi lock since nothing is streamed.
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
+        // A fixed session id (instead of the one ExoPlayer picks) keeps the equalizer attached.
+        val audioSessionId = getSystemService(AudioManager::class.java).generateAudioSessionId()
+        player.audioSessionId = audioSessionId
+        val engine = EqualizerEngine(audioSessionId, (application as FernixApp).container.settings)
+        equalizer = engine
         session = MediaSession.Builder(this, player)
+            .setCallback(EqualizerCallback(engine))
             // Tapping the notification (or the lock-screen card) opens the app.
             .setSessionActivity(
                 PendingIntent.getActivity(
@@ -55,6 +68,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        equalizer?.release()
+        equalizer = null
         session?.run {
             player.release()
             release()

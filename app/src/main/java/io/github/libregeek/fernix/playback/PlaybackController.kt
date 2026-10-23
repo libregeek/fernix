@@ -3,11 +3,14 @@ package io.github.libregeek.fernix.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import androidx.media3.session.SessionToken
 import io.github.libregeek.fernix.data.db.TrackRow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +45,11 @@ class PlaybackController(context: Context) {
     private val appContext = context.applicationContext
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state
+
+    private val _equalizer = MutableStateFlow<EqualizerState?>(null)
+
+    /** The equalizer, or null until [loadEqualizer] has answered or when the device has none. */
+    val equalizer: StateFlow<EqualizerState?> = _equalizer
 
     private var controller: MediaController? = null
     private var connecting = false
@@ -129,6 +137,28 @@ class PlaybackController(context: Context) {
     fun setRepeatMode(@Player.RepeatMode mode: Int) = run { it.repeatMode = mode }
     fun clearError() { _state.value = _state.value.copy(error = null) }
 
+    fun loadEqualizer() = equalizerCommand(EqualizerCommands.GET)
+    fun setEqualizerEnabled(enabled: Boolean) =
+        equalizerCommand(EqualizerCommands.SET_ENABLED, Bundle().apply { putBoolean(EqualizerCommands.ARG_ENABLED, enabled) })
+    fun setEqualizerBand(band: Int, levelMillibels: Int) = equalizerCommand(
+        EqualizerCommands.SET_BAND,
+        Bundle().apply { putInt(EqualizerCommands.ARG_BAND, band); putInt(EqualizerCommands.ARG_LEVEL, levelMillibels) },
+    )
+    fun useEqualizerPreset(index: Int) =
+        equalizerCommand(EqualizerCommands.USE_PRESET, Bundle().apply { putInt(EqualizerCommands.ARG_PRESET, index) })
+    fun resetEqualizer() = equalizerCommand(EqualizerCommands.RESET)
+
+    private fun equalizerCommand(action: String, args: Bundle = Bundle.EMPTY) = run { c ->
+        val future = c.sendCustomCommand(SessionCommand(action, Bundle.EMPTY), args)
+        future.addListener(
+            {
+                val result = try { future.get() } catch (e: Exception) { return@addListener }
+                _equalizer.value = if (result.resultCode == SessionResult.RESULT_SUCCESS) EqualizerState.fromBundle(result.extras) else null
+            },
+            ContextCompat.getMainExecutor(appContext),
+        )
+    }
+
     /** The playback position, for the seek bar, which polls it while visible. */
     fun currentPositionMs(): Long = controller?.currentPosition ?: 0
 
@@ -139,6 +169,7 @@ class PlaybackController(context: Context) {
         controller = null
         pending.clear()
         _state.value = PlaybackUiState()
+        _equalizer.value = null
     }
 
     private fun publish(player: Player) {

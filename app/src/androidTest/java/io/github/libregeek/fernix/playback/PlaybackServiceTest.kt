@@ -111,7 +111,10 @@ class PlaybackServiceTest {
         }
         assertTrue("no notification posted", posted.isNotEmpty())
         val notification = posted.first().notification
-        assertEquals("Notified", notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString())
+        // ExoPlayer overlays the tags it reads from the file on the item's metadata, so the title is
+        // ours until the file has been read and the file's own afterwards.
+        val title = notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString()
+        assertTrue("unexpected title $title", title == "Notified" || title == "Opus Song")
         assertTrue("notification has no content intent", notification.contentIntent != null)
         assertTrue("notification has no play/pause/skip actions", notification.actions.orEmpty().isNotEmpty())
     }
