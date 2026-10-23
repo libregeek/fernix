@@ -5,6 +5,7 @@ Items are ticked **only after the maintainer approves them**.
 
 Ground rules for every item: SPDX header on new files, no `INTERNET` permission, no unapproved library or permission,
 MediaStore URIs only, DB/tag work on `Dispatchers.IO`, bind SQL arguments (CLAUDE.md).
+**Never trade sound quality for performance** (spec §8): no resampling, downmixing, bit-depth reduction or extra audio processing to save CPU, memory, battery or size.
 Dependencies and permissions listed below are already approved in the spec (§2, §3) but are added **only in the phase that needs them**.
 
 Phases are ordered so each one ends in something runnable and testable.
@@ -120,6 +121,7 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [ ] Process-death / config-change handling in all ViewModels
 - [ ] Error handling: unreadable files, files removed mid-scan, permission revoked
 - [ ] Performance pass on large library (startup, first-scan time, scroll, memory)
+- [ ] Audio-path check: output is unchanged from the source (no resampling, downmix or bit-depth reduction; equalizer off adds nothing); verify before and after every performance change [§8]
 - [ ] Accessibility: content descriptions, touch targets, font scaling
 - [ ] `./gradlew lint` clean
 - [ ] Test matrix on AOSP emulator, API 29 and latest API

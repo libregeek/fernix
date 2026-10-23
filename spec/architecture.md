@@ -8,6 +8,7 @@ Design priorities:
 - Filtering on **any** tag present in the user's library, not just a fixed set.
 - Zero dependencies on proprietary tools or Google Play Services; F-Droid compliant.
 - Small APK and low resource use — prefer platform APIs over libraries.
+- **Sound quality comes first:** performance and size work must never reduce audio quality (§8).
 
 ---
 
@@ -297,6 +298,11 @@ A person's image is an embedded picture whose type is a role: Lead artist (7), A
 - `MediaSessionService` hosts a single ExoPlayer instance and runs independently of the UI lifecycle; the UI connects via `MediaController`.
 - Only core and session Media3 modules are included (see §2).
 - Gapless playback uses ExoPlayer's built-in support (MP3 LAME/iTunes gapless info, Ogg, FLAC).
+- **Sound quality is never traded for performance or size.** Playback must stay bit-perfect with the source except for what the user chooses:
+  - No resampling, downmixing, bit-depth reduction or lower-quality decoder settings to save CPU, memory or battery; ExoPlayer's decoders and audio sink run with their default (full-quality) settings, and any change to them needs the user's approval.
+  - No volume normalisation, loudness processing or other audio effect unless the user turns it on.
+  - The equalizer is off by default and, when off, adds nothing to the signal path; its settings are restored only if the user had enabled it.
+  - Optimisation targets the library, scanning, UI and memory (§5, §6, §9), never the decode and output path. A change that touches the audio path is checked by ear and against the source, not only by benchmark.
 - Equalizer: `android.media.audiofx.Equalizer` on ExoPlayer's audio session id.
 - The play queue is not capped: "Play" on any list queues all of its tracks. Queue items carry only the track id, content URI and the title/artist/album shown in the notification; anything else is loaded from the database when needed.
 
