@@ -250,6 +250,20 @@ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:
 
 (That broadcast is deprecated and ignored on some newer Android versions. If files don't appear in MediaStore, reboot the emulator with `adb reboot` — the media scanner runs on boot.)
 
+### Emulator with an SD card
+
+To test an SD card (a second MediaStore volume), create an AVD with an emulated card. It can run next to the first AVD on another port:
+
+```bash
+avdmanager create avd -n fernix-api29-sd -k "system-images;android-29;default;x86_64" --sdcard 512M
+# (the "Could not load devices from ... devices.xml" messages are harmless)
+
+emulator -avd fernix-api29-sd -port 5556 &
+adb -s emulator-5556 shell sm list-volumes     # a "public:..." volume appears once the card is mounted
+```
+
+Put music on the card with `adb -s emulator-5556 push song.mp3 /storage/<card-id>/Music/`, where `<card-id>` is the id shown under `/storage` (`adb shell ls /storage`). Unmount and remount it with `adb shell sm unmount public:<major>,<minor>` and `adb shell sm mount public:<major>,<minor>` to test the unmounted-volume behaviour.
+
 ## 6. Physical device
 
 1. On the phone: *Settings → About phone →* tap *Build number* 7× → *Developer options → USB debugging* on.

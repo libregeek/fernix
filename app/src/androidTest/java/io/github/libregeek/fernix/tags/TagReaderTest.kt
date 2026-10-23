@@ -74,6 +74,25 @@ class TagReaderTest {
     }
 
     @Test
+    fun opus_readsVorbisCommentFields() {
+        val tags = read("sample.opus")!!
+        assertEquals(listOf("Opus Song"), tags["TITLE"])
+        assertEquals(listOf("Opus Artist"), tags["ARTIST"])
+        assertEquals(listOf("Opus Album"), tags["ALBUM"])
+        assertEquals(listOf("2020"), tags["DATE"])
+        assertEquals(listOf("Opus Composer"), tags["COMPOSER"])
+    }
+
+    @Test
+    fun wav_readsRiffInfoFields() {
+        val tags = read("sample.wav")!!
+        assertEquals(listOf("Wav Song"), tags["TITLE"])
+        assertEquals(listOf("Wav Artist"), tags["ARTIST"])
+        assertEquals(listOf("Wav Album"), tags["ALBUM"])
+        assertEquals(listOf("2019"), tags["DATE"])
+    }
+
+    @Test
     fun embeddedPictureIsNotReportedAsATag() {
         val tags = read("sample.ogg")!!
         assertFalse(tags.keys.any { it.contains("PICTURE", ignoreCase = true) })
