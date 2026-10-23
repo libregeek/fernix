@@ -77,6 +77,8 @@ Exact versions are pinned in `gradle/libs.versions.toml` (libraries, plugins), `
 
 Added automatically by `androidx.core` (approved): `io.github.libregeek.fernix.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` — a signature-level permission the app defines for itself to protect its own non-exported broadcast receivers. Not user-visible; grants no access.
 
+`android.permission.ACCESS_NETWORK_STATE`, which `media3-exoplayer` adds through manifest merging (it only tunes buffering for streaming), is removed with `tools:node="remove"`; Fernix plays local files only. After any dependency change, list the merged permissions and make sure only those above remain.
+
 The playback service is declared with `android:foregroundServiceType="mediaPlayback"`.
 
 **`android.permission.INTERNET` is never declared** — network traffic is structurally prevented at the OS level.

@@ -11,6 +11,7 @@ import io.github.libregeek.fernix.data.scan.LibraryScanner
 import io.github.libregeek.fernix.data.scan.MediaStoreSource
 import io.github.libregeek.fernix.data.scan.MediaStoreTagSource
 import io.github.libregeek.fernix.data.scan.ScanState
+import io.github.libregeek.fernix.playback.PlaybackController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +35,9 @@ class AppContainer(context: Context) {
     }
 
     val trackSearch: TrackSearch by lazy { TrackSearch(database) }
+
+    /** Main thread only. Connects to the playback service on first use. */
+    val playback: PlaybackController by lazy { PlaybackController(appContext) }
 
     /** Outlives activities, so a scan keeps going across rotation and screen changes. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

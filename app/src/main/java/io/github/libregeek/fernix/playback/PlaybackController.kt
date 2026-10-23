@@ -1,0 +1,162 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+package io.github.libregeek.fernix.playback
+
+import android.content.ComponentName
+import android.content.Context
+import androidx.core.content.ContextCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import io.github.libregeek.fernix.data.db.TrackRow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+/** What the UI needs to know about playback; the details of a track come from the database. */
+data class PlaybackUiState(
+    val connected: Boolean = false,
+    val isPlaying: Boolean = false,
+    /** `tracks.id` of the current item (its `mediaId`), or null with an empty queue. */
+    val trackId: Long? = null,
+    val title: String = "",
+    val artist: String = "",
+    val album: String = "",
+    val durationMs: Long = 0,
+    val queueSize: Int = 0,
+    val currentIndex: Int = -1,
+    val shuffle: Boolean = false,
+    val repeatMode: Int = Player.REPEAT_MODE_OFF,
+    val error: String? = null,
+)
+
+/**
+ * UI-side handle on the playback service (spec/architecture.md §8): wraps a [MediaController] and
+ * exposes playback state as a [StateFlow]. The service is started on first use, not at app start.
+ * Commands given before the connection is up are queued and run once it is.
+ *
+ * Main thread only, like the controller it wraps.
+ */
+class PlaybackController(context: Context) {
+
+    private val appContext = context.applicationContext
+    private val _state = MutableStateFlow(PlaybackUiState())
+    val state: StateFlow<PlaybackUiState> = _state
+
+    private var controller: MediaController? = null
+    private var connecting = false
+    private val pending = ArrayDeque<(MediaController) -> Unit>()
+
+    private val listener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) = publish(player)
+        override fun onPlayerError(error: PlaybackException) {
+            _state.value = _state.value.copy(error = error.errorCodeName)
+        }
+    }
+
+    /** Connects to the service if not already; also lets the UI pick up a session that is already playing. */
+    fun connect() {
+        if (controller != null || connecting) return
+        connecting = true
+        val token = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
+        val future = MediaController.Builder(appContext, token).buildAsync()
+        future.addListener(
+            {
+                connecting = false
+                val connected = try {
+                    future.get()
+                } catch (e: Exception) {
+                    _state.value = _state.value.copy(error = e.javaClass.simpleName)
+                    pending.clear()
+                    return@addListener
+                }
+                controller = connected
+                connected.addListener(listener)
+                publish(connected)
+                while (pending.isNotEmpty()) pending.removeFirst()(connected)
+            },
+            ContextCompat.getMainExecutor(appContext),
+        )
+    }
+
+    private fun run(command: (MediaController) -> Unit) {
+        val c = controller
+        if (c != null) command(c) else {
+            pending.addLast(command)
+            connect()
+        }
+    }
+
+    /** Replaces the queue with [tracks] and starts at [startIndex]; the queue is not capped. */
+    fun play(tracks: List<TrackRow>, startIndex: Int = 0, shuffle: Boolean = false) =
+        playItems(tracks.map(MediaItems::of), startIndex, shuffle)
+
+    fun playItems(items: List<MediaItem>, startIndex: Int = 0, shuffle: Boolean = false) = run {
+        if (items.isEmpty()) return@run
+        it.setMediaItems(items, startIndex.coerceIn(0, items.lastIndex), 0)
+        it.shuffleModeEnabled = shuffle
+        it.prepare()
+        it.play()
+    }
+
+    /** Appends [tracks] to the end of the queue. */
+    fun enqueue(tracks: List<TrackRow>) = enqueueItems(tracks.map(MediaItems::of))
+
+    fun enqueueItems(items: List<MediaItem>) = run {
+        if (items.isEmpty()) return@run
+        val wasEmpty = it.mediaItemCount == 0
+        it.addMediaItems(items)
+        if (wasEmpty) {
+            it.prepare()
+            it.play()
+        }
+    }
+
+    /** Stops playback and empties the queue. */
+    fun stop() = run {
+        it.stop()
+        it.clearMediaItems()
+    }
+
+    fun playPause() = run { if (it.isPlaying) it.pause() else it.play() }
+    fun next() = run { it.seekToNextMediaItem() }
+    fun previous() = run { it.seekToPreviousMediaItem() }
+    fun seekTo(positionMs: Long) = run { it.seekTo(positionMs) }
+    fun skipTo(queueIndex: Int) = run { if (queueIndex in 0 until it.mediaItemCount) it.seekToDefaultPosition(queueIndex) }
+    fun removeFromQueue(queueIndex: Int) = run { if (queueIndex in 0 until it.mediaItemCount) it.removeMediaItem(queueIndex) }
+    fun moveInQueue(from: Int, to: Int) = run { if (from in 0 until it.mediaItemCount && to in 0 until it.mediaItemCount) it.moveMediaItem(from, to) }
+    fun setShuffle(enabled: Boolean) = run { it.shuffleModeEnabled = enabled }
+    fun setRepeatMode(@Player.RepeatMode mode: Int) = run { it.repeatMode = mode }
+    fun clearError() { _state.value = _state.value.copy(error = null) }
+
+    /** The playback position, for the seek bar, which polls it while visible. */
+    fun currentPositionMs(): Long = controller?.currentPosition ?: 0
+
+    /** Disconnects from the service (it keeps playing); call when the app process is going away. */
+    fun release() {
+        controller?.removeListener(listener)
+        controller?.release()
+        controller = null
+        pending.clear()
+        _state.value = PlaybackUiState()
+    }
+
+    private fun publish(player: Player) {
+        val item = player.currentMediaItem
+        val meta = item?.mediaMetadata
+        _state.value = PlaybackUiState(
+            connected = true,
+            isPlaying = player.isPlaying,
+            trackId = item?.mediaId?.let(MediaItems::trackId),
+            title = meta?.title?.toString().orEmpty(),
+            artist = meta?.artist?.toString().orEmpty(),
+            album = meta?.albumTitle?.toString().orEmpty(),
+            durationMs = player.duration.takeIf { it != androidx.media3.common.C.TIME_UNSET } ?: 0,
+            queueSize = player.mediaItemCount,
+            currentIndex = if (player.mediaItemCount == 0) -1 else player.currentMediaItemIndex,
+            shuffle = player.shuffleModeEnabled,
+            repeatMode = player.repeatMode,
+            error = _state.value.error,
+        )
+    }
+}
