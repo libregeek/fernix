@@ -13,8 +13,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Exercises the TagLib JNI bridge against real files in androidTest/assets.
- * Expected values below are those of the sample files; update them if the samples change.
+ * Exercises the TagLib JNI bridge against the sample files in androidTest/assets, which
+ * scripts/generate-test-fixtures.py writes. Expected values below are the ones it sets.
  */
 @RunWith(AndroidJUnit4::class)
 class TagReaderTest {
@@ -40,37 +40,38 @@ class TagReaderTest {
     @Test
     fun mp3_id3v24_multiValueArtistKeepsOrder() {
         val tags = read("sample.mp3")!!
-        assertEquals(listOf("K. J. Yesudas", "K. S. Chithra"), tags["ARTIST"])
-        assertEquals(listOf("Aadyamayi Kanda Naal"), tags["TITLE"])
-        assertEquals(listOf("Thooval Kottaram"), tags["ALBUM"])
+        assertEquals(listOf("Shared Artist", "Second Artist"), tags["ARTIST"])
+        assertEquals(listOf("Mp3 Song"), tags["TITLE"])
+        assertEquals(listOf("Mp3 Album"), tags["ALBUM"])
         assertEquals(listOf("1996"), tags["DATE"])
         assertEquals(listOf("Soundtrack"), tags["GENRE"])
-        assertEquals(listOf("Johnson"), tags["COMPOSER"])
-        assertEquals(listOf("Kaithapram Damodaran Namboothiri"), tags["LYRICIST"])
+        assertEquals(listOf("Mp3 Composer"), tags["COMPOSER"])
+        assertEquals(listOf("Mp3 Lyricist"), tags["LYRICIST"])
+        assertEquals(listOf("3/12"), tags["TRACKNUMBER"])
     }
 
     @Test
     fun ogg_vorbis_customTagsAndFixedFields() {
         val tags = read("sample.ogg")!!
-        assertEquals(listOf("Thechimandaram Thulassi"), tags["TITLE"])
-        assertEquals(listOf("Vinaya"), tags["ARTIST"])
-        assertEquals(listOf("Sandhyanamam Fusion"), tags["ALBUM"])
-        assertEquals(listOf("Sangeeth"), tags["COMPOSER"])
-        assertEquals(listOf("Vayalar Rama Varma"), tags["LYRICIST"])
-        assertEquals(listOf("Malayalam"), tags["LANGUAGE"])
-        assertEquals(listOf("j_IZASdcqGEKfJSb_k_PDYJyQBE-"), tags["MUSICBRAINZ_DISCID"])
+        assertEquals(listOf("Ogg Song"), tags["TITLE"])
+        assertEquals(listOf("Ogg Artist"), tags["ARTIST"])
+        assertEquals(listOf("Ogg Album"), tags["ALBUM"])
+        assertEquals(listOf("Ogg Composer"), tags["COMPOSER"])
+        assertEquals(listOf("Ogg Lyricist"), tags["LYRICIST"])
+        assertEquals(listOf("Testish"), tags["LANGUAGE"])
+        assertEquals(listOf("TestDiscId-0123456789"), tags["MUSICBRAINZ_DISCID"])
     }
 
     @Test
     fun flac_multiValueGenreAndCustomTags() {
         val tags = read("sample.flac")!!
         assertEquals(listOf("Asian Music", "Indian Music"), tags["GENRE"])
-        assertEquals(listOf("Ponnum Pathinettam"), tags["TITLE"])
-        assertEquals(listOf("K. J. Yesudas"), tags["ARTIST"])
+        assertEquals(listOf("Flac Song"), tags["TITLE"])
+        assertEquals(listOf("Shared Artist"), tags["ARTIST"])
         assertEquals(listOf("Various Artists"), tags["ALBUMARTIST"])
         assertEquals(listOf("2011-12-01"), tags["DATE"])
         assertEquals(listOf("111"), tags["BPM"])
-        assertEquals(listOf("INH100029230"), tags["ISRC"])
+        assertEquals(listOf("TEST00000001"), tags["ISRC"])
     }
 
     @Test

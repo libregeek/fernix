@@ -78,25 +78,25 @@ class ScanFixturesTest {
 
         assertEquals(ScanState.Finished(5), scanner.state.value)
         assertEquals(
-            setOf("Aadyamayi Kanda Naal", "Thechimandaram Thulassi", "Opus Song", "Ponnum Pathinettam", "Wav Song"),
+            setOf("Mp3 Song", "Ogg Song", "Opus Song", "Flac Song", "Wav Song"),
             column("SELECT title FROM tracks").toSet(),
         )
 
         val byName = column("SELECT displayName || '|' || artist FROM tracks").toSet()
         assertEquals(
             setOf(
-                "fernix-scan-sample.mp3|" + TagValues.join(listOf("K. J. Yesudas", "K. S. Chithra")),
-                "fernix-scan-sample.ogg|Vinaya",
+                "fernix-scan-sample.mp3|" + TagValues.join(listOf("Shared Artist", "Second Artist")),
+                "fernix-scan-sample.ogg|Ogg Artist",
                 "fernix-scan-sample.opus|Opus Artist",
-                "fernix-scan-sample.flac|K. J. Yesudas",
+                "fernix-scan-sample.flac|Shared Artist",
                 "fernix-scan-sample.wav|Wav Artist",
             ),
             byName,
         )
-        // K. J. Yesudas is credited on two tracks, as one person.
+        // Shared Artist is credited on two tracks, as one person.
         assertEquals(
             listOf("2"),
-            column("SELECT p.trackCount FROM people p JOIN tag_values v ON v.id = p.valueId WHERE v.value = 'K. J. Yesudas'"),
+            column("SELECT p.trackCount FROM people p JOIN tag_values v ON v.id = p.valueId WHERE v.value = 'Shared Artist'"),
         )
         assertEquals(listOf("external_primary/$folder"), column("SELECT DISTINCT f.path FROM tracks t JOIN folders f ON f.id = t.folderId"))
         // The FLAC's multi-value genre is two rows under one key.

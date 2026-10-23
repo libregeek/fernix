@@ -26,5 +26,3 @@ keystore.properties
 # Claude
 CLAUDE.md
 
-# Large local sample audio for instrumented tests
-app/src/androidTest/assets/sample.*

@@ -157,7 +157,7 @@ One constant in code: `ARTIST`, `ALBUMARTIST`, `AUTHOR`, `COMPOSER`, `LYRICIST`,
 | Column | Notes |
 |---|---|
 | `id` | PK, autogenerate. Also the Media3 `MediaItem.mediaId`, so the playing item maps back to its row. |
-| `mediaStoreId` | MediaStore `_ID`; unique index. The content URI is derived (`ContentUris.withAppendedId(EXTERNAL_CONTENT_URI, mediaStoreId)`), not stored. |
+| `mediaStoreId` | MediaStore `_ID`; unique index. The content URI is derived (`ContentUris.withAppendedId(EXTERNAL_CONTENT_URI, mediaStoreId)`), not stored. Verified on an API 29 emulator with an SD card: ids are unique across volumes and that URI resolves to the right file (`VolumeIdsTest`), so the id alone identifies a track. If that test ever fails on another Android version, key tracks by (volume, id). |
 | `folderId` | FK → `folders.id`; index |
 | `displayName` | File name |
 | `durationMs`, `dateModified`, `sizeBytes` | From MediaStore; used for change detection |
