@@ -29,6 +29,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -46,6 +53,8 @@ import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
 import io.github.libregeek.fernix.ui.nowplaying.NowPlayingScreen
 import io.github.libregeek.fernix.ui.queue.QueueScreen
+import io.github.libregeek.fernix.ui.settings.SettingsScreen
+import io.github.libregeek.fernix.ui.settings.SplitRulesScreen
 import io.github.libregeek.fernix.ui.trackdetails.TrackDetailScreen
 import io.github.libregeek.fernix.ui.people.PeopleScreen
 import io.github.libregeek.fernix.ui.people.PersonDetailScreen
@@ -66,6 +75,8 @@ private val Screen.label: Int
         Screen.NowPlaying -> R.string.now_playing
         Screen.Queue -> R.string.queue
         Screen.TrackDetail -> R.string.track_details
+        Screen.Settings -> R.string.settings
+        Screen.SplitRules -> R.string.settings_split_rules
         Screen.AlbumDetail -> R.string.tab_albums
         Screen.PersonDetail -> R.string.tab_people
         Screen.PlaylistDetail -> R.string.tab_playlists
@@ -82,6 +93,8 @@ private val Screen.icon: Int
         Screen.NowPlaying -> R.drawable.ic_play
         Screen.Queue -> R.drawable.ic_queue_music
         Screen.TrackDetail -> R.drawable.ic_info
+        Screen.Settings -> R.drawable.ic_more_vert
+        Screen.SplitRules -> R.drawable.ic_more_vert
         Screen.AlbumDetail -> R.drawable.ic_album
         Screen.PersonDetail -> R.drawable.ic_people
         Screen.PlaylistDetail -> R.drawable.ic_playlist
@@ -105,6 +118,11 @@ fun FernixAppUi(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        topBar = {
+            if (current.isTab) {
+                LibraryTopBar(stringResource(current.label), onSettings = { backStack.push(Screen.Settings) })
+            }
+        },
         bottomBar = {
             Column {
                 // A scan runs in the background; its progress shows on every screen, above the mini-player.
@@ -139,6 +157,27 @@ fun FernixAppUi(
                 onOpenQueue = { backStack.push(Screen.Queue) },
                 onOpenTrack = openTrack,
                 onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.Settings) {
+            SettingsScreen(
+                container.database,
+                container.settings,
+                scanning = scanState is ScanState.Running,
+                onRescan = onRescan,
+                onOpenSplitRules = { backStack.push(Screen.SplitRules) },
+                onBack = { backStack.pop() },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.SplitRules) {
+            SplitRulesScreen(
+                container.database,
+                container.tagSource,
+                onBack = { backStack.pop() },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -240,17 +279,25 @@ fun FernixAppUi(
             )
             return@Scaffold
         }
-        Box(
-            Modifier.fillMaxSize().padding(padding),
-            contentAlignment = Alignment.Center,
+    }
+}
+
+/** Title and overflow menu of the five library screens; the overflow menu leads to Settings (spec §9). */
+@Composable
+private fun LibraryTopBar(title: String, onSettings: () -> Unit) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Row(
+            Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).height(48.dp).padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Placeholder until each screen is built (Phase 5); the scan status and Rescan button
-            // move to the library top bar and Settings (Phases 5 and 8).
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(current.label), style = MaterialTheme.typography.titleLarge)
-                Text(scanState.describe(), style = MaterialTheme.typography.bodyMedium)
-                Button(onClick = onRescan, enabled = scanState !is ScanState.Running) {
-                    Text(stringResource(R.string.rescan))
+            Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Box {
+                IconButton(onClick = { open = true }) {
+                    Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_options))
+                }
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.settings)) }, onClick = { open = false; onSettings() })
                 }
             }
         }

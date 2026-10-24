@@ -12,6 +12,7 @@ import io.github.libregeek.fernix.tags.PeopleTags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -59,9 +60,16 @@ class NowPlayingViewModel(
         if (id == null) flowOf(false) else db.playlistDao().isFavourite(id)
     }
 
-    private val lines: Flow<List<TagLine>> = trackId.flatMapLatest { id ->
+    /** The slot keys; re-read when the screen opens, since Settings may have changed them. */
+    private val slotKeys = MutableStateFlow(settings.nowPlayingSlots)
+
+    fun reloadSlots() {
+        slotKeys.value = settings.nowPlayingSlots
+    }
+
+    private val lines: Flow<List<TagLine>> = combine(trackId, slotKeys, ::Pair).flatMapLatest { (id, keys) ->
         if (id == null) return@flatMapLatest flowOf(emptyList())
-        val slots = settings.nowPlayingSlots.filter { it.isNotEmpty() }
+        val slots = keys.filter { it.isNotEmpty() }
         if (slots.isEmpty()) return@flatMapLatest flowOf(emptyList())
         flow { emit(db.tagDao().slotKeyIds(slots, includePerformer = PERFORMER in slots)) }
             .flatMapLatest { keyIds ->

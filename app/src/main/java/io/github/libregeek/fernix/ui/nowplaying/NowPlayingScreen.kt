@@ -68,6 +68,7 @@ fun NowPlayingScreen(
         factory = viewModelFactory { initializer { NowPlayingViewModel(db, settings, playback) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.reloadSlots() }
     val player by playback.state.collectAsStateWithLifecycle()
     val track = state.track
     var showEqualizer by rememberSaveable { mutableStateOf(false) }

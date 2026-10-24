@@ -15,6 +15,8 @@ enum class Screen(val isTab: Boolean) {
     Queue(false),
     /** Takes `tracks.id` as its argument. */
     TrackDetail(false),
+    Settings(false),
+    SplitRules(false),
     /** Takes the album id as its argument. */
     AlbumDetail(false),
     /** Takes the person's `tag_values.id` as its argument. */

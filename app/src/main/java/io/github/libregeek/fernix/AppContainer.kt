@@ -54,8 +54,11 @@ class AppContainer(context: Context) {
     /** Outlives activities, so a scan keeps going across rotation and screen changes. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /** Reads a file's tags by MediaStore id: for scans and for undoing a split rule. */
+    val tagSource: MediaStoreTagSource by lazy { MediaStoreTagSource(appContext) }
+
     val scanner: LibraryScanner by lazy {
-        LibraryScanner(database, MediaStoreSource(appContext), MediaStoreTagSource(appContext))
+        LibraryScanner(database, MediaStoreSource(appContext), tagSource)
     }
 
     /**

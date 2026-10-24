@@ -225,6 +225,20 @@ interface SplitRuleDao {
     @Query("SELECT * FROM split_rules WHERE keyId = :keyId AND value = :value")
     suspend fun find(keyId: Long, value: String): SplitRuleEntity?
 
+    /** Rules by id with their key name, paged (Settings). Start with `afterId = 0`. */
+    @Query(
+        "SELECT r.id AS id, k.`key` AS `key`, r.value AS value, r.parts AS parts FROM split_rules r " +
+            "JOIN tag_keys k ON k.id = r.keyId WHERE r.id > :afterId ORDER BY r.id LIMIT :limit",
+    )
+    suspend fun pageWithKeys(afterId: Long, limit: Int): List<SplitRuleRow>
+
+    /** The tracks a rule was applied to, to read their files again when it is deleted. */
+    @Query("SELECT trackId FROM split_rule_tracks WHERE ruleId = :ruleId ORDER BY trackId")
+    suspend fun trackIds(ruleId: Long): List<Long>
+
+    @Query("SELECT COUNT(*) FROM split_rule_tracks WHERE ruleId = :ruleId")
+    suspend fun trackCount(ruleId: Long): Int
+
     /** Every rule with its key name; loaded once per scan to split values as files are ingested. */
     @Query("SELECT r.id AS id, k.`key` AS `key`, r.value AS value, r.parts AS parts FROM split_rules r JOIN tag_keys k ON k.id = r.keyId")
     suspend fun allWithKeys(): List<SplitRuleRow>

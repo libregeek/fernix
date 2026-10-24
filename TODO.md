@@ -124,10 +124,10 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 
 ## Phase 8 — Settings
 
-- [ ] Settings screen reached from the library top-bar overflow menu
+- [x] Settings screen reached from the library top-bar overflow menu (a title bar with a ⋮ menu on the five library screens; Settings has Rescan, the Now Playing tags and the split rules)
 - [ ] Library folders: change scope with the chooser; confirm before narrowing (count of tracks and playlist entries removed) [§6, §9]
-- [ ] Now Playing tag slots: set / clear / restore defaults (any `tag_keys` except `TITLE`, `ALBUM`, `DATE`)
-- [ ] Split rules list (paged); delete re-reads affected files to undo the split
+- [x] Now Playing tag slots: set / clear / restore defaults (any `tag_keys` except `TITLE`, `ALBUM`, `DATE`)
+- [x] Split rules list (paged); delete re-reads affected files to undo the split
 
 ## Phase 9 — Hardening & release
 
