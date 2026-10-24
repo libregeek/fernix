@@ -187,7 +187,21 @@ def main() -> None:
         )
         (tmp / "tagged.wav").replace(wav)
 
-        for path in (mp3, ogg, flac, opus, wav):
+        # Hi-res sources for the audio-path test: 24-bit FLAC at 96 kHz and 24-bit WAV at 44.1 kHz, both stereo.
+        hires_flac = tmp / "hires24.flac"
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1:sample_rate=96000",
+             "-ac", "2", "-sample_fmt", "s32", "-c:a", "flac", "-bits_per_raw_sample", "24", "-map_metadata", "-1", str(hires_flac)],
+            check=True,
+        )
+        hires_wav = tmp / "hires24.wav"
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1:sample_rate=44100",
+             "-ac", "2", "-c:a", "pcm_s24le", "-map_metadata", "-1", str(hires_wav)],
+            check=True,
+        )
+
+        for path in (mp3, ogg, flac, opus, wav, hires_flac, hires_wav):
             (OUT / path.name).write_bytes(path.read_bytes())
             print(f"{path.name}: {path.stat().st_size} bytes")
         art_fixtures(OUT, OUT)

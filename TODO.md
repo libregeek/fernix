@@ -174,7 +174,7 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 - [ ] Process-death / config-change handling in all ViewModels
 - [ ] Error handling: unreadable files, files removed mid-scan, permission revoked
 - [ ] Performance pass on large library (startup, first-scan time, scroll, memory)
-- [ ] Audio-path check: output is unchanged from the source (no resampling, downmix or bit-depth reduction; equalizer off adds nothing); verify before and after every performance change [§8]
+- [ ] Audio-path check: output is unchanged from the source (no resampling, downmix or bit-depth reduction; equalizer off adds nothing); verify before and after every performance change [§8] — `AudioPathTest` (10 tests) added with `PlayerFactory`: rates, channels and 16-bit depth reach the `AudioTrack` unchanged for WAV, FLAC, MP3, Ogg, Opus and 96 kHz FLAC, the equalizer is off by default, and the player has no speed/silence/volume changes. **Found: 24-bit sources are reduced to 16-bit by ExoPlayer's defaults**; the fix (float output) needs the maintainer's approval, test `hiRes24Bit_isNotReducedTo16Bit` is `@Ignore`d until then
 - [ ] Accessibility: content descriptions, touch targets, font scaling
 - [x] `./gradlew lint` clean: "No issues found" (2026-10-24; the last two warnings were newer-version notices, cleared by bumping Gradle to 9.8.2 and the Kotlin/Compose plugin to 2.4.21 with the maintainer's approval)
 - [ ] Test matrix on AOSP emulator, API 29 and latest API

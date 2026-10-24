@@ -4,7 +4,6 @@ package io.github.libregeek.fernix.playback
 import android.app.PendingIntent
 import android.content.Intent
 import android.media.AudioManager
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -28,18 +27,7 @@ class PlaybackService : MediaSessionService() {
     @OptIn(markerClass = [UnstableApi::class])
     override fun onCreate() {
         super.onCreate()
-        val player = ExoPlayer.Builder(this)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                /* handleAudioFocus = */ true,
-            )
-            .setHandleAudioBecomingNoisy(true)
-            // CPU wake lock only; no Wi-Fi lock since nothing is streamed.
-            .setWakeMode(C.WAKE_MODE_LOCAL)
-            .build()
+        val player = PlayerFactory.create(this)
         // A fixed session id (instead of the one ExoPlayer picks) keeps the equalizer attached.
         val audioSessionId = getSystemService(AudioManager::class.java).generateAudioSessionId()
         player.audioSessionId = audioSessionId
