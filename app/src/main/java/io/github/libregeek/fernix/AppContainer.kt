@@ -2,6 +2,9 @@
 package io.github.libregeek.fernix
 
 import android.content.Context
+import io.github.libregeek.fernix.ui.permission.StoragePermission
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import android.os.ParcelFileDescriptor
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -71,6 +74,7 @@ class AppContainer(context: Context) {
         LibraryScanner(database, mediaSource, tagSource)
     }
 
+
     /**
      * Saves a new scan scope and scans with it (spec/architecture.md §6): a wider one adds tracks, a
      * narrower one deletes the tracks outside it and, through the playlists' cascade, their entries.
@@ -89,6 +93,8 @@ class AppContainer(context: Context) {
     fun startScan() {
         val scope = settings.scanScope ?: return
         if (scanner.state.value is ScanState.Running) return
+        // Without the audio permission MediaStore answers with nothing: don't scan (and so don't look like an empty library).
+        if (ContextCompat.checkSelfPermission(appContext, StoragePermission.permission) != PackageManager.PERMISSION_GRANTED) return
         appScope.launch {
             settings.scanCompleted = false
             scanner.scan(scope)

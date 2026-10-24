@@ -67,6 +67,10 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
                     val entity = trackEntity(op.media, fields, existing ?: 0).copy(
                         playCount = previous?.playCount ?: 0,
                         lastPlayedAt = previous?.lastPlayedAt,
+                        // A file that could not be read is kept (untagged) but marked as never seen, so the
+                        // next scan reads it again: the failure may have been a moment's, and a file that
+                        // is really gone is then removed by the diff.
+                        dateModified = if (op.rawTags == null) 0 else op.media.dateModified,
                     )
                     val trackId = if (existing != null) existing.also { tracks.update(entity) } else tracks.insert(entity)
                     for ((key, values) in normalized) {
@@ -94,7 +98,8 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
         dateModified = media.dateModified,
         sizeBytes = media.sizeBytes,
         dateAdded = media.dateAdded,
-        title = fields.title,
+        // A file with no title tag is listed by its file name, without the extension, rather than as a blank.
+        title = fields.title.ifEmpty { media.displayName.substringBeforeLast('.') },
         album = fields.album,
         date = fields.date,
         artist = fields.artist,

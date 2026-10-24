@@ -50,7 +50,7 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadProperties(JNIEnv *env,
     }
 
     TagLib::PropertyMap properties;
-    {
+    try {
         // FileRef does not own the stream; it must be destroyed first.
         const TagLib::FileRef ref(stream.get(), false);
         if (ref.isNull()) {
@@ -58,6 +58,10 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadProperties(JNIEnv *env,
             return nullptr;
         }
         properties = ref.properties();
+    } catch (...) {
+        // A corrupt file must never take the scan (or the app) down with it: it is just unreadable.
+        __android_log_print(ANDROID_LOG_WARN, kLogTag, "Exception while reading properties");
+        return nullptr;
     }
 
     std::vector<std::pair<TagLib::String, TagLib::String>> pairs;
@@ -96,13 +100,16 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadPictures(JNIEnv *env, j
     }
 
     TagLib::List<TagLib::VariantMap> pictures;
-    {
+    try {
         const TagLib::FileRef ref(stream.get(), false);
         if (ref.isNull()) {
             __android_log_print(ANDROID_LOG_WARN, kLogTag, "Unsupported or unreadable file");
             return nullptr;
         }
         pictures = ref.complexProperties("PICTURE");
+    } catch (...) {
+        __android_log_print(ANDROID_LOG_WARN, kLogTag, "Exception while reading pictures");
+        return nullptr;
     }
 
     jclass objectClass = env->FindClass("java/lang/Object");
@@ -144,7 +151,7 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadAudioProperties(JNIEnv 
     }
 
     jint values[5];
-    {
+    try {
         const TagLib::FileRef ref(stream.get(), true, TagLib::AudioProperties::Average);
         if (ref.isNull() || ref.audioProperties() == nullptr) {
             __android_log_print(ANDROID_LOG_WARN, kLogTag, "No audio properties");
@@ -165,6 +172,9 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadAudioProperties(JNIEnv 
         values[2] = properties->sampleRate();
         values[3] = properties->channels();
         values[4] = bits;
+    } catch (...) {
+        __android_log_print(ANDROID_LOG_WARN, kLogTag, "Exception while reading audio properties");
+        return nullptr;
     }
 
     jintArray result = env->NewIntArray(5);

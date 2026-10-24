@@ -16,7 +16,8 @@ sealed interface ScanState {
     /** [processed] files (new, changed or removed) committed so far. */
     data class Running(val processed: Int) : ScanState
 
-    data class Finished(val processed: Int) : ScanState
+    /** [unreadable] files could not be read this time; they are kept untagged and tried again at the next scan. */
+    data class Finished(val processed: Int, val unreadable: Int = 0) : ScanState
 
     data class Failed(val message: String) : ScanState
 }
@@ -39,14 +40,22 @@ class LibraryScanner(
     suspend fun scan(scope: ScanScope) {
         if (!claim()) return
         try {
+            unreadable = 0
             val processed = withContext(Dispatchers.IO) { run(scope) }
-            _state.value = ScanState.Finished(processed)
+            _state.value = ScanState.Finished(processed, unreadable)
         } catch (e: CancellationException) {
             _state.value = ScanState.Idle
             throw e
         } catch (e: Exception) {
             _state.value = ScanState.Failed(e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    private var unreadable = 0
+
+    /** Back to idle, e.g. when the user dismisses a failure message. */
+    fun clearFailure() {
+        if (_state.value is ScanState.Failed) _state.value = ScanState.Idle
     }
 
     @Synchronized
@@ -75,8 +84,8 @@ class LibraryScanner(
                 ScanDiff.walk(mediaRows, storedRows, scope, mounted) { event ->
                     coroutineContext.ensureActive()
                     pending += when (event) {
-                        is DiffEvent.New -> LibraryOp.Upsert(event.media, tags.read(event.media.mediaStoreId))
-                        is DiffEvent.Changed -> LibraryOp.Upsert(event.media, tags.read(event.media.mediaStoreId))
+                        is DiffEvent.New -> upsert(event.media)
+                        is DiffEvent.Changed -> upsert(event.media)
                         is DiffEvent.Vanished -> LibraryOp.Remove(event.mediaStoreId)
                         is DiffEvent.DateAdded -> LibraryOp.SetDateAdded(event.mediaStoreId, event.dateAdded)
                     }
@@ -87,6 +96,13 @@ class LibraryScanner(
         flush()
         cleanUp()
         return processed
+    }
+
+    /** Reads the file's tags; a file that cannot be read is counted and stored untagged (see [LibraryWriter]). */
+    private fun upsert(media: MediaRow): LibraryOp.Upsert {
+        val raw = tags.read(media.mediaStoreId)
+        if (raw == null) unreadable++
+        return LibraryOp.Upsert(media, raw)
     }
 
     /** Spec §6.5: unused folders (bottom-up), albums and tag values. */

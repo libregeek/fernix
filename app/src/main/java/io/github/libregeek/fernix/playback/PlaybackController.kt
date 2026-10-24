@@ -31,6 +31,8 @@ data class PlaybackUiState(
     val shuffle: Boolean = false,
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val error: String? = null,
+    /** Counts the errors, so the UI can tell a new one from one it has shown already. */
+    val errorCount: Int = 0,
 )
 
 /** One entry of the play queue, as the Queue screen shows it. [index] is its position in the queue. */
@@ -69,7 +71,7 @@ class PlaybackController(context: Context) {
             if (events.contains(Player.EVENT_TIMELINE_CHANGED)) publishQueue(player)
         }
         override fun onPlayerError(error: PlaybackException) {
-            _state.value = _state.value.copy(error = error.errorCodeName)
+            _state.value = _state.value.copy(error = error.errorCodeName, errorCount = _state.value.errorCount + 1)
         }
     }
 
@@ -213,6 +215,7 @@ class PlaybackController(context: Context) {
             shuffle = player.shuffleModeEnabled,
             repeatMode = player.repeatMode,
             error = _state.value.error,
+            errorCount = _state.value.errorCount,
         )
     }
 }

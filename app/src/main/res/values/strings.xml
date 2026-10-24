@@ -172,7 +172,14 @@
         <item quantity="one">Scan finished (%1$d file changed)</item>
         <item quantity="other">Scan finished (%1$d files changed)</item>
     </plurals>
-    <string name="scan_failed">Scan failed: %1$s</string>
+    <string name="scan_failed">Scan stopped: %1$s</string>
+    <string name="scan_retry">Retry</string>
+    <string name="scan_dismiss">Dismiss</string>
+    <plurals name="scan_unreadable">
+        <item quantity="one">%d file could not be read. It stays in your library without tags and is tried again at the next scan.</item>
+        <item quantity="other">%d files could not be read. They stay in your library without tags and are tried again at the next scan.</item>
+    </plurals>
+    <string name="playback_error">Couldn\'t play that file</string>
     <string name="chooser_title">Choose folders to index</string>
     <string name="chooser_empty">No audio files found on this device.</string>
     <string name="chooser_cancel">Back</string>

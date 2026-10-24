@@ -269,6 +269,12 @@ The scope is stored in `SharedPreferences`: `scan_scope` (`all` or `selected`) a
 4. **Persist** — values are normalised, then each batch of ~500 tracks is written in one Room transaction (`folders`, `albums`, `tracks`, `tag_keys`, `tag_values`, `track_tags`, `key_values`, `people`). A re-parsed track has its `track_tags` rows replaced and keeps its `playCount` and `lastPlayedAt`. Key and value ids and the split rules are cached in memory for the duration of the scan.
 5. **Clean up** — after the scan, unused folders, albums and tag values are deleted.
 
+**Errors (2026-10-24).** A bad file or a bad moment never costs the library or stops the scan:
+- **Unreadable file** (damaged, gone before it was read, not openable): the track is stored without tags, listed by its file name, and marked as never seen (`dateModified = 0`), so the next scan reads it again; one that is really gone is then removed by the diff. The scan counts them, and Settings says how many ("N files could not be read; tried again at the next scan"). The native readers catch every TagLib exception, so a corrupt file returns "unreadable" instead of crashing the process (`CorruptFilesTest` cuts and damages every sample format).
+- **MediaStore cannot answer** (a null cursor, a `SecurityException`, e.g. access revoked): the scan fails with a message and Retry / Dismiss in a bar above the mini-player. It is never read as "no files", which would delete every stored track.
+- **No storage permission:** no scan is started; the app shows the permission screen (§9) and re-checks when it is resumed. Revoking the permission in system settings ends the process, and the library in the database is untouched.
+- **Unmounted volume:** see above; the tracks stay.
+
 Each committed batch is final, so an interrupted scan resumes where it stopped on the next run (the diff skips what is already stored). The library is usable while a scan runs, and the UI shows progress. Scanning runs on `Dispatchers.IO` and never blocks the UI.
 
 ---
@@ -311,6 +317,7 @@ A person's image is an embedded picture whose type is a role: Lead artist (7), A
 
 - `MediaSessionService` hosts a single ExoPlayer instance and runs independently of the UI lifecycle; the UI connects via `MediaController`.
 - Only core and session Media3 modules are included (see §2).
+- **A file that cannot be played** (gone, unreadable, damaged) is skipped: the service moves to the next item and keeps playing (`SkipOnError`), and the UI shows a short message. When every item in the queue has failed in a row (the storage went away, or repeat-all would loop for ever) it stops.
 - Gapless playback uses ExoPlayer's built-in support (MP3 LAME/iTunes gapless info, Ogg, FLAC).
 - **Sound quality is never traded for performance or size.** Playback must stay bit-perfect with the source except for what the user chooses:
   - No resampling, downmixing, bit-depth reduction or lower-quality decoder settings to save CPU, memory or battery; ExoPlayer's decoders and audio sink run with their default (full-quality) settings, and any change to them needs the user's approval.

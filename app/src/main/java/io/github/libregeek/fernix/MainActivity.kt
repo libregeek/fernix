@@ -2,6 +2,9 @@
 package io.github.libregeek.fernix
 
 import android.os.Bundle
+import io.github.libregeek.fernix.R
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
@@ -55,6 +58,11 @@ class MainActivity : ComponentActivity() {
                         val scanState by container.scanner.state.collectAsStateWithLifecycle()
                         val playback by container.playback.state.collectAsStateWithLifecycle()
                         NotificationPermissionEffect(container.settings, playback.isPlaying)
+                        // The player has already moved on to the next file; say why the last one stopped.
+                        val context = LocalContext.current
+                        LaunchedEffect(playback.errorCount) {
+                            if (playback.errorCount > 0) Toast.makeText(context, R.string.playback_error, Toast.LENGTH_SHORT).show()
+                        }
                         FernixAppUi(
                             container = container,
                             scanState = scanState,

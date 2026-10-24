@@ -19,9 +19,14 @@ class LibraryScannerTest {
     private class FakeMedia : MediaSource {
         var mounted = setOf("external_primary")
         val rows = sortedMapOf<Long, MediaRow>()
+        var failing = false
         override fun mountedVolumes() = mounted
         override fun folders(volumes: Set<String>) = rows.values.map { it.folderPath }.toSet()
-        override fun query(volumes: Set<String>) = object : MediaRowIterator {
+        override fun query(volumes: Set<String>): MediaRowIterator {
+            if (failing) throw java.io.IOException("MediaStore did not answer")
+            return rows(volumes)
+        }
+        private fun rows(volumes: Set<String>) = object : MediaRowIterator {
             private val it = rows.values.filter { ScanScope.volumeOf(it.folderPath) in volumes }.iterator()
             override fun hasNext() = it.hasNext()
             override fun next() = it.next()
@@ -104,6 +109,57 @@ class LibraryScannerTest {
         assertEquals(3L, count("folders"))
         // Only X and Cy are still used; Ann and Bob were cleaned up.
         assertEquals(2L, count("tag_values"))
+    }
+
+    @Test
+    fun anUnreadableFile_isKeptUntagged_andReadAgainAtTheNextScan() = runBlocking {
+        add(1, t = arrayOf("TITLE" to listOf("Good")))
+        add(2, t = arrayOf("TITLE" to listOf("Bad later")))
+        tags.tags.remove(2) // the file cannot be read this time
+        val first = scanner()
+        first.scan(ScanScope.All)
+        assertEquals(ScanState.Finished(2, unreadable = 1), first.state.value)
+        assertEquals(2L, count("tracks"))
+
+        tags.tags[2] = mapOf("TITLE" to listOf("Bad later"))
+        val readsBefore = tags.reads
+        val second = scanner()
+        second.scan(ScanScope.All)
+
+        // Only the unreadable one is read again, and now it has its title.
+        assertEquals(1, tags.reads - readsBefore)
+        assertEquals(ScanState.Finished(1, unreadable = 0), second.state.value)
+        assertEquals(1L, db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM tracks WHERE title = 'Bad later'").use { it.moveToFirst(); it.getLong(0) })
+    }
+
+    @Test
+    fun aFileRemovedBeforeItIsRead_isRemovedByTheNextScan() = runBlocking {
+        add(1, t = arrayOf("TITLE" to listOf("Here")))
+        add(2, t = arrayOf("TITLE" to listOf("Gone")))
+        tags.tags.remove(2)
+        scanner().scan(ScanScope.All)
+        assertEquals(2L, count("tracks"))
+
+        media.rows.remove(2) // it really is gone
+        scanner().scan(ScanScope.All)
+
+        assertEquals(1L, count("tracks"))
+    }
+
+    @Test
+    fun aFailedMediaStoreQuery_failsTheScan_andLeavesTheLibraryAlone() = runBlocking {
+        add(1, t = arrayOf("TITLE" to listOf("A")))
+        add(2, t = arrayOf("TITLE" to listOf("B")))
+        scanner().scan(ScanScope.All)
+
+        media.failing = true // e.g. access revoked
+        val failed = scanner()
+        failed.scan(ScanScope.All)
+
+        assertTrue(failed.state.value is ScanState.Failed)
+        assertEquals(2L, count("tracks"))
+        failed.clearFailure()
+        assertEquals(ScanState.Idle, failed.state.value)
     }
 
     @Test

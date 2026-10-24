@@ -25,6 +25,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -134,6 +135,7 @@ fun FernixAppUi(
             Column {
                 // A scan runs in the background; its progress shows on every screen, above the mini-player.
                 if (scanState is ScanState.Running) ScanProgress(scanState)
+                if (scanState is ScanState.Failed) ScanFailure(scanState.message, onRetry = onRescan, onDismiss = container.scanner::clearFailure)
                 if (current != Screen.NowPlaying) {
                     val miniPlayer: MiniPlayerViewModel = viewModel(
                         factory = viewModelFactory { initializer { MiniPlayerViewModel(container.database, container.playback) } },
@@ -178,6 +180,7 @@ fun FernixAppUi(
                 container.database,
                 container.settings,
                 scanning = scanState is ScanState.Running,
+                unreadable = (scanState as? ScanState.Finished)?.unreadable ?: 0,
                 onRescan = onRescan,
                 onChangeFolders = { backStack.push(Screen.LibraryFolders) },
                 onBack = { backStack.pop() },
@@ -299,6 +302,23 @@ fun FernixAppUi(
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
+        }
+    }
+}
+
+/** A scan that stopped (MediaStore did not answer, access was revoked, ...): what happened, with Retry and Dismiss. Nothing was lost. */
+@Composable
+private fun ScanFailure(message: String, onRetry: () -> Unit, onDismiss: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.scan_failed, message),
+                modifier = Modifier.weight(1f).padding(vertical = 6.dp),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 2,
+            )
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.scan_retry)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.scan_dismiss)) }
         }
     }
 }

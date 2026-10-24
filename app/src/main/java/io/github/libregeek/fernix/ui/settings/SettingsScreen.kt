@@ -52,6 +52,7 @@ fun SettingsScreen(
     db: FernixDatabase,
     settings: Settings,
     scanning: Boolean,
+    unreadable: Int,
     onRescan: () -> Unit,
     onChangeFolders: () -> Unit,
     onBack: () -> Unit,
@@ -84,6 +85,13 @@ fun SettingsScreen(
             OutlinedButton(onClick = onChangeFolders, enabled = !scanning) { Text(stringResource(R.string.settings_change_folders)) }
             Text(stringResource(R.string.settings_rescan_detail), style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onRescan, enabled = !scanning) { Text(stringResource(R.string.rescan)) }
+            if (unreadable > 0) {
+                Text(
+                    pluralStringResource(R.plurals.scan_unreadable, unreadable, unreadable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         Section(stringResource(R.string.settings_appearance)) {

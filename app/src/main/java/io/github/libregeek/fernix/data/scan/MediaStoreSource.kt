@@ -5,6 +5,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
 import android.provider.MediaStore
+import java.io.IOException
 
 /** Closeable stream of [MediaRow]s ordered by `mediaStoreId`. */
 interface MediaRowIterator : Iterator<MediaRow>, AutoCloseable
@@ -47,7 +48,9 @@ class MediaStoreSource(context: Context) : MediaSource {
             names.toTypedArray(),
             "${MediaStore.Audio.Media._ID} ASC",
         )
-        return MediaRows(cursor)
+        // A null cursor means MediaStore could not answer (e.g. access was revoked). Treating it as "no
+        // files" would make the scan remove every stored track, so it is an error and nothing is touched.
+        return MediaRows(cursor ?: throw IOException("MediaStore did not answer"))
     }
 
     /**
@@ -75,7 +78,7 @@ class MediaStoreSource(context: Context) : MediaSource {
         return result
     }
 
-    /** Iterates a MediaStore cursor as [MediaRow]s. A null cursor (query failed) is empty. */
+    /** Iterates a MediaStore cursor as [MediaRow]s; a null cursor is no volumes at all (empty). */
     class MediaRows(private val cursor: Cursor?) : MediaRowIterator {
         private val id = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media._ID) ?: -1
         private val size = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE) ?: -1
