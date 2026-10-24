@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewmodel.initializer
@@ -327,8 +328,8 @@ private fun ScanProgress(state: ScanState.Running) {
 @Composable
 private fun ScanState.describe(): String = when (this) {
     ScanState.Idle -> stringResource(R.string.scan_idle)
-    is ScanState.Running -> stringResource(R.string.scan_running, processed)
-    is ScanState.Finished -> stringResource(R.string.scan_finished, processed)
+    is ScanState.Running -> pluralStringResource(R.plurals.scan_running, processed, processed)
+    is ScanState.Finished -> pluralStringResource(R.plurals.scan_finished, processed, processed)
     is ScanState.Failed -> stringResource(R.string.scan_failed, message)
 }
 

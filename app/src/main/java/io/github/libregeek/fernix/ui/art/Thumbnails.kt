@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 
@@ -35,9 +37,9 @@ object Thumbnails {
         val width = max(1, (decoded.width * minOf(scale, 1f)).toInt())
         val height = max(1, (decoded.height * minOf(scale, 1f)).toInt())
         val scaled = if (width == decoded.width && height == decoded.height) decoded
-        else Bitmap.createScaledBitmap(decoded, width, height, true)
+        else decoded.scale(width, height)
 
-        val flat = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val flat = createBitmap(width, height)
         Canvas(flat).apply {
             drawColor(Color.WHITE)
             drawBitmap(scaled, 0f, 0f, null)

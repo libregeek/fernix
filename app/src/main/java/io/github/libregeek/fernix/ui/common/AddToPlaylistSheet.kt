@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -68,6 +69,7 @@ fun AddToPlaylistSheet(db: FernixDatabase, tracks: suspend () -> List<TrackRow>,
     var name by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val favouritesName = stringResource(R.string.playlist_favourites)
 
     LaunchedEffect(Unit) {
@@ -82,7 +84,7 @@ fun AddToPlaylistSheet(db: FernixDatabase, tracks: suspend () -> List<TrackRow>,
             withContext(Dispatchers.IO) {
                 db.playlistDao().append(playlistId, rows.map { it.id }, System.currentTimeMillis())
             }
-            Toast.makeText(context, context.getString(R.string.added_to_playlist, playlistName), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, resources.getString(R.string.added_to_playlist, playlistName), Toast.LENGTH_SHORT).show()
             onDone()
         }
     }

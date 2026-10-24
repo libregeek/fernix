@@ -3,6 +3,7 @@ package io.github.libregeek.fernix.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import io.github.libregeek.fernix.data.scan.ScanScope
 import io.github.libregeek.fernix.tags.TagValues
 
@@ -23,11 +24,11 @@ class Settings(context: Context) {
         set(value) {
             require(value.size == SLOT_COUNT) { "Expected $SLOT_COUNT slots" }
             require(value.none { it in FIXED_KEYS }) { "TITLE, ALBUM and DATE can't be slots" }
-            prefs.edit().putString(KEY_NOW_PLAYING_SLOTS, TagValues.join(value)).apply()
+            prefs.edit { putString(KEY_NOW_PLAYING_SLOTS, TagValues.join(value)) }
         }
 
     fun resetNowPlayingSlots() {
-        prefs.edit().remove(KEY_NOW_PLAYING_SLOTS).apply()
+        prefs.edit { remove(KEY_NOW_PLAYING_SLOTS) }
     }
 
     /**
@@ -37,7 +38,7 @@ class Settings(context: Context) {
     var splitDelimiters: List<String>
         get() = prefs.getString(KEY_SPLIT_DELIMITERS, null)?.let(TagValues::split) ?: DEFAULT_SPLIT_DELIMITERS
         set(value) {
-            prefs.edit().putString(KEY_SPLIT_DELIMITERS, TagValues.join(value)).apply()
+            prefs.edit { putString(KEY_SPLIT_DELIMITERS, TagValues.join(value)) }
         }
 
     /**
@@ -51,14 +52,14 @@ class Settings(context: Context) {
             else -> null
         }
         set(value) {
-            prefs.edit().apply {
+            prefs.edit {
                 when (value) {
                     null -> remove(KEY_SCAN_SCOPE).remove(KEY_SCAN_FOLDERS)
                     ScanScope.All -> putString(KEY_SCAN_SCOPE, SCOPE_ALL).remove(KEY_SCAN_FOLDERS)
                     is ScanScope.Selected -> putString(KEY_SCAN_SCOPE, SCOPE_SELECTED)
                         .putStringSet(KEY_SCAN_FOLDERS, value.folders.toSet())
                 }
-            }.apply()
+            }
         }
 
     /**
@@ -68,30 +69,30 @@ class Settings(context: Context) {
     var storagePermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_STORAGE_ASKED, false)
         set(value) {
-            prefs.edit().putBoolean(KEY_STORAGE_ASKED, value).apply()
+            prefs.edit { putBoolean(KEY_STORAGE_ASKED, value) }
         }
 
     /** Whether the equalizer is switched on. */
     var equalizerEnabled: Boolean
         get() = prefs.getBoolean(KEY_EQ_ENABLED, false)
         set(value) {
-            prefs.edit().putBoolean(KEY_EQ_ENABLED, value).apply()
+            prefs.edit { putBoolean(KEY_EQ_ENABLED, value) }
         }
 
     /** Band levels in millibels, lowest band first; null until the user changes them. */
     var equalizerLevels: List<Int>?
         get() = prefs.getString(KEY_EQ_LEVELS, null)?.let { s -> s.split(',').mapNotNull { it.toIntOrNull() } }
         set(value) {
-            prefs.edit().apply {
+            prefs.edit {
                 if (value == null) remove(KEY_EQ_LEVELS) else putString(KEY_EQ_LEVELS, value.joinToString(","))
-            }.apply()
+            }
         }
 
     /** Whether the notification permission (Android 13+) has been requested; asked once, not nagged. */
     var notificationPermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false)
         set(value) {
-            prefs.edit().putBoolean(KEY_NOTIFICATION_ASKED, value).apply()
+            prefs.edit { putBoolean(KEY_NOTIFICATION_ASKED, value) }
         }
 
     /**
@@ -101,7 +102,7 @@ class Settings(context: Context) {
     var scanCompleted: Boolean
         get() = prefs.getBoolean(KEY_SCAN_COMPLETED, false)
         set(value) {
-            prefs.edit().putBoolean(KEY_SCAN_COMPLETED, value).apply()
+            prefs.edit { putBoolean(KEY_SCAN_COMPLETED, value) }
         }
 
     private fun List<String>.padEnd(size: Int): List<String> =

@@ -306,7 +306,7 @@ private fun Technical(audio: AudioProperties, format: String?) {
             when (audio.channels) {
                 1 -> stringResource(R.string.details_channels_mono)
                 2 -> stringResource(R.string.details_channels_stereo)
-                else -> stringResource(R.string.details_channels_n, audio.channels)
+                else -> pluralStringResource(R.plurals.details_channels_n, audio.channels, audio.channels)
             },
         )
     }

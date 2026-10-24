@@ -68,11 +68,11 @@ fun TracksScreen(
     db: FernixDatabase,
     search: TrackSearch,
     playback: PlaybackController,
+    onOpenTrack: (Long) -> Unit,
+    modifier: Modifier = Modifier,
     personId: Long = 0,
     tagKeyId: Long = 0,
     scanState: ScanState = ScanState.Idle,
-    onOpenTrack: (Long) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val vm: TracksViewModel = viewModel(
         key = "tracks$personId-$tagKeyId",

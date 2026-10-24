@@ -35,9 +35,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Exported on purpose: Media3 controllers (the system UI, Bluetooth, the lock screen) bind to the
+             MediaSessionService through this intent filter. It exposes only the media session. -->
         <service
             android:name=".playback.PlaybackService"
             android:exported="true"
+            tools:ignore="ExportedService"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />

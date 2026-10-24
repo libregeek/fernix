@@ -2,6 +2,7 @@
 package io.github.libregeek.fernix.ui.permission
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,7 +35,10 @@ fun NotificationPermissionEffect(settings: Settings, isPlaying: Boolean) {
         val granted = Build.VERSION.SDK_INT < 33 ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         if (NotificationPermission.shouldRequest(Build.VERSION.SDK_INT, granted, settings.notificationPermissionAsked, isPlaying)) {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            // shouldRequest is false below API 33, where the permission doesn't exist.
+            @SuppressLint("InlinedApi")
+            val permission = Manifest.permission.POST_NOTIFICATIONS
+            launcher.launch(permission)
         }
     }
 }

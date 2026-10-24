@@ -176,10 +176,10 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 - [ ] Performance pass on large library (startup, first-scan time, scroll, memory)
 - [ ] Audio-path check: output is unchanged from the source (no resampling, downmix or bit-depth reduction; equalizer off adds nothing); verify before and after every performance change [§8]
 - [ ] Accessibility: content descriptions, touch targets, font scaling
-- [ ] `./gradlew lint` clean
+- [x] `./gradlew lint` clean: 0 errors; 2 warnings left, both newer-version notices for pinned versions (Gradle 9.8.1 → 9.8.2, the Compose compiler plugin 2.4.20 → 2.4.21), which wait for your decision on bumping them (2026-10-24)
 - [ ] Test matrix on AOSP emulator, API 29 and latest API
-- [ ] Merged-manifest check: no `INTERNET`; dependency tree has no Google/proprietary artifacts [CLAUDE.md rules 3–4]
-- [ ] R8 release build checked (JNI classes kept in `proguard-rules.pro`)
-- [ ] Confirm APK size is reasonable; drop anything unused
+- [x] Merged-manifest check: no `INTERNET`; dependency tree has no Google/proprietary artifacts [CLAUDE.md rules 3–4] — release manifest has exactly the approved permissions (`READ_MEDIA_AUDIO`, `READ_EXTERNAL_STORAGE` up to API 32, the foreground-service pair, `POST_NOTIFICATIONS`, `WAKE_LOCK`); no Play Services, Firebase, Crashlytics, OkHttp or analytics; the only `com.google` artifacts are Guava (via Media3) and accompanist-drawablepainter (via Coil), both open source (2026-10-24)
+- [x] R8 release build checked (JNI classes kept in `proguard-rules.pro`): `assembleRelease` builds; the signed release APK was installed on the emulator and scanned, listed, showed tags and covers (TagLib JNI, Room, Coil), opened Track details and played, with no crash in logcat (2026-10-24)
+- [x] Confirm APK size is reasonable; drop anything unused: release APK 8.2 MB unsigned for three ABIs (classes.dex 4.1 MB, `libfernix.so` 0.8–1.4 MB per ABI); nothing unused found. F-Droid can build per-ABI splits if wanted (2026-10-24)
 - [ ] README updated for user-visible features, permissions, formats (include the default playlists and that play history stays on the device)
 - [ ] F-Droid metadata (fastlane / metadata yml), changelog, app icon polish, tag `v0.1.0`

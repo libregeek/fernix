@@ -82,7 +82,10 @@
     <string name="details_uri">Content URI</string>
     <string name="details_channels_mono">Mono</string>
     <string name="details_channels_stereo">Stereo</string>
-    <string name="details_channels_n">%d channels</string>
+    <plurals name="details_channels_n">
+        <item quantity="one">%d channel</item>
+        <item quantity="other">%d channels</item>
+    </plurals>
     <string name="details_missing">This track is no longer in your library</string>
     <string name="equalizer">Equalizer</string>
     <string name="equalizer_on">Equalizer on</string>
@@ -90,7 +93,6 @@
     <string name="equalizer_preset">Preset</string>
     <string name="equalizer_custom">Custom</string>
     <string name="equalizer_reset">Reset</string>
-    <string name="equalizer_band">%1$s, %2$s</string>
     <string name="queue_empty">The queue is empty</string>
     <string name="queue_remove">Remove from queue</string>
     <string name="queue_reorder">Drag to reorder</string>
@@ -150,8 +152,14 @@
     <string name="volume_internal">Internal storage</string>
     <string name="rescan">Rescan</string>
     <string name="scan_idle">Library not scanned yet</string>
-    <string name="scan_running">Scanning… %1$d files processed</string>
-    <string name="scan_finished">Scan finished (%1$d files changed)</string>
+    <plurals name="scan_running">
+        <item quantity="one">Scanning… %1$d file processed</item>
+        <item quantity="other">Scanning… %1$d files processed</item>
+    </plurals>
+    <plurals name="scan_finished">
+        <item quantity="one">Scan finished (%1$d file changed)</item>
+        <item quantity="other">Scan finished (%1$d files changed)</item>
+    </plurals>
     <string name="scan_failed">Scan failed: %1$s</string>
     <string name="chooser_title">Choose folders to index</string>
     <string name="chooser_empty">No audio files found on this device.</string>
