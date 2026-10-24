@@ -5,7 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,45 +20,42 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.data.db.TrackEntity
+import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.playback.PlaybackUiState
+import io.github.libregeek.fernix.ui.tracks.trackAlbumLine
 
 /**
  * Persistent bar above the bottom navigation (spec/architecture.md §9). Shown while the queue is
- * not empty; tapping it opens Now Playing.
+ * not empty; tapping it opens Now Playing. Three lines, as in the Tracks list: the title; the album with
+ * its date in brackets; the artists, both smaller. [track] is the playing track's database row; until
+ * it arrives the title and artist from the player are shown.
  */
 @Composable
 fun MiniPlayer(
     state: PlaybackUiState,
+    track: TrackEntity?,
     onOpen: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
 ) {
     if (state.queueSize == 0) return
+    val title = track?.title?.takeIf { it.isNotEmpty() } ?: state.title
+    val album = track?.let { trackAlbumLine(it.album, it.date) }
+    val artists = track?.let { MediaItems.display(it.artist) } ?: state.artist.takeIf { it.isNotEmpty() }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .heightIn(min = 72.dp)
                 .clickable(onClick = onOpen)
-                .padding(start = 16.dp, end = 4.dp),
+                .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(
-                    state.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (state.artist.isNotEmpty()) {
-                    Text(
-                        state.artist,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                album?.let { SmallLine(it) }
+                artists?.let { SmallLine(it) }
             }
             IconButton(onClick = onPlayPause) {
                 Icon(
@@ -71,4 +68,15 @@ fun MiniPlayer(
             }
         }
     }
+}
+
+@Composable
+private fun SmallLine(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }

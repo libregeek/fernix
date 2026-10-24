@@ -62,6 +62,7 @@ fun NowPlayingScreen(
     onOpenQueue: () -> Unit,
     onOpenTrack: (Long) -> Unit,
     onOpenAlbum: (Long) -> Unit,
+    onOpenTag: (keyId: Long, valueId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: NowPlayingViewModel = viewModel(
@@ -151,7 +152,7 @@ fun NowPlayingScreen(
             )
             Detail(track.date.takeIf { it.isNotEmpty() }?.let { io.github.libregeek.fernix.playback.MediaItems.display(it) })
 
-            state.lines.forEach { line -> TagLineRow(line, onOpenPerson) }
+            state.lines.forEach { line -> TagLineRow(line, onOpenPerson, onOpenTag) }
         }
 
         SeekBar(playback, player.durationMs, player.isPlaying)
@@ -221,17 +222,17 @@ private fun Detail(text: String?, onClick: (() -> Unit)? = null) {
     )
 }
 
-/** A slot: its label, then each value on its own line; a person's name opens Search filtered by them. */
+/** A slot: its label, then each value on its own line; a person's name opens Tracks filtered by them, any other value by it. */
 @Composable
-private fun TagLineRow(line: TagLine, onOpenPerson: (Long) -> Unit) {
+private fun TagLineRow(line: TagLine, onOpenPerson: (Long) -> Unit, onOpenTag: (keyId: Long, valueId: Long) -> Unit) {
     Column(Modifier.padding(top = 12.dp)) {
         Text(line.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         line.values.forEach { value ->
             Text(
                 value.text,
-                modifier = if (value.isPerson) Modifier.clickable { onOpenPerson(value.valueId) } else Modifier,
+                modifier = Modifier.clickable { if (value.isPerson) onOpenPerson(value.valueId) else onOpenTag(value.keyId, value.valueId) },
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (value.isPerson) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
     }

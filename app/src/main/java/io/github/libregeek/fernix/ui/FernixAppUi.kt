@@ -46,6 +46,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.libregeek.fernix.AppContainer
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.ui.albums.AlbumDetailScreen
@@ -125,7 +129,11 @@ fun FernixAppUi(
                 // A scan runs in the background; its progress shows on every screen, above the mini-player.
                 if (scanState is ScanState.Running) ScanProgress(scanState)
                 if (current != Screen.NowPlaying) {
-                    MiniPlayer(playback, onOpen = { backStack.push(Screen.NowPlaying) }, onPlayPause = onPlayPause, onNext = onNext)
+                    val miniPlayer: MiniPlayerViewModel = viewModel(
+                        factory = viewModelFactory { initializer { MiniPlayerViewModel(container.database, container.playback) } },
+                    )
+                    val playing by miniPlayer.track.collectAsStateWithLifecycle()
+                    MiniPlayer(playback, playing, onOpen = { backStack.push(Screen.NowPlaying) }, onPlayPause = onPlayPause, onNext = onNext)
                 }
                 CompactNavBar {
                     Screen.entries.filter { it.isTab }.forEach { tab ->
@@ -152,6 +160,7 @@ fun FernixAppUi(
                 onBack = { backStack.pop() },
                 onOpenPerson = { backStack.push(Screen.Tracks, it) },
                 onOpenQueue = { backStack.push(Screen.Queue) },
+                onOpenTag = { keyId, valueId -> backStack.push(Screen.Tracks, valueId, keyId) },
                 onOpenTrack = openTrack,
                 onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
                 modifier = Modifier.padding(padding),
@@ -176,6 +185,7 @@ fun FernixAppUi(
                 container.settings,
                 container.trackFiles,
                 onBack = { backStack.pop() },
+                onOpenTag = { keyId, valueId -> backStack.push(Screen.Tracks, valueId, keyId) },
                 onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
                 onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
                 modifier = Modifier.padding(padding),

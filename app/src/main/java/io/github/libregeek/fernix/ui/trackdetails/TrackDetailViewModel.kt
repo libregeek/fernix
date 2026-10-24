@@ -129,7 +129,7 @@ class TrackDetailViewModel(
     companion object {
         /** One line per key, in key order, with every value; people keys are marked tappable. */
         fun group(tags: List<PlayingTag>): List<TagLine> = tags.groupBy { it.key }.map { (key, rows) ->
-            TagLine(key, rows.map { TagValue(it.valueId, it.value, PeopleTags.isPeopleKey(key)) })
+            TagLine(key, rows.map { TagValue(it.valueId, it.value, PeopleTags.isPeopleKey(key), it.keyId) })
         }
 
         /** The codec as the user knows it, from the file extension; unknown extensions are shown as they are. */

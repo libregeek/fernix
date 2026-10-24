@@ -103,7 +103,7 @@ interface TagDao {
      * key then `ord`. Reads only that track's `track_tags` rows (primary key), re-emits on a split or rescan.
      */
     @Query(
-        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
+        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value, k.id AS keyId FROM track_tags tt " +
             "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
             "WHERE tt.trackId = :trackId AND tt.keyId IN (:keyIds) ORDER BY k.`key`, tt.ord",
     )
@@ -111,7 +111,7 @@ interface TagDao {
 
     /** The values a track has under the given [keys] (by name), by key then order. */
     @Query(
-        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
+        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value, k.id AS keyId FROM track_tags tt " +
             "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
             "WHERE tt.trackId = :trackId AND k.`key` IN (:keys) ORDER BY k.`key`, tt.ord",
     )
@@ -141,7 +141,7 @@ interface TagDao {
 
     /** Every tag of one track: all keys, each key's values in stored order (Track details). */
     @Query(
-        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
+        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value, k.id AS keyId FROM track_tags tt " +
             "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
             "WHERE tt.trackId = :trackId ORDER BY k.`key`, tt.ord",
     )

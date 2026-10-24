@@ -7,6 +7,15 @@ import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import io.github.libregeek.fernix.tags.TagValues
+import io.github.libregeek.fernix.playback.MediaItems
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.AssistChip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,6 +75,7 @@ fun TrackDetailScreen(
     onBack: () -> Unit,
     onOpenPerson: (Long) -> Unit,
     onOpenAlbum: (Long) -> Unit,
+    onOpenTag: (keyId: Long, valueId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: TrackDetailViewModel = viewModel(
@@ -110,16 +120,31 @@ fun TrackDetailScreen(
             )
         }
 
-        Text(
-            track.title.ifEmpty { track.displayName },
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-            style = MaterialTheme.typography.titleLarge,
-        )
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(track.title.ifEmpty { track.displayName }, style = MaterialTheme.typography.titleLarge)
+            AlbumLine(track.album, track.date, onClick = track.albumId?.let { id -> { onOpenAlbum(id) } })
+        }
 
-        if (state.tags.isNotEmpty()) {
-            Section(stringResource(R.string.details_tags)) {
-                state.tags.forEach { line ->
-                    TagBlock(line, track.albumId, state.delimiters, onOpenPerson, onOpenAlbum, onSplit = { vm.askSplit(line.label, it) })
+        // Composer, Lyricist and Artists lead; everything else follows under Other tags. Every value
+        // is a pill: a person's opens their details, any other value opens Tracks filtered by it.
+        val byKey = state.tags.associateBy { it.label }
+        val people = listOf(
+            "COMPOSER" to R.string.details_composer,
+            "LYRICIST" to R.string.details_lyricist,
+            "ARTIST" to R.string.details_artists,
+        )
+        val shown = setOf("TITLE", "ALBUM", "DATE") + people.map { it.first }
+        val splitter = { line: TagLine, value: TagValue -> vm.askSplit(line.label, value) }
+        for ((key, label) in people) {
+            val line = byKey[key] ?: continue
+            Section(stringResource(label)) { PillGroup(line, state.delimiters, onOpenPerson, onOpenTag, splitter) }
+        }
+        val other = state.tags.filter { it.label !in shown }
+        if (other.isNotEmpty()) {
+            Section(stringResource(R.string.details_other_tags)) {
+                other.forEach { line ->
+                    Text(line.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PillGroup(line, state.delimiters, onOpenPerson, onOpenTag, splitter)
                 }
             }
         }
@@ -185,36 +210,69 @@ private fun Section(title: String, content: @Composable () -> Unit) {
     }
 }
 
-/** A tag key with every value. The ALBUM value opens the album; a person's name opens the person. */
+/** The album in bold, smaller than the title, with its date in brackets after it; the name opens the album. */
 @Composable
-private fun TagBlock(
+private fun AlbumLine(album: String, date: String, onClick: (() -> Unit)?) {
+    val name = MediaItems.display(album)
+    val first = TagValues.split(date).firstOrNull()
+    if (name == null && first == null) return
+    Row {
+        if (name != null) {
+            Text(
+                name,
+                modifier = if (onClick != null) Modifier.clickable(onClick = onClick).weight(1f, fill = false) else Modifier.weight(1f, fill = false),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (onClick != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (first != null) {
+            Text(
+                (if (name != null) " " else "") + "($first)",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * The values of one tag as pills. A person's pill (tinted) opens their details; any other value's pill
+ * opens Tracks with that value as a filter. A value holding one of the Settings delimiters also has a
+ * small split button after it (TITLE, ALBUM and DATE never do).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PillGroup(
     line: TagLine,
-    albumId: Long?,
     delimiters: List<String>,
     onOpenPerson: (Long) -> Unit,
-    onOpenAlbum: (Long) -> Unit,
-    onSplit: (TagValue) -> Unit,
+    onOpenTag: (keyId: Long, valueId: Long) -> Unit,
+    onSplit: (TagLine, TagValue) -> Unit,
 ) {
-    Column {
-        Text(line.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         line.values.forEach { value ->
-            val open: (() -> Unit)? = when {
-                value.isPerson -> ({ onOpenPerson(value.valueId) })
-                line.label == "ALBUM" && albumId != null -> ({ onOpenAlbum(albumId) })
-                else -> null
-            }
-            // A value that holds one of the delimiters from Settings can be split (TITLE, ALBUM and DATE never).
             val splittable = line.label !in TagSplitter.UNSPLITTABLE_KEYS && TagSplitter.contains(value.text, delimiters)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    value.text,
-                    modifier = (if (open != null) Modifier.clickable(onClick = open) else Modifier).weight(1f),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (open != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                AssistChip(
+                    onClick = { if (value.isPerson) onOpenPerson(value.valueId) else onOpenTag(value.keyId, value.valueId) },
+                    label = { Text(value.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    modifier = Modifier.widthIn(max = 280.dp),
+                    shape = CircleShape,
+                    colors = if (value.isPerson) {
+                        AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    } else {
+                        AssistChipDefaults.assistChipColors()
+                    },
                 )
                 if (splittable) {
-                    IconButton(onClick = { onSplit(value) }) {
-                        Icon(painterResource(R.drawable.ic_call_split), stringResource(R.string.split_value))
+                    IconButton(onClick = { onSplit(line, value) }, modifier = Modifier.size(36.dp)) {
+                        Icon(painterResource(R.drawable.ic_call_split), stringResource(R.string.split_value), Modifier.size(20.dp))
                     }
                 }
             }

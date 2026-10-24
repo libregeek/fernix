@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** One value on the playing track. A person's value opens Search filtered by that person. */
-data class TagValue(val valueId: Long, val text: String, val isPerson: Boolean)
+data class TagValue(val valueId: Long, val text: String, val isPerson: Boolean, val keyId: Long = 0)
 
 /** A Now Playing slot with its values: the key (or, for `PERFORMER:*`, the instrument) and every value. */
 data class TagLine(val label: String, val values: List<TagValue>)
@@ -100,7 +100,7 @@ class NowPlayingViewModel(
             mine.groupBy { it.key }.map { (key, rows) ->
                 TagLine(
                     label = key.removePrefix("$PERFORMER:"),
-                    values = rows.map { TagValue(it.valueId, it.value, PeopleTags.isPeopleKey(key)) },
+                    values = rows.map { TagValue(it.valueId, it.value, PeopleTags.isPeopleKey(key), it.keyId) },
                 )
             }
         }

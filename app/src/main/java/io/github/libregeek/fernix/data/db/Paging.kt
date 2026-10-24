@@ -44,7 +44,7 @@ data class TrackKeyValue(val valueId: Long, val value: String)
 data class TrackFile(val id: Long, val mediaStoreId: Long)
 
 /** One value of a tag key on the playing track; [valueId] is the person id for a people key. */
-data class PlayingTag(val key: String, val valueId: Long, val value: String)
+data class PlayingTag(val key: String, val valueId: Long, val value: String, val keyId: Long = 0)
 
 /** A tag key on a track, e.g. the roles a person has on it. */
 data class RoleRow(val trackId: Long, val key: String)

@@ -24,6 +24,13 @@ class TrackDetailViewModelTest {
     }
 
     @Test
+    fun theKeyIdTravelsWithEveryValue_soAPillCanOpenTracksFilteredByIt() {
+        val lines = TrackDetailViewModel.group(listOf(PlayingTag("GENRE", 9, "Rock", keyId = 4), PlayingTag("GENRE", 10, "Pop", keyId = 4)))
+        assertEquals(listOf(4L, 4L), lines.single().values.map { it.keyId })
+        assertEquals(listOf(9L, 10L), lines.single().values.map { it.valueId })
+    }
+
+    @Test
     fun formatComesFromTheExtension() {
         assertEquals("MP3", TrackDetailViewModel.formatOf("Song.MP3"))
         assertEquals("FLAC", TrackDetailViewModel.formatOf("a.flac"))
