@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import io.github.libregeek.fernix.data.scan.ScanScope
 import io.github.libregeek.fernix.tags.TagValues
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /** User settings in SharedPreferences (spec/architecture.md §2, §5, §9). */
 class Settings(context: Context) {
@@ -26,6 +27,20 @@ class Settings(context: Context) {
             require(value.none { it in FIXED_KEYS }) { "TITLE, ALBUM and DATE can't be slots" }
             prefs.edit { putString(KEY_NOW_PLAYING_SLOTS, TagValues.join(value)) }
         }
+
+    /** Which theme the app uses: [ThemeMode.Fernix] (the default), Dark, or System, which is stock Material following the phone. Observe it with [themeModeFlow]. */
+    var themeMode: ThemeMode
+        get() = themeModeFlow.value
+        set(value) {
+            prefs.edit { putString(KEY_THEME, value.name) }
+            themeModeFlow.value = value
+        }
+
+    val themeModeFlow = MutableStateFlow(
+        // "Light" is what Fernix was called before it had its own look.
+        prefs.getString(KEY_THEME, null)?.let { saved -> ThemeMode.entries.firstOrNull { it.name == saved } ?: ThemeMode.Fernix.takeIf { saved == "Light" } }
+            ?: ThemeMode.Fernix,
+    )
 
     fun resetNowPlayingSlots() {
         prefs.edit { remove(KEY_NOW_PLAYING_SLOTS) }
@@ -117,6 +132,7 @@ class Settings(context: Context) {
         val FIXED_KEYS = setOf("TITLE", "ALBUM", "DATE")
 
         private const val FILE_NAME = "settings"
+        private const val KEY_THEME = "theme_mode"
         private const val KEY_NOW_PLAYING_SLOTS = "now_playing_slots"
         private const val KEY_SPLIT_DELIMITERS = "split_delimiters"
         private const val KEY_STORAGE_ASKED = "storage_permission_asked"
@@ -130,3 +146,6 @@ class Settings(context: Context) {
         private const val SCOPE_SELECTED = "selected"
     }
 }
+
+/** The app's theme: Fernix (the light green one with a colourful gradient, the default), Dark, or System (stock Material colours, light or dark as the phone is). */
+enum class ThemeMode { Fernix, Dark, System }

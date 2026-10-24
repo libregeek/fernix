@@ -25,7 +25,8 @@ fun ListActions(onPlay: () -> Unit, onEnqueue: () -> Unit, onAddToPlaylist: () -
     Surface(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
     ) {
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPlay) {

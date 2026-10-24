@@ -119,6 +119,14 @@ The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§
 - [ ] Check scrolling the full track list with thumbnails on a large library (smoothness, memory); on the emulator the lists show and cache thumbnails (4 albums, 762 bytes to 11 KB each) — a real 16K-track library is still to be tried
 - [x] Tests: empty filter lists all tracks (paging across pages), ✕ clears text and chips, add-all-results to a new and to an existing playlist (more results than one page), All Songs gone
 
+### Look and feel (2026-10-24, from review)
+
+- [x] Fern Green / Burgundy / Purple palette for light and dark (fixed, not dynamic colour); condensed system font; compact `ListItem`; rounded shapes
+- [x] Now Playing fits one screen with no scrolling (art flexes; landscape side by side); smaller playback controls
+- [x] Checked on the emulator in light: Tracks, Albums, Album details (now with the same three-icon capsule as Tracks), Track details, Queue, Equalizer, Person details, Playlists, Settings; in dark: Tracks, Now Playing, Playlists
+- [x] Settings → Appearance: Fernix / Dark / System, applied at once and remembered; the Fernix theme has a soft app-wide gradient (System is stock Material, dynamic colour on Android 12+, and follows the phone's light/dark; Fernix is the default and has the deeper colours: gradient through purple and burgundy, deeper green surfaces, a purple action capsule) (the saved "Light" becomes Fernix)
+- [ ] Check every screen in dark and light on a real device, and at a large font size (accessibility pass)
+
 ### Top-bar search (2026-10-24, from review)
 
 - [x] `LibraryTopBar`: title, search icon and gear; the search icon opens a field under the title, which stays (the icon or Back closes and clears, the cross clears the text)

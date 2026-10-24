@@ -120,8 +120,8 @@ private fun QueueRow(
             .graphicsLayer { translationY = dragged }
             .background(
                 if (dragging > 0) MaterialTheme.colorScheme.surfaceContainerHighest
-                else if (current) MaterialTheme.colorScheme.secondaryContainer
-                else MaterialTheme.colorScheme.surface,
+                else if (current) MaterialTheme.colorScheme.primaryContainer
+                else androidx.compose.ui.graphics.Color.Transparent,
             )
             .clickable(onClick = onClick)
             .padding(start = 16.dp),

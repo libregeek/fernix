@@ -2,5 +2,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <resources>
     <!-- Platform theme only for the window; all UI styling comes from Compose Material 3. -->
-    <style name="Theme.Fernix" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Fernix" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F7FAF2</item>
+    </style>
 </resources>

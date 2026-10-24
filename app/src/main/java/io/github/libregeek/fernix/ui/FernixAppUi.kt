@@ -122,6 +122,8 @@ fun FernixAppUi(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             // Tracks, Albums, People and Playlists draw their own (it has the search); Folders uses the plain one.
             if (current == Screen.Folders) {
@@ -361,7 +363,7 @@ private fun RowScope.CompactNavItem(
                 .clip(CircleShape)
                 .then(
                     if (selected) {
-                        Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
+                        Modifier.background(MaterialTheme.colorScheme.primaryContainer)
                     } else {
                         Modifier
                     },
@@ -373,7 +375,7 @@ private fun RowScope.CompactNavItem(
                 contentDescription = description,
                 modifier = Modifier.size(24.dp),
                 tint = if (selected) {
-                    MaterialTheme.colorScheme.onSecondaryContainer
+                    MaterialTheme.colorScheme.onPrimaryContainer
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },

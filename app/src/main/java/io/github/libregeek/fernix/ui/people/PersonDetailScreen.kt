@@ -24,7 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import io.github.libregeek.fernix.ui.common.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -157,10 +157,10 @@ private fun Initials(personId: Long, name: String) {
     val initials = name.split(' ').filter { it.isNotEmpty() }.take(2)
         .joinToString("") { it.first().uppercase() }
     Box(
-        Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+        Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.tertiaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        Text(initials, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Text(initials, color = MaterialTheme.colorScheme.onTertiaryContainer)
         // A role-typed embedded picture of this person, if any of their first tracks has one.
         if (name.isNotEmpty()) {
             AsyncImage(

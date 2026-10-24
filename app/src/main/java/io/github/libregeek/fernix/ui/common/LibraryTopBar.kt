@@ -57,7 +57,7 @@ fun LibraryTopBar(
     BackHandler(enabled = searching) { close() }
     LaunchedEffect(searching) { if (searching && query.isEmpty()) runCatching { focus.requestFocus() } }
 
-    Surface(modifier, color = MaterialTheme.colorScheme.surface) {
+    Surface(modifier, color = androidx.compose.ui.graphics.Color.Transparent) {
         Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
             // The title stays; the search icon opens the field below it and closes it again.
             Row(

@@ -165,7 +165,7 @@ fun TrackDetailScreen(
                         Text("${split.key}: ${split.value}")
                         Text(
                             "\u2192 " + split.parts.joinToString(" | "),
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.tertiary,
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
@@ -231,7 +231,7 @@ private fun AlbumLine(album: String, date: String, onClick: (() -> Unit)?) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                color = if (onClick != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                color = if (onClick != null) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -280,7 +280,7 @@ private fun TagRow(
                             if (value.isPerson) onOpenPerson(value.valueId) else onOpenTag(value.keyId, value.valueId)
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.tertiary,
                     )
                     if (splittable) {
                         IconButton(onClick = { onSplit(line, value) }, modifier = Modifier.size(28.dp)) {

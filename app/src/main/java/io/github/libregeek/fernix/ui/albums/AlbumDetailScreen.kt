@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
+import io.github.libregeek.fernix.ui.common.ListActions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import io.github.libregeek.fernix.ui.common.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -107,10 +108,7 @@ fun AlbumDetailScreen(
             }
         }
         if (state.album != null) {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = vm::playAll) { Text(stringResource(R.string.play)) }
-                OutlinedButton(onClick = vm::enqueueAll) { Text(stringResource(R.string.add_to_queue)) }
-            }
+            ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
         }
         Box(Modifier.fillMaxSize()) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {

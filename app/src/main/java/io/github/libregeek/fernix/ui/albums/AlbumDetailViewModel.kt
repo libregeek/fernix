@@ -83,6 +83,6 @@ class AlbumDetailViewModel(
 
     fun enqueueTrack(track: TrackRow) = playback.enqueue(listOf(track))
 
-    private suspend fun allTracks(): List<TrackRow> =
+    suspend fun allTracks(): List<TrackRow> =
         withContext(Dispatchers.IO) { db.trackDao().albumTracks(albumId) }
 }

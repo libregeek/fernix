@@ -17,7 +17,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import io.github.libregeek.fernix.ui.common.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -41,6 +41,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.Settings
+import io.github.libregeek.fernix.data.ThemeMode
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.scan.ScanScope
 
@@ -81,6 +84,24 @@ fun SettingsScreen(
             OutlinedButton(onClick = onChangeFolders, enabled = !scanning) { Text(stringResource(R.string.settings_change_folders)) }
             Text(stringResource(R.string.settings_rescan_detail), style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onRescan, enabled = !scanning) { Text(stringResource(R.string.rescan)) }
+        }
+
+        Section(stringResource(R.string.settings_appearance)) {
+            val mode by settings.themeModeFlow.collectAsStateWithLifecycle()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    ThemeMode.Fernix to R.string.theme_fernix,
+                    ThemeMode.Dark to R.string.theme_dark,
+                    ThemeMode.System to R.string.theme_system,
+                ).forEach { (option, label) ->
+                    FilterChip(selected = mode == option, onClick = { settings.themeMode = option }, label = { Text(stringResource(label)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                    )
+                }
+            }
         }
 
         Section(stringResource(R.string.settings_np_tags)) {

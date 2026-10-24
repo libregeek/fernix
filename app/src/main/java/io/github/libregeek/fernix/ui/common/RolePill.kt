@@ -23,7 +23,7 @@ fun RolePill(text: String, modifier: Modifier = Modifier) {
         modifier = modifier,
         shape = CircleShape,
         color = Color.Transparent,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f)),
     ) {
         Text(
             text,

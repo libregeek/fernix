@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<resources>
+    <!-- The window behind Compose, so a dark system theme never flashes white at launch. -->
+    <style name="Theme.Fernix" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#10140F</item>
+    </style>
+</resources>
