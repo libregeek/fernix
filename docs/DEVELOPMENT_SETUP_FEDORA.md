@@ -250,6 +250,20 @@ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:
 
 (That broadcast is deprecated and ignored on some newer Android versions. If files don't appear in MediaStore, reboot the emulator with `adb reboot` — the media scanner runs on boot.)
 
+**A pushed file that Fernix doesn't show after a rescan** is usually still *pending* in MediaStore: `adb push` creates the row, but with `is_pending=1` and no size or duration, and apps (Fernix included) don't see pending rows. Check with
+
+```bash
+adb shell content query --uri content://media/external/audio/media --projection _display_name:_size:duration:is_pending
+```
+
+and, if it says `is_pending=1`, ask MediaStore to index the volume, then rescan in Fernix (Settings → Rescan):
+
+```bash
+adb shell content call --uri content://media --method scan_volume --arg external_primary
+```
+
+(Use the SD card's volume name, e.g. `0000-0000`, for files pushed to `/storage/0000-0000/`.)
+
 ### Emulator with an SD card
 
 To test an SD card (a second MediaStore volume), create an AVD with an emulated card. It can run next to the first AVD on another port:

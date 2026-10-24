@@ -26,7 +26,7 @@ Phases are ordered so each one ends in something runnable and testable.
 
 - [x] `AppContainer` owned by `FernixApp` (manual DI) [§2, §4]
 - [x] `TagValues` codec: join/split on `U+001F` + unit tests [§5]
-- [x] Hand-rolled back stack + bottom navigation shell (Folders, Search → renamed Tracks in Phase 5b, Albums, Playlists, People) with empty screens [§2, §9]
+- [x] Hand-rolled back stack + bottom navigation shell with empty screens [§2, §9]; tab order since 2026-10-24: Tracks, Albums, Folders, Playlists, People (the app starts on Tracks)
 - [x] `SharedPreferences` wrapper for settings (Now Playing slots, last split choice) [§2]
 - [x] People-tag-keys constant (incl. `PERFORMER:*` matching) + unit tests [§5]
 
@@ -91,7 +91,7 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [x] Folders: tree browse (volume roots; skip level when single volume), play/enqueue folder or track
 - [x] Albums: list (name + year, year hidden when 0) and album detail by disc/track (art waits for Coil)
 - [x] Search (now the Tracks screen, see Phase 5b): FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
-- [x] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter (renamed "Show in Tracks" in Phase 5b)
+- [x] People: paged list with track counts; tap → person details (see below), (its "show in Search" action was renamed "Show in Tracks" in Phase 5b and then removed, 2026-10-24)
 - [x] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
 - [x] No duplicate tracks in a playlist: adding one already present is a no-op (DAO); the unique index comes with the schema migration above (added 2026-10-24)
 - [x] Default playlists on the Playlists tab, above the user's own: Favourites (editable), Recently Added, All Songs (removed in Phase 5b), Never Played, Most Played (read-only: no remove/rename/delete, not offered by *Add to playlist*); detail screen reused with Play and Shuffle [§5, §9] (added 2026-10-24)
@@ -108,7 +108,7 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 
 The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§5, §9.6].
 
-- [x] Rename Search → Tracks: bottom-nav label and a music-note icon instead of the magnifier, screen/back-stack names, strings, "Show in Tracks" on person details, README
+- [x] Rename Search → Tracks: bottom-nav label and a music-note icon instead of the magnifier, screen/back-stack names, strings, README
 - [x] Tracks lists **every track** when there is no search text and no filter (title, id; keyset-paged); the tab is the library's full track list
 - [x] ✕ button in the search box removes all search terms: the text and every filter chip (person chip included)
 - [x] Multiple filters: filters on the **same** tag are ORed, filters on different tags are ANDed, and the text and the person filter are ANDed with the rest [§5 *Filtering*, §9.3]; `TrackQueryBuilder` builds one `keyId = ? AND valueId IN (…)` subquery per key; update its unit tests and add one for same-key OR, different-key AND, plus text and person together
@@ -123,8 +123,15 @@ The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§
 
 - [x] Mini-player: three lines like a Tracks row (title; album with its date in brackets; artists, smaller), from the playing track's database row
 - [x] Track details: cover, title, album in bold (smaller than the title) with the date in brackets, then Composer, Lyricist and Artists, then **Other tags** (renamed from Tags: everything except those and title/album/date)
-- [x] Every tag value is a pill; a person's pill opens the person details, any other pill opens Tracks with the value as a filter (`BackStack` entries gain a second argument); the split button follows a splittable pill
+- [x] Every tag value is tappable: a person's opens the person details, any other value opens Tracks with the value as a filter (`BackStack` entries gain a second argument); the split button follows a splittable value (shown as pills at first, replaced by plain accent-coloured text, see below)
+- [x] Track details made compact (2026-10-24, from review): no pills; the title and the album with its date are centred; a small cover; Composer, Lyricist, Artists, Other tags, Technical and File are all the same slim label/values rows
 - [x] Now Playing: tapping a non-person tag value opens Tracks filtered by it too
+
+- [x] First launch: after the scope choice the app shows the Tracks screen, and its list reloads while the first scan runs and when it finishes (as Folders, Albums and People already do)
+
+- [x] Person details: the same three icons as on Tracks (shared `ListActions` capsule) instead of the Play / Add to queue buttons; "Show in Tracks" removed
+
+- [x] Person details: roles as small transparent pills with a thin border and an 11 sp font (first tried at 9 sp, too small), in the roles list and on every track row (`RolePill`); track rows also show the album with its date in brackets
 
 ### Tracks screen layout (2026-10-24, from review)
 
@@ -134,7 +141,7 @@ The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§
 - [x] Track row: title; then album with its date in brackets and the artists, both smaller (`TrackRow` gains `date`)
 - [x] Reset moved to the bottom of the container and made an icon (add-filter icon on its left), so the search box has the full width; the search box is a slim 40 dp pill (`CompactSearchField`)
 - [x] The three result actions form one tonal capsule; **Add to playlist** is reworked as a bottom sheet (`AddToPlaylistSheet`: highlighted New playlist row with an inline name field, Favourites and playlists as rounded tiles with counts, a toast on success) instead of a plain dialog
-- [ ] The same icon actions on the album, person and playlist detail screens (they still have text buttons) — only if wanted
+- [ ] The same icon actions on the album and playlist detail screens (they still have text buttons; person details now has them) — only if wanted
 
 ## Phase 6 — Now Playing & Queue
 
@@ -157,8 +164,8 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 
 ## Phase 8 — Settings
 
-- [x] Settings screen reached from the library top-bar overflow menu (a title bar with a ⋮ menu on the five library screens; Settings has Rescan, the Now Playing tags and the split rules)
-- [ ] Library folders: change scope with the chooser; confirm before narrowing (count of tracks and playlist entries removed) [§6, §9]
+- [x] Settings screen reached from a gear icon in the library title bar, one tap (a title bar with a gear on the five library screens; Settings has Library folders with Rescan, the Now Playing tags and the split delimiters)
+- [x] Library folders: change scope with the chooser; confirm before narrowing (count of tracks and playlist entries removed) [§6, §9]
 - [x] Now Playing tag slots: set / clear / restore defaults (any `tag_keys` except `TITLE`, `ALBUM`, `DATE`)
 - [x] Split delimiters section (see Phase 7)
 

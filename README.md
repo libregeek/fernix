@@ -16,10 +16,10 @@ Fernix plays the music stored on your phone. It never connects to the internet, 
 - **Filter by any tag:** besides artist, album and genre, you can filter on any tag in your files (BPM, label, release type, MusicBrainz IDs, your own custom tags…).
 - **Simple screens:**
   - **Now Playing:** album art, playback controls, shuffle/repeat, and the track's title, album and date, plus three tags of your choice — composers, lyricists and artists by default; swap any of them for others such as conductor, genre or BPM in Settings. Tap a name to see every track that person worked on, or any other value to see all tracks that share it.
-  - **Folders:** browse your music the way it's stored on your device
   - **Tracks:** every track in your library. Type in the search box, and add filters on any tag (several values of the same tag mean "either"; different tags must all match). Clear it all with the ✕ button, then play the result, queue it, or add it to a playlist, including a new one.
   - **Queue:** see, reorder and edit what's playing next
   - **Albums:** albums grouped by name and year, each with its cover
+  - **Folders:** browse your music the way it's stored on your device
   - **Playlists:** Fernix keeps four playlists for you, and you can make your own.
     - **Favourites:** tap the heart on the Now Playing screen to add the song you're listening to, and tap it again to remove it. You can also add and remove songs from Favourites in any list.
     - **Recently Added:** your 50 newest songs.
@@ -27,7 +27,7 @@ Fernix plays the music stored on your phone. It never connects to the internet, 
     - **Most Played:** your 50 most-played songs.
     - **Your own playlists:** create, rename and delete them, add songs from any list, and remove songs again. A song can be in a playlist only once. Play a playlist in order or shuffled.
 
-    Only Favourites and your own playlists can be changed; the other four update themselves. Fernix remembers when you last played each song, on your device only, to keep them up to date.
+    Only Favourites and your own playlists can be changed; the other three update themselves. Fernix remembers when you last played each song, on your device only, to keep them up to date.
   - **People:** everyone credited on your tracks — artists, composers, lyricists, conductors, performers and more. Tap a name to see all their tracks.
 - **Background playback:** controls in the notification and on the lock screen.
 - **Built-in equalizer:** open it from the Now Playing screen.
