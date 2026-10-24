@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +46,8 @@ import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.playback.PlaybackController
+import coil3.compose.AsyncImage
+import io.github.libregeek.fernix.ui.art.TrackArt
 import io.github.libregeek.fernix.ui.equalizer.EqualizerSheet
 import kotlinx.coroutines.delay
 
@@ -105,6 +108,13 @@ fun NowPlayingScreen(
                 contentDescription = null,
                 modifier = Modifier.size(96.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // Over the placeholder: nothing is drawn while loading or when the file has no picture.
+            AsyncImage(
+                model = TrackArt(track.mediaStoreId),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
             )
         }
 

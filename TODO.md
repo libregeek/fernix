@@ -99,14 +99,14 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [ ] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row
 - [ ] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
 - [ ] Album details via album name: tapping an album name anywhere (track rows, Now Playing, track details) opens album art, name, year (hidden when 0) and the track list by disc/track
-- [ ] JNI additions: `AudioProperties` call and `PICTURE` complex-properties call (picture type, description, MIME, bytes) in `tag_reader.cpp` / `TagReader.kt`, with instrumented tests on MP3, FLAC, Ogg incl. role-typed pictures [§7]
-- [ ] Coil (`coil-compose`) album art from embedded/local art via content URI [§2]
+- [ ] JNI additions: `AudioProperties` call and `PICTURE` complex-properties call (picture type, description, MIME, bytes) in `tag_reader.cpp` / `TagReader.kt`, with instrumented tests on MP3, FLAC, Ogg incl. role-typed pictures [§7] — `PICTURE` done (`TagReader.readPictures`, tests on MP3/FLAC/Ogg incl. role-typed pictures); `AudioProperties` still to do
+- [x] Coil (`coil-compose`) album art from embedded art via content URI [§2] — `TrackArt` model + fetcher; used on Now Playing; album details and person images still to wire
 - [ ] Vector icons copied in as drawables (no `material-icons-extended`), including heart (filled and outline) for Favourites
 - [ ] Scan progress indicator
 
 ## Phase 6 — Now Playing & Queue
 
-- [ ] Now Playing: art, title, album, date, seek bar, transport, shuffle/repeat [§9.1] — everything but the art is done (placeholder until Coil)
+- [x] Now Playing: art, title, album, date, seek bar, transport, shuffle/repeat [§9.1]
 - [x] "Tags on the playing track" query as Room `Flow`; 3 configurable slots (defaults `COMPOSER`, `LYRICIST`, `ARTIST`); `PERFORMER` slot shows instrument label; hide missing tags
 - [x] Favourite heart on Now Playing: one tap adds the playing track to Favourites, another removes it; filled state from a Room `Flow` [§9.1] (added 2026-10-24)
 - [ ] Tappable values → Search pushed on back stack (person filter for people keys, tag filter otherwise) — people keys done; other tags need Search to take a tag filter as its argument

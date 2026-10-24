@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TagReaderTest {
 
-    private fun read(asset: String): Map<String, List<String>>? {
+    private fun <T> withFile(asset: String, block: (ParcelFileDescriptor) -> T): T {
         // An asset's descriptor points into the APK (and compressed assets have none), so copy
         // it to a real file. Like a MediaStore descriptor, this one covers exactly the whole file.
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -28,13 +28,30 @@ class TagReaderTest {
             file.outputStream().use { input.copyTo(it) }
         }
         try {
-            // readProperties consumes (closes) the descriptor it is given.
-            return TagReader.readProperties(
-                ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY),
-            )
+            // The readers consume (close) the descriptor they are given.
+            return block(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))
         } finally {
             file.delete()
         }
+    }
+
+    private fun read(asset: String): Map<String, List<String>>? = withFile(asset, TagReader::readProperties)
+
+    private fun pictures(asset: String): List<Picture>? = withFile(asset, TagReader::readPictures)
+
+    // Colours of the 4x4 PNGs in scripts/generate-test-fixtures.py: red, green and blue.
+    private fun colour(picture: Picture): String = when {
+        picture.data.size < 40 -> "?"
+        // The IDAT payload differs per colour; compare by the first pixel stored in the zlib stream.
+        else -> android.graphics.BitmapFactory.decodeByteArray(picture.data, 0, picture.data.size)
+            .getPixel(0, 0).let { px ->
+                when (px) {
+                    0xFFFF0000.toInt() -> "red"
+                    0xFF00FF00.toInt() -> "green"
+                    0xFF0000FF.toInt() -> "blue"
+                    else -> "other"
+                }
+            }
     }
 
     @Test
@@ -100,6 +117,42 @@ class TagReaderTest {
     }
 
     @Test
+    fun mp3_pictures_keepFileOrder_withTypeMimeDescriptionAndBytes() {
+        val found = pictures("art.mp3")!!
+        assertEquals(listOf(4, 3, 11), found.map { it.type })
+        assertEquals(listOf("back", "front", "Johnson"), found.map { it.description })
+        assertEquals(listOf("image/png", "image/png", "image/png"), found.map { it.mimeType })
+        assertEquals(listOf("green", "red", "blue"), found.map(::colour))
+    }
+
+    @Test
+    fun cover_isTheFrontCover_notTheFirstPicture() {
+        assertEquals("red", colour(Picture.cover(pictures("art.mp3")!!)!!))
+        assertEquals("red", colour(Picture.cover(pictures("art.flac")!!)!!))
+    }
+
+    @Test
+    fun cover_fallsBackToTheFirstPicture_whenThereIsNoFrontCover() {
+        val found = pictures("art.ogg")!!
+        assertEquals(listOf(7), found.map { it.type })
+        assertEquals("Ann", found.single().description)
+        assertEquals("blue", colour(Picture.cover(found)!!))
+    }
+
+    @Test
+    fun flac_pictures_includeRoleTypedOnes() {
+        val found = pictures("art.flac")!!
+        assertEquals(listOf(3, 8), found.map { it.type })
+        assertEquals(listOf("front", "Ann"), found.map { it.description })
+    }
+
+    @Test
+    fun fileWithoutPictures_givesAnEmptyList_andNonAudioGivesNull() {
+        assertEquals(emptyList<Picture>(), pictures("sample.opus"))
+        assertNull(pictures("notaudio.txt"))
+    }
+
+    @Test
     fun allKeysAreUppercase() {
         for (asset in listOf("sample.mp3", "sample.ogg", "sample.flac")) {
             val tags = read(asset)!!
@@ -115,9 +168,14 @@ class TagReaderTest {
 
     @Test
     fun invalidDescriptor_returnsNull() {
-        val pfd = ParcelFileDescriptor.createPipe()[0]
-        val fd = pfd.detachFd()
+        val (read, write) = ParcelFileDescriptor.createPipe()
+        // With the write end closed the pipe is at end-of-file; left open, TagLib would block on it.
+        write.close()
+        val fd = read.detachFd()
         // A pipe is not seekable, so TagLib cannot read it as a file.
         assertNull(TagReader.readProperties(ParcelFileDescriptor.adoptFd(fd)))
+        val (read2, write2) = ParcelFileDescriptor.createPipe()
+        write2.close()
+        assertNull(TagReader.readPictures(read2))
     }
 }

@@ -6,6 +6,7 @@ Needs ffmpeg (with libmp3lame, libvorbis, libopus, flac) and the Python package 
 The tests assert the exact tag values written here, so change both together.
 
     python3 scripts/generate-test-fixtures.py [output-dir]
+    python3 scripts/generate-test-fixtures.py --art-only [output-dir]   # only art.*, from the existing samples
 """
 import base64
 import struct
@@ -19,7 +20,9 @@ from mutagen.flac import FLAC, Picture
 from mutagen.id3 import APIC, ID3, TALB, TCOM, TCON, TDRC, TEXT, TIT2, TPE1, TRCK
 from mutagen.oggvorbis import OggVorbis
 
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "app/src/androidTest/assets"
+ART_ONLY = "--art-only" in sys.argv
+_ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+OUT = Path(_ARGS[0]) if _ARGS else Path(__file__).resolve().parent.parent / "app/src/androidTest/assets"
 
 
 def png_1x1() -> bytes:
@@ -33,6 +36,68 @@ def png_1x1() -> bytes:
         + chunk(b"IDAT", zlib.compress(b"\x00\xc8\x64\x32"))
         + chunk(b"IEND", b"")
     )
+
+
+def png_solid(rgb: tuple) -> bytes:
+    """A 4x4 PNG of one colour, so tests can tell the pictures apart by their bytes."""
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        body = kind + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
+
+    rows = b"".join(b"\x00" + bytes(rgb) * 4 for _ in range(4))
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 4, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
+
+
+RED, GREEN, BLUE = png_solid((255, 0, 0)), png_solid((0, 255, 0)), png_solid((0, 0, 255))
+
+
+def flac_picture(kind: int, desc: str, data: bytes) -> Picture:
+    p = Picture()
+    p.type = kind
+    p.mime = "image/png"
+    p.desc = desc
+    p.width = p.height = 4
+    p.depth = 24
+    p.data = data
+    return p
+
+
+def art_fixtures(source: Path, out: Path) -> None:
+    """art.mp3/.flac/.ogg: the samples with their pictures replaced by known ones (tests read these).
+
+    mp3: back cover (green), front cover (red), composer "Johnson" (blue), in this order.
+    flac: front cover (red), artist "Ann" (blue).
+    ogg: lead artist "Ann" (blue) only, so the first picture is the cover.
+    """
+    mp3 = out / "art.mp3"
+    mp3.write_bytes((source / "sample.mp3").read_bytes())
+    t = ID3(mp3)
+    t.delall("APIC")
+    t.add(APIC(encoding=3, mime="image/png", type=4, desc="back", data=GREEN))
+    t.add(APIC(encoding=3, mime="image/png", type=3, desc="front", data=RED))
+    t.add(APIC(encoding=3, mime="image/png", type=11, desc="Johnson", data=BLUE))
+    t.save(mp3, v2_version=4)
+
+    flac = out / "art.flac"
+    flac.write_bytes((source / "sample.flac").read_bytes())
+    f = FLAC(flac)
+    f.clear_pictures()
+    f.add_picture(flac_picture(3, "front", RED))
+    f.add_picture(flac_picture(8, "Ann", BLUE))
+    f.save()
+
+    ogg = out / "art.ogg"
+    ogg.write_bytes((source / "sample.ogg").read_bytes())
+    o = OggVorbis(ogg)
+    o.pop("metadata_block_picture", None)
+    o["METADATA_BLOCK_PICTURE"] = [base64.b64encode(flac_picture(7, "Ann", BLUE).write()).decode("ascii")]
+    o.save()
 
 
 def picture() -> Picture:
@@ -56,6 +121,9 @@ def ffmpeg(dest: Path, *codec_args: str, seconds: int = 2, rate: int = 22050) ->
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    if ART_ONLY:
+        art_fixtures(OUT, OUT)
+        return
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
 
@@ -122,6 +190,7 @@ def main() -> None:
         for path in (mp3, ogg, flac, opus, wav):
             (OUT / path.name).write_bytes(path.read_bytes())
             print(f"{path.name}: {path.stat().st_size} bytes")
+        art_fixtures(OUT, OUT)
 
 
 if __name__ == "__main__":
