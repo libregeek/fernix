@@ -75,6 +75,13 @@ interface TrackDao {
         limit: Int,
     ): List<TrackRow>
 
+    /** The files of an album's first [limit] tracks (disc/track order), to look for its art. */
+    @Query(
+        "SELECT mediaStoreId FROM tracks WHERE albumId = :albumId " +
+            "ORDER BY COALESCE(discNumber, 0), COALESCE(trackNumber, 0), id LIMIT :limit",
+    )
+    suspend fun albumMediaStoreIds(albumId: Long, limit: Int): List<Long>
+
     /** Every track of an album, in the order of [albumPage]. */
     @Query(
         "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks WHERE albumId = :albumId " +

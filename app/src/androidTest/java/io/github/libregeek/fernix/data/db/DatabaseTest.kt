@@ -373,6 +373,19 @@ class DatabaseTest {
         assertEquals(emptyList<PlaylistRow>(), dao.summaries().first())
     }
 
+    @Test
+    fun albumMediaStoreIds_followDiscAndTrackOrder_andRespectTheLimit() = runBlocking {
+        val f = lib.folder()
+        val album = lib.album("Abbey", 1969)
+        val t2 = lib.track("Two", f, albumId = album, disc = 1, number = 2)
+        val t1 = lib.track("One", f, albumId = album, disc = 1, number = 1)
+        val d2 = lib.track("DiscTwo", f, albumId = album, disc = 2, number = 1)
+        lib.track("Other", f, albumId = lib.album("Elsewhere"))
+        fun mediaStoreId(trackId: Long) = runBlocking { db.trackDao().byId(trackId)!!.mediaStoreId }
+        assertEquals(listOf(t1, t2, d2).map(::mediaStoreId), db.trackDao().albumMediaStoreIds(album, 20))
+        assertEquals(listOf(t1, t2).map(::mediaStoreId), db.trackDao().albumMediaStoreIds(album, 2))
+    }
+
     // --- Now Playing tags ---
 
     @Test

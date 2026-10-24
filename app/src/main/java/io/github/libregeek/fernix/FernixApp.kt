@@ -6,7 +6,10 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
+import io.github.libregeek.fernix.ui.art.AlbumArtFetcher
+import io.github.libregeek.fernix.ui.art.AlbumArtKeyer
 import io.github.libregeek.fernix.ui.art.TrackArtFetcher
+import io.github.libregeek.fernix.ui.art.contentResolverOpener
 import io.github.libregeek.fernix.ui.art.TrackArtKeyer
 
 class FernixApp : Application(), SingletonImageLoader.Factory {
@@ -20,15 +23,18 @@ class FernixApp : Application(), SingletonImageLoader.Factory {
     }
 
     /**
-     * Album art only (spec §2, §7): one fetcher for [io.github.libregeek.fernix.ui.art.TrackArt],
+     * Album art only (spec §2, §7): fetchers for [io.github.libregeek.fernix.ui.art.TrackArt] and album art,
      * no network module, no disk cache (nothing is written to disk), and a small memory cache,
      * since a music app shows few images at once.
      */
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             .components {
+                val open = contentResolverOpener(contentResolver)
                 add(TrackArtKeyer())
-                add(TrackArtFetcher.Factory(contentResolver))
+                add(TrackArtFetcher.Factory(open))
+                add(AlbumArtKeyer())
+                add(AlbumArtFetcher.Factory({ album, limit -> container.database.trackDao().albumMediaStoreIds(album, limit) }, open))
             }
             .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.05).build() }
             .diskCache(null)
