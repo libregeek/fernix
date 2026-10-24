@@ -20,7 +20,7 @@ Design priorities:
 | `minSdk` | 29 (Android 10) |
 | `targetSdk` / `compileSdk` | 37 / 37 (Android 17) |
 | Language | Kotlin (app), C++ (TagLib JNI bridge) |
-| Toolchain | Gradle 9.8.1, AGP 9.4.1, Kotlin 2.4.20, KSP 2.3.12, JDK 17 bytecode target |
+| Toolchain | Gradle 9.8.2, AGP 9.4.1, Kotlin 2.4.21 (the Compose compiler plugin), KSP 2.3.12, JDK 17 bytecode target |
 | NDK / CMake | 28.2.13676358 / 3.31.6 (SDK packages) |
 | Native ABIs | `arm64-v8a`, `armeabi-v7a`, `x86_64` (emulator) |
 | Distribution | F-Droid |
