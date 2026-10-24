@@ -22,7 +22,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -84,13 +83,28 @@ class AudioPathTest {
         assertEquals("$asset bit depth", AudioFormat.ENCODING_PCM_16BIT, config.encoding)
     }
 
+    /**
+     * A FLAC is decoded by the platform to 32-bit float once float output is on (see [PlayerFactory]), even
+     * when it is 16-bit. Float holds every 16-bit (and 24-bit) value exactly, so nothing is lost; what must
+     * not happen is a lower depth than the source, so 16-bit PCM or float are both right here.
+     */
+    private fun assertLossless16(asset: String, rate: Int, channelConfig: Int) {
+        val config = trackFor(asset)
+        assertEquals("$asset sample rate", rate, config.sampleRate)
+        assertEquals("$asset channels", channelConfig, config.channelConfig)
+        assertTrue(
+            "$asset reached the audio track as encoding ${config.encoding}",
+            config.encoding == AudioFormat.ENCODING_PCM_16BIT || config.encoding == AudioFormat.ENCODING_PCM_FLOAT,
+        )
+    }
+
     // The fixtures are mono 16-bit sine waves (scripts/generate-test-fixtures.py).
 
     @Test
     fun wav_reachesTheAudioTrack_atItsOwnRateChannelsAndDepth() = assertPcm16("sample.wav", 8000, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
-    fun flac_reachesTheAudioTrack_atItsOwnRateChannelsAndDepth() = assertPcm16("sample.flac", 22050, AudioFormat.CHANNEL_OUT_MONO)
+    fun flac_reachesTheAudioTrack_atItsOwnRateChannels_andNoLowerDepth() = assertLossless16("sample.flac", 22050, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
     fun mp3_reachesTheAudioTrack_atItsOwnRateAndChannels() = assertPcm16("sample.mp3", 22050, AudioFormat.CHANNEL_OUT_MONO)
@@ -126,7 +140,7 @@ class AudioPathTest {
             // Where the device has one, it exists but is not enabled, so it is not in the signal path.
             engine.state()?.let { assertFalse("equalizer must start disabled", it.enabled) }
             // Playing still gives the decoder's own format.
-            assertPcm16("sample.flac", 22050, AudioFormat.CHANNEL_OUT_MONO)
+            assertLossless16("sample.flac", 22050, AudioFormat.CHANNEL_OUT_MONO)
             engine.state()?.let { assertFalse(it.enabled) }
             engine.release()
         } finally {
@@ -152,13 +166,10 @@ class AudioPathTest {
     }
 
     /**
-     * KNOWN GAP, found 2026-10-24: with ExoPlayer's defaults a 24-bit source reaches the AudioTrack as
-     * 16-bit PCM (`ENCODING_PCM_16BIT`), so the bit depth is reduced, which spec §8 forbids. Keeping it
-     * needs `DefaultRenderersFactory.setEnableAudioFloatOutput(true)` (24-bit becomes 32-bit float, which
-     * holds it exactly; 16-bit sources are not touched). That changes the audio sink, which needs the
-     * maintainer's approval. Remove @Ignore once it is approved and done.
+     * With ExoPlayer's defaults a 24-bit source reached the AudioTrack as 16-bit PCM (found 2026-10-24).
+     * [PlayerFactory] now turns float output on, so it arrives as 32-bit float, which holds 24-bit values
+     * exactly (spec §8). A reduction back to 16-bit would fail this.
      */
-    @Ignore("known gap: 24-bit sources are reduced to 16-bit; waiting for approval to enable float output")
     @Test
     fun hiRes24Bit_isNotReducedTo16Bit() {
         for (asset in listOf("hires24.flac", "hires24.wav")) {
