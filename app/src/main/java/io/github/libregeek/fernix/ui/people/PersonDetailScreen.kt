@@ -5,7 +5,7 @@ import io.github.libregeek.fernix.data.db.TrackRow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
-import io.github.libregeek.fernix.ui.common.AddToPlaylistDialog
+import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,7 +59,7 @@ fun PersonDetailScreen(
     search: TrackSearch,
     playback: PlaybackController,
     onBack: () -> Unit,
-    onShowInSearch: () -> Unit,
+    onShowInTracks: () -> Unit,
     onOpenTrack: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -107,7 +107,7 @@ fun PersonDetailScreen(
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = vm::playAll) { Text(stringResource(R.string.play)) }
                 OutlinedButton(onClick = vm::enqueueAll) { Text(stringResource(R.string.add_to_queue)) }
-                OutlinedButton(onClick = onShowInSearch) { Text(stringResource(R.string.person_show_in_search)) }
+                OutlinedButton(onClick = onShowInTracks) { Text(stringResource(R.string.person_show_in_tracks)) }
             }
         }
         Box(Modifier.fillMaxSize()) {
@@ -133,7 +133,7 @@ fun PersonDetailScreen(
             }
         }
     }
-    addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
+    addTracks?.let { AddToPlaylistSheet(db, it) { addTracks = null } }
 }
 
 @Composable

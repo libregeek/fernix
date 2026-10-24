@@ -57,7 +57,7 @@ import io.github.libregeek.fernix.ui.settings.SettingsScreen
 import io.github.libregeek.fernix.ui.trackdetails.TrackDetailScreen
 import io.github.libregeek.fernix.ui.people.PeopleScreen
 import io.github.libregeek.fernix.ui.people.PersonDetailScreen
-import io.github.libregeek.fernix.ui.search.SearchScreen
+import io.github.libregeek.fernix.ui.tracks.TracksScreen
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackUiState
 import io.github.libregeek.fernix.ui.nav.BackStack
@@ -67,7 +67,7 @@ import io.github.libregeek.fernix.ui.nav.Screen
 private val Screen.label: Int
     get() = when (this) {
         Screen.Folders -> R.string.tab_folders
-        Screen.Search -> R.string.tab_search
+        Screen.Tracks -> R.string.tab_tracks
         Screen.Albums -> R.string.tab_albums
         Screen.Playlists -> R.string.tab_playlists
         Screen.People -> R.string.tab_people
@@ -84,7 +84,7 @@ private val Screen.label: Int
 private val Screen.icon: Int
     get() = when (this) {
         Screen.Folders -> R.drawable.ic_folder
-        Screen.Search -> R.drawable.ic_search
+        Screen.Tracks -> R.drawable.ic_music_note
         Screen.Albums -> R.drawable.ic_album
         Screen.Playlists -> R.drawable.ic_playlist
         Screen.People -> R.drawable.ic_people
@@ -150,7 +150,7 @@ fun FernixAppUi(
                 container.settings,
                 container.playback,
                 onBack = { backStack.pop() },
-                onOpenPerson = { backStack.push(Screen.Search, it) },
+                onOpenPerson = { backStack.push(Screen.Tracks, it) },
                 onOpenQueue = { backStack.push(Screen.Queue) },
                 onOpenTrack = openTrack,
                 onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
@@ -190,12 +190,13 @@ fun FernixAppUi(
             )
             return@Scaffold
         }
-        if (current == Screen.Search) {
-            SearchScreen(
+        if (current == Screen.Tracks) {
+            TracksScreen(
                 container.database,
                 container.trackSearch,
                 container.playback,
                 personId = backStack.currentArg,
+                tagKeyId = backStack.currentArg2,
                 onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )
@@ -240,7 +241,7 @@ fun FernixAppUi(
                 container.trackSearch,
                 container.playback,
                 onBack = { backStack.pop() },
-                onShowInSearch = { backStack.push(Screen.Search, personId) },
+                onShowInTracks = { backStack.push(Screen.Tracks, personId) },
                 onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )

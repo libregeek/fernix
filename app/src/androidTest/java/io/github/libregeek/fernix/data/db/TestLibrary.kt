@@ -53,6 +53,8 @@ class TestLibrary(val db: FernixDatabase) {
         return if (inserted > 0) inserted else db.tagDao().keyId(key)!!
     }
 
+    fun valueIdSync(value: String): Long = kotlinx.coroutines.runBlocking { valueId(value) }
+
     suspend fun valueId(value: String): Long {
         val inserted = db.tagDao().insertValue(TagValueEntity(value = value))
         return if (inserted > 0) inserted else db.tagDao().valueId(value)!!

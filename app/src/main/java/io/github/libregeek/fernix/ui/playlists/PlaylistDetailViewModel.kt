@@ -93,7 +93,6 @@ class PlaylistDetailViewModel(
         return when (playlistId) {
             DefaultPlaylists.RECENTLY_ADDED -> indexed(db.trackDao().recentlyAdded()).also { done = true }
             DefaultPlaylists.MOST_PLAYED -> indexed(db.trackDao().mostPlayed()).also { done = true }
-            DefaultPlaylists.ALL_SONGS -> indexed(titlePage(TrackFilter(), last))
             DefaultPlaylists.NEVER_PLAYED -> indexed(titlePage(TrackFilter(neverPlayed = true), last))
             else -> db.playlistDao().entriesPage(playlistId, last?.position ?: -1, PAGE_SIZE)
         }

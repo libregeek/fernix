@@ -17,6 +17,10 @@ data class TrackRow(
     val album: String,
     val artist: String,
     val durationMs: Long,
+    /** The album's id, for the row's art thumbnail (spec §7 *Thumbnails*); null for a track with no album. */
+    val albumId: Long? = null,
+    /** The `DATE` tag, `U+001F`-joined like the other fixed fields; shown in brackets after the album on the Tracks list. */
+    val date: String = "",
 )
 
 /** Position in a title-sorted track list: the last row of the previous page. */

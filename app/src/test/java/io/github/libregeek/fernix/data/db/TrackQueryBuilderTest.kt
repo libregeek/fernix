@@ -14,7 +14,7 @@ class TrackQueryBuilderTest {
     fun emptyFilter_pagesAllTracks() {
         val q = TrackQueryBuilder.build(TrackFilter(), emptyList())
         assertEquals(
-            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs " +
+            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date " +
                 "FROM tracks t WHERE (t.title, t.id) > (?, ?)$tail",
             q.sql,
         )
@@ -25,7 +25,7 @@ class TrackQueryBuilderTest {
     fun neverPlayed_addsAFixedCondition_withoutArguments() {
         val q = TrackQueryBuilder.build(TrackFilter(neverPlayed = true), emptyList())
         assertEquals(
-            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs " +
+            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date " +
                 "FROM tracks t WHERE (t.title, t.id) > (?, ?) AND t.lastPlayedAt IS NULL$tail",
             q.sql,
         )
@@ -41,8 +41,8 @@ class TrackQueryBuilderTest {
     @Test
     fun tagFilter_usesTrackTagsIndexSide() {
         val q = TrackQueryBuilder.build(TrackFilter(tags = listOf(TagCondition(keyId = 3, valueId = 9))), emptyList())
-        assertTrue(q.sql.contains("t.id IN (SELECT trackId FROM track_tags WHERE valueId = ? AND keyId = ?)"))
-        assertEquals(listOf<Any>("", 0L, 9L, 3L, PAGE_SIZE), q.args)
+        assertTrue(q.sql.contains("t.id IN (SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (?))"))
+        assertEquals(listOf<Any>("", 0L, 3L, 9L, PAGE_SIZE), q.args)
     }
 
     @Test
@@ -54,15 +54,31 @@ class TrackQueryBuilderTest {
         )
         val q = TrackQueryBuilder.build(filter, listOf(5L, 6L), TrackCursor("x", 1), 10)
         assertEquals(
-            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs FROM tracks t " +
+            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date FROM tracks t " +
                 "WHERE (t.title, t.id) > (?, ?) AND t.id IN (" +
                 "SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ? INTERSECT " +
-                "SELECT trackId FROM track_tags WHERE valueId = ? AND keyId = ? INTERSECT " +
-                "SELECT trackId FROM track_tags WHERE valueId = ? AND keyId = ? INTERSECT " +
+                "SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (?) INTERSECT " +
+                "SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (?) INTERSECT " +
                 "SELECT trackId FROM track_tags WHERE valueId = ? AND keyId IN (?,?))$tail",
             q.sql,
         )
-        assertEquals(listOf<Any>("x", 1L, "\"beat*\"", 10L, 1L, 20L, 2L, 99L, 5L, 6L, 10), q.args)
+        assertEquals(listOf<Any>("x", 1L, "\"beat*\"", 1L, 10L, 2L, 20L, 99L, 5L, 6L, 10), q.args)
+        assertEquals(q.sql.count { it == '?' }, q.args.size)
+    }
+
+    @Test
+    fun valuesOfTheSameKey_areOred_andDifferentKeysAreAnded() {
+        // Genre (key 1): Rock or Pop; Label (key 2): X  =>  (Rock or Pop) and X.
+        val filter = TrackFilter(tags = listOf(TagCondition(1, 10), TagCondition(2, 30), TagCondition(1, 11), TagCondition(1, 10)))
+        val q = TrackQueryBuilder.build(filter, emptyList())
+        assertTrue(
+            q.sql.contains(
+                "SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (?,?) INTERSECT " +
+                    "SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (?))",
+            ),
+        )
+        // The repeated Rock is dropped; the keys keep the order they were first added in.
+        assertEquals(listOf<Any>("", 0L, 1L, 10L, 11L, 2L, 30L, PAGE_SIZE), q.args)
         assertEquals(q.sql.count { it == '?' }, q.args.size)
     }
 

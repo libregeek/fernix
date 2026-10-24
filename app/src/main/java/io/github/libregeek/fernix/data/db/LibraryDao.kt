@@ -151,6 +151,9 @@ interface TagDao {
     @Query("SELECT EXISTS(SELECT 1 FROM people WHERE valueId = :valueId)")
     suspend fun personExists(valueId: Long): Boolean
 
+    @Query("SELECT `key` FROM tag_keys WHERE id = :keyId")
+    suspend fun keyName(keyId: Long): String?
+
     @Query("SELECT value FROM tag_values WHERE id = :valueId")
     suspend fun valueText(valueId: Long): String?
 
@@ -253,7 +256,7 @@ interface PlaylistDao {
     /** Entries after [afterPosition] in playlist order. Start with `afterPosition = -1`. */
     @Query(
         "SELECT e.position AS position, t.id AS id, t.mediaStoreId AS mediaStoreId, t.title AS title, " +
-            "t.album AS album, t.artist AS artist, t.durationMs AS durationMs " +
+            "t.album AS album, t.artist AS artist, t.durationMs AS durationMs, t.albumId AS albumId, t.date AS date " +
             "FROM playlist_entries e JOIN tracks t ON t.id = e.trackId " +
             "WHERE e.playlistId = :playlistId AND e.position > :afterPosition " +
             "ORDER BY e.position LIMIT :limit",
@@ -263,7 +266,7 @@ interface PlaylistDao {
     /** Every track of a playlist, in playlist order (the same track may repeat). */
     @Query(
         "SELECT t.id AS id, t.mediaStoreId AS mediaStoreId, t.title AS title, t.album AS album, " +
-            "t.artist AS artist, t.durationMs AS durationMs " +
+            "t.artist AS artist, t.durationMs AS durationMs, t.albumId AS albumId, t.date AS date " +
             "FROM playlist_entries e JOIN tracks t ON t.id = e.trackId " +
             "WHERE e.playlistId = :playlistId ORDER BY e.position",
     )

@@ -5,7 +5,7 @@ import io.github.libregeek.fernix.data.db.TrackRow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
-import io.github.libregeek.fernix.ui.common.AddToPlaylistDialog
+import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -134,7 +134,7 @@ fun AlbumDetailScreen(
             }
         }
     }
-    addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
+    addTracks?.let { AddToPlaylistSheet(db, it) { addTracks = null } }
 }
 
 private const val LOAD_AHEAD = 20

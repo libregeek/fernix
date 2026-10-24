@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package io.github.libregeek.fernix.ui.search
+package io.github.libregeek.fernix.ui.tracks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -37,13 +37,13 @@ data class ValuePicker(
     val loading: Boolean = true,
 )
 
-data class SearchState(
+data class TracksState(
     val text: String = "",
     val chips: List<TagChip> = emptyList(),
     val person: PersonChip? = null,
     val results: List<TrackResult> = emptyList(),
     val loading: Boolean = false,
-    /** A filter is set and nothing matches. */
+    /** Everything is loaded and nothing matches (or the library has no tracks). */
     val noResults: Boolean = false,
     /** Non-null while the tag-key picker is open. */
     val keyChoices: List<TagKeyEntity>? = null,
@@ -53,19 +53,23 @@ data class SearchState(
 }
 
 /**
- * Search: free text plus tag and person filters, all ANDed, title-sorted and keyset-paged
- * (spec/architecture.md §5 "Filtering", §9). Nothing is listed until a filter is set.
+ * Tracks: every track by title, keyset-paged, narrowed by free text and by tag and person filters
+ * (spec/architecture.md §5 "Filtering", §9.3). With nothing typed and no filter, it is the whole library.
  */
-class SearchViewModel(
+class TracksViewModel(
     private val db: FernixDatabase,
     private val search: TrackSearch,
     private val playback: PlaybackController,
-    /** `tag_values.id` of a person to filter by from the start, or 0. */
+    /**
+     * A filter to start with, or 0: with [initialTagKeyId] 0 it is a person (`tag_values.id`); with a
+     * tag key id it is that tag key's value (`tag_values.id`), as when a tag is tapped on Track details.
+     */
     initialPersonId: Long = 0,
+    initialTagKeyId: Long = 0,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SearchState())
-    val state: StateFlow<SearchState> = _state
+    private val _state = MutableStateFlow(TracksState())
+    val state: StateFlow<TracksState> = _state
 
     private var searchJob: Job? = null
     private var valuesJob: Job? = null
@@ -79,10 +83,21 @@ class SearchViewModel(
     private var valuesDone = false
 
     init {
-        if (initialPersonId != 0L) {
+        if (initialPersonId == 0L) {
+            rerun(debounce = false)
+        } else {
             viewModelScope.launch {
-                val name = withContext(Dispatchers.IO) { db.tagDao().valueText(initialPersonId) }
-                if (name != null) setPerson(PersonChip(initialPersonId, name))
+                val value = withContext(Dispatchers.IO) { db.tagDao().valueText(initialPersonId) }
+                val key = if (initialTagKeyId == 0L) null else withContext(Dispatchers.IO) { db.tagDao().keyName(initialTagKeyId) }
+                when {
+                    value == null -> rerun(debounce = false)
+                    initialTagKeyId == 0L -> setPerson(PersonChip(initialPersonId, value))
+                    key == null -> rerun(debounce = false)
+                    else -> {
+                        _state.update { it.copy(chips = listOf(TagChip(initialTagKeyId, key, initialPersonId, value))) }
+                        rerun(debounce = false)
+                    }
+                }
             }
         }
     }
@@ -94,6 +109,12 @@ class SearchViewModel(
 
     fun setPerson(person: PersonChip?) {
         _state.update { it.copy(person = person) }
+        rerun(debounce = false)
+    }
+
+    /** The ✕ in the search box: removes every search term, the text and all filter chips. */
+    fun clearAll() {
+        _state.update { it.copy(text = "", chips = emptyList(), person = null) }
         rerun(debounce = false)
     }
 
@@ -112,11 +133,6 @@ class SearchViewModel(
         searchJob?.cancel()
         generation++
         done = false
-        if (!_state.value.hasFilter) {
-            busy = false
-            _state.update { it.copy(results = emptyList(), loading = false, noResults = false) }
-            return
-        }
         // The first page is this job's; busy keeps loadMore (the list is empty, so it would fire at once) out.
         busy = true
         _state.update { it.copy(results = emptyList(), loading = true, noResults = false) }
@@ -124,12 +140,6 @@ class SearchViewModel(
         searchJob = viewModelScope.launch {
             if (debounce) delay(DEBOUNCE_MS)
             dropStalePerson()
-            if (!_state.value.hasFilter) {
-                // The stale person was the only filter: nothing to list.
-                busy = false
-                _state.update { it.copy(loading = false) }
-                return@launch
-            }
             loadPage(gen)
         }
     }
@@ -142,7 +152,7 @@ class SearchViewModel(
     }
 
     fun loadMore() {
-        if (busy || done || !_state.value.hasFilter) return
+        if (busy || done) return
         busy = true
         val gen = generation
         searchJob = viewModelScope.launch { loadPage(gen) }
@@ -245,7 +255,8 @@ class SearchViewModel(
 
     fun enqueueTrack(track: TrackRow) = playback.enqueue(listOf(track))
 
-    private suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter()) }
+    /** Every track matching the text and filters, all pages: to play, queue or add to a playlist. */
+    suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter()) }
 
     private companion object {
         const val DEBOUNCE_MS = 250L

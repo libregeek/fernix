@@ -18,8 +18,8 @@ class BackStackTest {
     @Test
     fun pushThenPop_returnsToPreviousScreen() {
         val back = BackStack()
-        back.push(Screen.Search)
-        assertEquals(Screen.Search, back.current)
+        back.push(Screen.Tracks)
+        assertEquals(Screen.Tracks, back.current)
         assertTrue(back.pop())
         assertEquals(Screen.Folders, back.current)
     }
@@ -34,7 +34,7 @@ class BackStackTest {
     @Test
     fun switchTab_clearsStack() {
         val back = BackStack()
-        back.push(Screen.Search)
+        back.push(Screen.Tracks)
         back.push(Screen.People)
         back.switchTab(Screen.Albums)
         assertEquals(listOf(Screen.Albums), back.stack)
@@ -42,7 +42,7 @@ class BackStackTest {
 
     @Test
     fun savedStateRestoresStack() {
-        val back = BackStack(listOf(Screen.Albums to 0L, Screen.AlbumDetail to 42L))
+        val back = BackStack(listOf(BackEntry(Screen.Albums), BackEntry(Screen.Tracks, arg = 42, arg2 = 7)))
         val saved = with(BackStack.Saver) {
             object : androidx.compose.runtime.saveable.SaverScope {
                 override fun canBeSaved(value: Any) = true
@@ -51,6 +51,7 @@ class BackStackTest {
         val restored = BackStack.Saver.restore(saved)!!
         assertEquals(back.stack, restored.stack)
         assertEquals(42L, restored.currentArg)
+        assertEquals(7L, restored.currentArg2)
     }
 
     @Test
@@ -58,6 +59,10 @@ class BackStackTest {
         val back = BackStack()
         back.push(Screen.AlbumDetail, 7)
         assertEquals(7L, back.currentArg)
+        assertEquals(0L, back.currentArg2)
+        back.push(Screen.Tracks, 5, 9)
+        assertEquals(5L to 9L, back.currentArg to back.currentArg2)
+        back.pop()
         back.pop()
         assertEquals(0L, back.currentArg)
     }

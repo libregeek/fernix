@@ -383,6 +383,53 @@ class DatabaseTest {
         assertEquals(listOf(t1, t2).map(::mediaStoreId), db.trackDao().albumMediaStoreIds(album, 2))
     }
 
+    @Test
+    fun filters_sameKeyValuesAreOred_differentKeysAreAnded_withTextAndPerson() = runBlocking {
+        val f = lib.folder()
+        val a = lib.track("Alpha", f)
+        val b = lib.track("Bravo", f)
+        val c = lib.track("Charlie", f)
+        val d = lib.track("Delta", f)
+        lib.tag(a, "GENRE", "Rock"); lib.tag(a, "LABEL", "X")
+        lib.tag(b, "GENRE", "Pop"); lib.tag(b, "LABEL", "X")
+        lib.tag(c, "GENRE", "Jazz"); lib.tag(c, "LABEL", "X")
+        lib.tag(d, "GENRE", "Rock"); lib.tag(d, "LABEL", "Y")
+        lib.tag(b, "ARTIST", "Ann")
+        lib.refreshSummaries(PeopleTags.KEYS)
+        val genre = lib.keyId("GENRE")
+        val label = lib.keyId("LABEL")
+        fun cond(key: Long, value: String) = TagCondition(key, lib.valueIdSync(value))
+
+        // Genre: Rock or Pop  =>  A, B, D
+        assertEquals(listOf("Alpha", "Bravo", "Delta"), titles(search.page(TrackFilter(tags = listOf(cond(genre, "Rock"), cond(genre, "Pop"))))))
+        // ... and Label: X  =>  A, B
+        assertEquals(
+            listOf("Alpha", "Bravo"),
+            titles(search.page(TrackFilter(tags = listOf(cond(genre, "Rock"), cond(label, "X"), cond(genre, "Pop"))))),
+        )
+        // ... and the text "bra"  =>  B; and the person Ann  =>  B
+        assertEquals(
+            listOf("Bravo"),
+            titles(search.page(TrackFilter(text = "bra", tags = listOf(cond(genre, "Rock"), cond(genre, "Pop"), cond(label, "X"))))),
+        )
+        assertEquals(
+            listOf("Bravo"),
+            titles(search.page(TrackFilter(tags = listOf(cond(genre, "Rock"), cond(genre, "Pop")), personValueId = lib.valueId("Ann")))),
+        )
+    }
+
+    @Test
+    fun emptyFilter_listsEveryTrackByTitle_acrossPages() = runBlocking {
+        val f = lib.folder()
+        val ids = (1..PAGE_SIZE * 2 + 50).map { lib.track("T%04d".format(it), f) }
+        val first = search.page(TrackFilter())
+        assertEquals(PAGE_SIZE, first.size)
+        val all = search.all(TrackFilter())
+        assertEquals(ids.size, all.size)
+        assertEquals(all.map { it.title }.sorted(), all.map { it.title })
+        assertEquals(ids.toSet(), all.map { it.id }.toSet())
+    }
+
     // --- Now Playing tags ---
 
     @Test

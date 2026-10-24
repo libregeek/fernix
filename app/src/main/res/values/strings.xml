@@ -3,7 +3,7 @@
 <resources>
     <string name="app_name">Fernix</string>
     <string name="tab_folders">Folders</string>
-    <string name="tab_search">Search</string>
+    <string name="tab_tracks">Tracks</string>
     <string name="tab_albums">Albums</string>
     <string name="tab_playlists">Playlists</string>
     <string name="tab_people">People</string>
@@ -91,6 +91,8 @@
     <string name="album_unknown">Unknown album</string>
     <string name="search_hint">Search title, album, artist…</string>
     <string name="search_no_results">No matching tracks</string>
+    <string name="tracks_empty">No tracks in your library</string>
+    <string name="search_reset">Reset search and filters</string>
     <string name="search_add_filter">Add filter</string>
     <string name="search_remove_filter">Remove filter</string>
     <string name="search_pick_key">Filter by tag</string>
@@ -99,7 +101,7 @@
     <string name="search_no_values">No values</string>
     <string name="cancel">Cancel</string>
     <string name="people_empty">No people in your library</string>
-    <string name="person_show_in_search">Show in Search</string>
+    <string name="person_show_in_tracks">Show in Tracks</string>
     <string name="person_roles">Roles</string>
     <plurals name="track_count">
         <item quantity="one">%d track</item>
@@ -109,8 +111,6 @@
     <string name="playlist_favourites">Favourites</string>
     <string name="playlist_recently_added">Recently Added</string>
     <string name="playlist_recently_added_desc">Your 50 newest songs</string>
-    <string name="playlist_all_songs">All Songs</string>
-    <string name="playlist_all_songs_desc">Everything in your library</string>
     <string name="playlist_never_played">Never Played</string>
     <string name="playlist_never_played_desc">Songs you haven\u2019t played all the way through</string>
     <string name="playlist_most_played">Most Played</string>
@@ -124,6 +124,7 @@
     <string name="playlist_empty">This playlist is empty</string>
     <string name="playlist_shuffle">Shuffle</string>
     <string name="playlist_remove_entry">Remove from playlist</string>
+    <string name="added_to_playlist">Added to %1$s</string>
     <string name="add_to_playlist">Add to playlist</string>
     <string name="save">Save</string>
     <string name="folders_empty">No music in this folder</string>

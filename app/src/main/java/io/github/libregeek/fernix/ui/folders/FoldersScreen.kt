@@ -4,7 +4,7 @@ package io.github.libregeek.fernix.ui.folders
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
-import io.github.libregeek.fernix.ui.common.AddToPlaylistDialog
+import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
 import android.provider.MediaStore
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -137,7 +137,7 @@ fun FoldersScreen(
             }
         }
     }
-    addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
+    addTracks?.let { AddToPlaylistSheet(db, it) { addTracks = null } }
 }
 
 @Composable

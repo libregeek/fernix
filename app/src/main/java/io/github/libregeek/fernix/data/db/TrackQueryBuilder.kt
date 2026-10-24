@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.data.db
 
-/** Tag filter: tracks carrying [valueId] under tag key [keyId]. */
+/** Tag filter: tracks carrying [valueId] under tag key [keyId]. Conditions on the same key are ORed. */
 data class TagCondition(val keyId: Long, val valueId: Long)
 
-/** All parts combine with AND. An empty filter matches every track. */
+/**
+ * The text, the person and the tag keys combine with AND; several tag values of one key are ORed.
+ * An empty filter matches every track.
+ */
 data class TrackFilter(
     val text: String = "",
     val tags: List<TagCondition> = emptyList(),
@@ -37,10 +40,13 @@ object TrackQueryBuilder {
             subqueries += "SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ?"
             subArgs += it
         }
-        for (condition in filter.tags) {
-            subqueries += "SELECT trackId FROM track_tags WHERE valueId = ? AND keyId = ?"
-            subArgs += condition.valueId
-            subArgs += condition.keyId
+        // One subquery per tag key: several values of the same key are an OR inside it, and the
+        // subqueries of different keys are INTERSECTed (an AND), as is everything else.
+        for ((keyId, conditions) in filter.tags.groupBy { it.keyId }) {
+            val valueIds = conditions.map { it.valueId }.distinct()
+            subqueries += "SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (${valueIds.joinToString(",") { "?" }})"
+            subArgs += keyId
+            subArgs.addAll(valueIds)
         }
         filter.personValueId?.let { person ->
             if (peopleKeyIds.isEmpty()) {
@@ -55,7 +61,7 @@ object TrackQueryBuilder {
 
         val args = mutableListOf<Any>(after.title, after.id)
         val sql = buildString {
-            append("SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs ")
+            append("SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date ")
             append("FROM tracks t WHERE (t.title, t.id) > (?, ?)")
             if (filter.neverPlayed) append(" AND t.lastPlayedAt IS NULL")
             if (subqueries.isNotEmpty()) {

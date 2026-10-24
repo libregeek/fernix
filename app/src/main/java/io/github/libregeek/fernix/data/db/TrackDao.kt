@@ -62,7 +62,7 @@ interface TrackDao {
 
     /** Album detail, by disc then track number (missing numbers sort first). */
     @Query(
-        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks " +
+        "SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date FROM tracks " +
             "WHERE albumId = :albumId " +
             "AND (COALESCE(discNumber, 0), COALESCE(trackNumber, 0), id) > (:afterDisc, :afterTrack, :afterId) " +
             "ORDER BY COALESCE(discNumber, 0), COALESCE(trackNumber, 0), id LIMIT :limit",
@@ -92,14 +92,14 @@ interface TrackDao {
 
     /** Every track of an album, in the order of [albumPage]. */
     @Query(
-        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks WHERE albumId = :albumId " +
+        "SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date FROM tracks WHERE albumId = :albumId " +
             "ORDER BY COALESCE(discNumber, 0), COALESCE(trackNumber, 0), id",
     )
     suspend fun albumTracks(albumId: Long): List<TrackRow>
 
     /** Tracks directly in a folder, by file name. Start with `afterName = ""`, `afterId = 0`. */
     @Query(
-        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks " +
+        "SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date FROM tracks " +
             "WHERE folderId = :folderId " +
             "AND (displayName COLLATE NOCASE, id) > (:afterName, :afterId) " +
             "ORDER BY displayName COLLATE NOCASE, id LIMIT :limit",
@@ -108,7 +108,7 @@ interface TrackDao {
 
     /** Every track directly in a folder, in the order of [folderPage]. */
     @Query(
-        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks " +
+        "SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date FROM tracks " +
             "WHERE folderId = :folderId ORDER BY displayName COLLATE NOCASE, id",
     )
     suspend fun folderTracks(folderId: Long): List<TrackRow>
@@ -120,7 +120,7 @@ interface TrackDao {
      * with bound arguments (no `LIKE`).
      */
     @Query(
-        "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs FROM tracks t " +
+        "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date FROM tracks t " +
             "JOIN folders f ON f.id = t.folderId " +
             "WHERE f.path = :path OR (f.path >= :low AND f.path < :high) " +
             "ORDER BY f.path, t.displayName COLLATE NOCASE, t.id",
@@ -129,14 +129,14 @@ interface TrackDao {
 
     /** *Recently Added*: the [DEFAULT_PLAYLIST_SIZE] newest tracks (spec/architecture.md §5). */
     @Query(
-        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks " +
+        "SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date FROM tracks " +
             "ORDER BY dateAdded DESC, id DESC LIMIT $DEFAULT_PLAYLIST_SIZE",
     )
     suspend fun recentlyAdded(): List<TrackRow>
 
     /** *Most Played*: the [DEFAULT_PLAYLIST_SIZE] tracks played most, ties by most recent play. */
     @Query(
-        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks WHERE playCount > 0 " +
+        "SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date FROM tracks WHERE playCount > 0 " +
             "ORDER BY playCount DESC, lastPlayedAt DESC, id LIMIT $DEFAULT_PLAYLIST_SIZE",
     )
     suspend fun mostPlayed(): List<TrackRow>
