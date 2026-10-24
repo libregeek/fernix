@@ -70,7 +70,12 @@ class SearchViewModel(
     private var searchJob: Job? = null
     private var valuesJob: Job? = null
     private var done = false
+
+    /** A page is being loaded, or is about to be: [loadMore] must not start another. */
     private var busy = false
+
+    /** Bumped by every [rerun], so a page that belongs to an earlier filter is dropped. */
+    private var generation = 0
     private var valuesDone = false
 
     init {
@@ -105,17 +110,27 @@ class SearchViewModel(
     /** Restarts the query from the first page; a page still in flight is dropped. */
     private fun rerun(debounce: Boolean) {
         searchJob?.cancel()
+        generation++
         done = false
-        busy = false
         if (!_state.value.hasFilter) {
+            busy = false
             _state.update { it.copy(results = emptyList(), loading = false, noResults = false) }
             return
         }
+        // The first page is this job's; busy keeps loadMore (the list is empty, so it would fire at once) out.
+        busy = true
         _state.update { it.copy(results = emptyList(), loading = true, noResults = false) }
+        val gen = generation
         searchJob = viewModelScope.launch {
             if (debounce) delay(DEBOUNCE_MS)
             dropStalePerson()
-            loadPage()
+            if (!_state.value.hasFilter) {
+                // The stale person was the only filter: nothing to list.
+                busy = false
+                _state.update { it.copy(loading = false) }
+                return@launch
+            }
+            loadPage(gen)
         }
     }
 
@@ -128,15 +143,17 @@ class SearchViewModel(
 
     fun loadMore() {
         if (busy || done || !_state.value.hasFilter) return
-        searchJob = viewModelScope.launch { loadPage() }
+        busy = true
+        val gen = generation
+        searchJob = viewModelScope.launch { loadPage(gen) }
     }
 
-    private suspend fun loadPage() {
-        busy = true
+    private suspend fun loadPage(gen: Int) {
         val filter = filter()
         val last = _state.value.results.lastOrNull()?.track
         val cursor = last?.let { TrackCursor(it.title, it.id) } ?: TrackCursor.START
         val page = withContext(Dispatchers.IO) { search.page(filter, cursor) }
+        if (gen != generation) return
         if (page.size < PAGE_SIZE) done = true
         busy = false
         _state.update {

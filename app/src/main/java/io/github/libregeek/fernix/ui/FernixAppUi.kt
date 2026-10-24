@@ -43,6 +43,7 @@ import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.ui.albums.AlbumDetailScreen
 import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
+import io.github.libregeek.fernix.ui.nowplaying.NowPlayingScreen
 import io.github.libregeek.fernix.ui.people.PeopleScreen
 import io.github.libregeek.fernix.ui.people.PersonDetailScreen
 import io.github.libregeek.fernix.ui.search.SearchScreen
@@ -125,6 +126,17 @@ fun FernixAppUi(
                 }
                 FoldersScreen(container.database, container.playback)
             }
+            return@Scaffold
+        }
+        if (current == Screen.NowPlaying) {
+            NowPlayingScreen(
+                container.database,
+                container.settings,
+                container.playback,
+                onBack = { backStack.pop() },
+                onOpenPerson = { backStack.push(Screen.Search, it) },
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
         if (current == Screen.Search) {

@@ -373,6 +373,37 @@ class DatabaseTest {
         assertEquals(emptyList<PlaylistRow>(), dao.summaries().first())
     }
 
+    // --- Now Playing tags ---
+
+    @Test
+    fun playingTags_readOnlyTheSlotKeysOfThatTrack_byKeyThenOrd_andFollowChanges() = runBlocking {
+        val f = lib.folder()
+        val a = lib.track("A", f)
+        val b = lib.track("B", f)
+        lib.tag(a, "COMPOSER", "Johnson")
+        lib.tag(a, "ARTIST", "Zed", "Amy")
+        lib.tag(a, "GENRE", "Rock")
+        lib.tag(a, "PERFORMER:GUITAR", "Gil")
+        lib.tag(b, "COMPOSER", "Other")
+
+        val tags = db.tagDao()
+        val keys = tags.slotKeyIds(listOf("COMPOSER", "ARTIST"), includePerformer = false)
+        assertEquals(2, keys.size)
+        assertEquals(
+            listOf("ARTIST" to "Zed", "ARTIST" to "Amy", "COMPOSER" to "Johnson"),
+            tags.playingTags(a, keys).first().map { it.key to it.value },
+        )
+        // The PERFORMER slot stands for every PERFORMER:<instrument> key.
+        val withPerformer = tags.slotKeyIds(listOf("PERFORMER"), includePerformer = true)
+        assertEquals(listOf("PERFORMER:GUITAR" to "Gil"), tags.playingTags(a, withPerformer).first().map { it.key to it.value })
+        assertEquals(emptyList<Long>(), tags.slotKeyIds(listOf("PERFORMER"), includePerformer = false))
+
+        // The track row is observable too, and goes null when deleted.
+        assertEquals("A", db.trackDao().observe(a).first()!!.title)
+        db.trackDao().deleteById(a)
+        assertEquals(null, db.trackDao().observe(a).first())
+    }
+
     // --- default playlists and play history ---
 
     @Test

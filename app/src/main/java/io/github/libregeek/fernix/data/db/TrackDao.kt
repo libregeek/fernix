@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.room.Update
 import androidx.sqlite.db.SupportSQLiteQuery
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TrackDao {
@@ -33,6 +34,10 @@ interface TrackDao {
 
     @Query("SELECT * FROM tracks WHERE id = :id")
     suspend fun byId(id: Long): TrackEntity?
+
+    /** One track as a `Flow`, e.g. the playing one; null once it is deleted. */
+    @Query("SELECT * FROM tracks WHERE id = :id")
+    fun observe(id: Long): Flow<TrackEntity?>
 
     @Query("DELETE FROM tracks WHERE id = :id")
     suspend fun deleteById(id: Long)

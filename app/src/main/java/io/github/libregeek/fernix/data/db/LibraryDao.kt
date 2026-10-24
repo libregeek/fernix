@@ -88,6 +88,24 @@ interface TagDao {
     @Query("SELECT * FROM tag_keys ORDER BY `key`")
     suspend fun allKeys(): List<TagKeyEntity>
 
+    /**
+     * The ids of the tag keys behind the Now Playing [slotKeys]; with [includePerformer] also every
+     * `PERFORMER:<instrument>` key, since the `PERFORMER` slot stands for all of them.
+     */
+    @Query("SELECT id FROM tag_keys WHERE `key` IN (:slotKeys) OR (:includePerformer AND `key` LIKE 'PERFORMER:%')")
+    suspend fun slotKeyIds(slotKeys: List<String>, includePerformer: Boolean): List<Long>
+
+    /**
+     * "Tags on the playing track" (spec/architecture.md §5): the values of [keyIds] on one track, by
+     * key then `ord`. Reads only that track's `track_tags` rows (primary key), re-emits on a split or rescan.
+     */
+    @Query(
+        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
+            "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
+            "WHERE tt.trackId = :trackId AND tt.keyId IN (:keyIds) ORDER BY k.`key`, tt.ord",
+    )
+    fun playingTags(trackId: Long, keyIds: List<Long>): Flow<List<PlayingTag>>
+
     /** Whether [valueId] is still a person (a rescan or a split can remove one). */
     @Query("SELECT EXISTS(SELECT 1 FROM people WHERE valueId = :valueId)")
     suspend fun personExists(valueId: Long): Boolean

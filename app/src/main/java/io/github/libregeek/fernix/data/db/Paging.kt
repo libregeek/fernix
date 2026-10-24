@@ -33,6 +33,9 @@ data class PersonRow(val valueId: Long, val name: String, val trackCount: Int)
 
 data class KeyValueRow(val valueId: Long, val value: String, val trackCount: Int)
 
+/** One value of a tag key on the playing track; [valueId] is the person id for a people key. */
+data class PlayingTag(val key: String, val valueId: Long, val value: String)
+
 /** A tag key on a track, e.g. the roles a person has on it. */
 data class RoleRow(val trackId: Long, val key: String)
 

@@ -106,10 +106,10 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 
 ## Phase 6 — Now Playing & Queue
 
-- [ ] Now Playing: art, title, album, date, seek bar, transport, shuffle/repeat [§9.1]
-- [ ] "Tags on the playing track" query as Room `Flow`; 3 configurable slots (defaults `COMPOSER`, `LYRICIST`, `ARTIST`); `PERFORMER` slot shows instrument label; hide missing tags
-- [ ] Favourite heart on Now Playing: one tap adds the playing track to Favourites, another removes it; filled state from a Room `Flow` [§9.1] (added 2026-10-24)
-- [ ] Tappable values → Search pushed on back stack (person filter for people keys, tag filter otherwise)
+- [ ] Now Playing: art, title, album, date, seek bar, transport, shuffle/repeat [§9.1] — everything but the art is done (placeholder until Coil)
+- [x] "Tags on the playing track" query as Room `Flow`; 3 configurable slots (defaults `COMPOSER`, `LYRICIST`, `ARTIST`); `PERFORMER` slot shows instrument label; hide missing tags
+- [x] Favourite heart on Now Playing: one tap adds the playing track to Favourites, another removes it; filled state from a Room `Flow` [§9.1] (added 2026-10-24)
+- [ ] Tappable values → Search pushed on back stack (person filter for people keys, tag filter otherwise) — people keys done; other tags need Search to take a tag filter as its argument
 - [ ] Equalizer bottom sheet from top app bar
 - [ ] Queue screen: drag-reorder, remove, jump to item
 
