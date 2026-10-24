@@ -7,7 +7,10 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import coil3.SingletonImageLoader
+import io.github.libregeek.fernix.ui.art.ThumbnailCache
 import io.github.libregeek.fernix.ui.art.contentResolverOpener
+import java.io.File
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.data.scan.LibraryScanner
 import io.github.libregeek.fernix.data.scan.MediaStoreSource
@@ -43,6 +46,9 @@ class AppContainer(context: Context) {
 
     val trackSearch: TrackSearch by lazy { TrackSearch(database) }
 
+    /** The small thumbnail cache of the Albums and Tracks lists, in the app's cache directory (spec §7). */
+    val thumbnails: ThumbnailCache by lazy { ThumbnailCache(File(appContext.cacheDir, "thumbnails")) }
+
     /** Called by the playback service when a track plays through; the write runs off the main thread. */
     fun recordPlay(trackId: Long) {
         appScope.launch(Dispatchers.IO) { database.trackDao().recordPlay(trackId, System.currentTimeMillis()) }
@@ -72,7 +78,15 @@ class AppContainer(context: Context) {
         appScope.launch {
             settings.scanCompleted = false
             scanner.scan(scope)
-            if (scanner.state.value is ScanState.Finished) settings.scanCompleted = true
+            val state = scanner.state.value
+            if (state is ScanState.Finished) {
+                settings.scanCompleted = true
+                // A scan that added, changed or removed files may have changed art: start the thumbnails afresh.
+                if (state.processed > 0) {
+                    thumbnails.clear()
+                    SingletonImageLoader.get(appContext).memoryCache?.clear()
+                }
+            }
         }
     }
 }

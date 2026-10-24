@@ -17,6 +17,7 @@ import io.github.libregeek.fernix.tags.Picture
 import io.github.libregeek.fernix.tags.TagReader
 import okio.Buffer
 import okio.FileSystem
+import okio.Path.Companion.toOkioPath
 
 /**
  * Coil model for the art of one track: its front cover, else its first embedded picture (spec
@@ -31,7 +32,7 @@ class TrackArtKeyer : Keyer<TrackArt> {
 }
 
 /** The cover of the file with [mediaStoreId], or null if it has none or can't be opened. */
-private fun coverOf(open: (Long) -> ParcelFileDescriptor?, mediaStoreId: Long): Picture? {
+internal fun coverOf(open: (Long) -> ParcelFileDescriptor?, mediaStoreId: Long): Picture? {
     val pfd = open(mediaStoreId) ?: return null
     return TagReader.readPictures(pfd)?.let(Picture::cover)
 }
@@ -106,5 +107,78 @@ class AlbumArtFetcher(
     ) : Fetcher.Factory<AlbumArt> {
         override fun create(data: AlbumArt, options: Options, imageLoader: ImageLoader): Fetcher =
             AlbumArtFetcher(tracks, open, data)
+    }
+}
+
+/** The thumbnail of an album's art for list rows (spec/architecture.md §7 *Thumbnails*). */
+data class AlbumThumbnail(val albumId: Long)
+
+/** The thumbnail of one track's art, for a row whose track has no album. */
+data class TrackThumbnail(val mediaStoreId: Long)
+
+class AlbumThumbnailKeyer : Keyer<AlbumThumbnail> {
+    override fun key(data: AlbumThumbnail, options: Options): String = "album-thumb:${data.albumId}"
+}
+
+class TrackThumbnailKeyer : Keyer<TrackThumbnail> {
+    override fun key(data: TrackThumbnail, options: Options): String = "track-thumb:${data.mediaStoreId}"
+}
+
+private fun thumbnailResult(file: java.io.File) = SourceFetchResult(
+    source = ImageSource(file.toOkioPath(), FileSystem.SYSTEM),
+    mimeType = "image/jpeg",
+    dataSource = DataSource.DISK,
+)
+
+/**
+ * Serves a thumbnail from the [cache] when it has one; otherwise finds the picture ([cover]), makes the
+ * small JPEG, stores it and serves that. Art that doesn't exist is remembered, so it isn't looked for again.
+ */
+private suspend fun thumbnail(cache: ThumbnailCache, key: String, cover: suspend () -> Picture?): FetchResult? {
+    cache.get(key)?.let { return thumbnailResult(it) }
+    if (cache.hasNone(key)) return null
+    val jpeg = cover()?.let { Thumbnails.encode(it.data) }
+    if (jpeg == null) {
+        cache.putNone(key)
+        return null
+    }
+    return thumbnailResult(cache.put(key, jpeg))
+}
+
+class AlbumThumbnailFetcher(
+    private val cache: ThumbnailCache,
+    private val tracks: suspend (albumId: Long, limit: Int) -> List<Long>,
+    private val open: (mediaStoreId: Long) -> ParcelFileDescriptor?,
+    private val data: AlbumThumbnail,
+) : Fetcher {
+
+    override suspend fun fetch(): FetchResult? = thumbnail(cache, "album-${data.albumId}") {
+        tracks(data.albumId, AlbumArt.MAX_TRACKS).firstNotNullOfOrNull { coverOf(open, it) }
+    }
+
+    class Factory(
+        private val cache: ThumbnailCache,
+        private val tracks: suspend (albumId: Long, limit: Int) -> List<Long>,
+        private val open: (mediaStoreId: Long) -> ParcelFileDescriptor?,
+    ) : Fetcher.Factory<AlbumThumbnail> {
+        override fun create(data: AlbumThumbnail, options: Options, imageLoader: ImageLoader): Fetcher =
+            AlbumThumbnailFetcher(cache, tracks, open, data)
+    }
+}
+
+class TrackThumbnailFetcher(
+    private val cache: ThumbnailCache,
+    private val open: (mediaStoreId: Long) -> ParcelFileDescriptor?,
+    private val data: TrackThumbnail,
+) : Fetcher {
+
+    override suspend fun fetch(): FetchResult? = thumbnail(cache, "track-${data.mediaStoreId}") { coverOf(open, data.mediaStoreId) }
+
+    class Factory(
+        private val cache: ThumbnailCache,
+        private val open: (mediaStoreId: Long) -> ParcelFileDescriptor?,
+    ) : Fetcher.Factory<TrackThumbnail> {
+        override fun create(data: TrackThumbnail, options: Options, imageLoader: ImageLoader): Fetcher =
+            TrackThumbnailFetcher(cache, open, data)
     }
 }

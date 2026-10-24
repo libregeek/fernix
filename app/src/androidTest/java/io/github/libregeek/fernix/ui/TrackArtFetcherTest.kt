@@ -10,6 +10,13 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.toBitmap
+import io.github.libregeek.fernix.ui.art.AlbumThumbnail
+import io.github.libregeek.fernix.ui.art.AlbumThumbnailFetcher
+import io.github.libregeek.fernix.ui.art.AlbumThumbnailKeyer
+import io.github.libregeek.fernix.ui.art.ThumbnailCache
+import io.github.libregeek.fernix.ui.art.TrackThumbnail
+import io.github.libregeek.fernix.ui.art.TrackThumbnailFetcher
+import io.github.libregeek.fernix.ui.art.TrackThumbnailKeyer
 import io.github.libregeek.fernix.ui.art.AlbumArt
 import io.github.libregeek.fernix.ui.art.AlbumArtFetcher
 import io.github.libregeek.fernix.ui.art.AlbumArtKeyer
@@ -45,6 +52,7 @@ class TrackArtFetcherTest {
     private val albums = mapOf(10L to listOf(4L, 3L, 1L), 11L to listOf(4L), 12L to emptyList())
 
     private val open: (Long) -> ParcelFileDescriptor? = { id ->
+        opened++
         val asset = assets[id]
         if (asset == null) {
             null
@@ -63,6 +71,10 @@ class TrackArtFetcherTest {
 
     private var people = FakePeople(emptyMap(), null)
 
+    private val cacheDir = File(context.cacheDir, "thumbnails-test")
+    private val thumbnails = ThumbnailCache(cacheDir, maxBytes = 1_000_000)
+    private var opened = 0
+
     private lateinit var loader: ImageLoader
 
     @Before
@@ -76,6 +88,10 @@ class TrackArtFetcherTest {
                     override suspend fun tracks(personId: Long, limit: Int) = people.tracks(personId, limit)
                     override suspend fun topRoleKey(personId: Long) = people.topRoleKey(personId)
                 }, open))
+                add(AlbumThumbnailKeyer())
+                add(AlbumThumbnailFetcher.Factory(thumbnails, { album, limit -> albums[album].orEmpty().take(limit) }, open))
+                add(TrackThumbnailKeyer())
+                add(TrackThumbnailFetcher.Factory(thumbnails, open))
                 add(AlbumArtKeyer())
                 add(AlbumArtFetcher.Factory({ album, limit -> albums[album].orEmpty().take(limit) }, open))
             }
@@ -85,6 +101,7 @@ class TrackArtFetcherTest {
 
     @After
     fun tearDown() {
+        thumbnails.clear()
         files.forEach { it.delete() }
     }
 
@@ -151,5 +168,45 @@ class TrackArtFetcherTest {
         people = FakePeople(mapOf(3L to listOf(PersonArtTrack(1, emptyMap()), PersonArtTrack(2, emptyMap()))), "ARTIST")
         assertTrue(load(PersonArt(3, "Nobody")) is ErrorResult) // pictures exist, none is Nobody's
         assertTrue(load(PersonArt(404, "Ann")) is ErrorResult) // no tracks
+    }
+
+    // --- thumbnails (JPEG is lossy, so colours are compared by their dominant channel) ---
+
+    private fun isBlue(px: Int) = android.graphics.Color.blue(px) > 200 && android.graphics.Color.red(px) < 60 && android.graphics.Color.green(px) < 60
+
+    private fun isRed(px: Int) = android.graphics.Color.red(px) > 200 && android.graphics.Color.green(px) < 60 && android.graphics.Color.blue(px) < 60
+
+    @Test
+    fun albumThumbnail_isMadeOnce_scaledDown_andThenServedFromTheCacheWithoutOpeningAnyFile() {
+        // Album 10: the first track (opus) has no picture, the second (ogg) is blue.
+        assertTrue("blue expected", isBlue(pixel(10, AlbumThumbnail(10))))
+        val made = thumbnails.get("album-10")!!
+        assertTrue(made.length() in 1..20_000)
+        assertTrue(opened >= 1)
+
+        opened = 0
+        loader.memoryCache?.clear()
+        val again = load(AlbumThumbnail(10))
+        assertTrue(again is SuccessResult)
+        assertEquals(0, opened) // read from the cache file, not from any audio file
+    }
+
+    @Test
+    fun albumThumbnail_forAnAlbumWithoutArt_leavesAMarker_andIsNotLookedForAgain() {
+        assertTrue(load(AlbumThumbnail(11)) is ErrorResult)
+        assertTrue(thumbnails.hasNone("album-11"))
+        opened = 0
+        assertTrue(load(AlbumThumbnail(11)) is ErrorResult)
+        assertEquals(0, opened)
+    }
+
+    @Test
+    fun trackThumbnail_usesTheTracksOwnCover_andAClearedCacheIsMadeAgain() {
+        assertTrue("red expected", isRed(pixel(1, TrackThumbnail(1))))
+        assertTrue(thumbnails.get("track-1") != null)
+        thumbnails.clear()
+        loader.memoryCache?.clear()
+        assertTrue(load(TrackThumbnail(1)) is SuccessResult)
+        assertTrue(thumbnails.get("track-1") != null)
     }
 }

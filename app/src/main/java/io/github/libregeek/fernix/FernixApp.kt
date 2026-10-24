@@ -8,6 +8,10 @@ import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import io.github.libregeek.fernix.data.db.PersonArtDb
 import io.github.libregeek.fernix.ui.art.AlbumArtFetcher
+import io.github.libregeek.fernix.ui.art.AlbumThumbnailFetcher
+import io.github.libregeek.fernix.ui.art.AlbumThumbnailKeyer
+import io.github.libregeek.fernix.ui.art.TrackThumbnailFetcher
+import io.github.libregeek.fernix.ui.art.TrackThumbnailKeyer
 import io.github.libregeek.fernix.ui.art.AlbumArtKeyer
 import io.github.libregeek.fernix.ui.art.PersonArtFetcher
 import io.github.libregeek.fernix.ui.art.PersonArtKeyer
@@ -34,12 +38,19 @@ class FernixApp : Application(), SingletonImageLoader.Factory {
         ImageLoader.Builder(context)
             .components {
                 val open = contentResolverOpener(contentResolver)
+                val albumTracks: suspend (Long, Int) -> List<Long> = { album, limit ->
+                    container.database.trackDao().albumMediaStoreIds(album, limit)
+                }
                 add(TrackArtKeyer())
                 add(TrackArtFetcher.Factory(open))
                 add(PersonArtKeyer())
                 add(PersonArtFetcher.Factory(PersonArtDb(container.database), open))
+                add(AlbumThumbnailKeyer())
+                add(AlbumThumbnailFetcher.Factory(container.thumbnails, albumTracks, open))
+                add(TrackThumbnailKeyer())
+                add(TrackThumbnailFetcher.Factory(container.thumbnails, open))
                 add(AlbumArtKeyer())
-                add(AlbumArtFetcher.Factory({ album, limit -> container.database.trackDao().albumMediaStoreIds(album, limit) }, open))
+                add(AlbumArtFetcher.Factory(albumTracks, open))
             }
             .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.05).build() }
             .diskCache(null)
