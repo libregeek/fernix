@@ -108,23 +108,40 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 
 The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§5, §9.6].
 
-- [ ] Rename Search → Tracks: bottom-nav label and a music-note icon instead of the magnifier, screen/back-stack names, strings, "Show in Tracks" on person details, README
-- [ ] Tracks lists **every track** when there is no search text and no filter (title, id; keyset-paged); the tab is the library's full track list
-- [ ] ✕ button in the search box removes all search terms: the text and every filter chip (person chip included)
-- [ ] Multiple filters: filters on the **same** tag are ORed, filters on different tags are ANDed, and the text and the person filter are ANDed with the rest [§5 *Filtering*, §9.3]; `TrackQueryBuilder` builds one `keyId = ? AND valueId IN (…)` subquery per key; update its unit tests and add one for same-key OR, different-key AND, plus text and person together
-- [ ] **Add to playlist** on the result list: every track matching the current search and filters (all pages, not only the loaded rows), into an existing playlist or a new one made from them (the existing picker); tracks already in a playlist are skipped
-- [ ] Thumbnail of the album art on every row of the Albums list and of the Tracks list (`AlbumArt` model; a track with no album uses its own picture); lazy, placeholder meanwhile; served from a small on-disk thumbnail cache in `cacheDir/thumbnails/` (JPEG, at most 160 px, keyed by album, capped at 20 MB, oldest deleted first, cleared after a scan that changed files) plus Coil's memory cache; `TrackRow` gains `albumId` so a row can ask for its album's art [§7 *Thumbnails*, §9.3, §9.5]
-- [ ] Remove **All Songs** from the Playlists tab and its detail screen (`DefaultPlaylists`, strings); four defaults remain: Favourites, Recently Added, Never Played, Most Played; README says four
-- [ ] Thumbnail cache: write/read/evict test (cap respected, cleared after a changing scan, a missing or corrupt file is regenerated) [§7 *Thumbnails*]
-- [ ] Check scrolling the full track list with thumbnails on a large library (smoothness, memory) and on the emulator
-- [ ] Tests: empty filter lists all tracks (paging across pages), ✕ clears text and chips, add-all-results to a new and to an existing playlist (more results than one page), All Songs gone
+- [x] Rename Search → Tracks: bottom-nav label and a music-note icon instead of the magnifier, screen/back-stack names, strings, "Show in Tracks" on person details, README
+- [x] Tracks lists **every track** when there is no search text and no filter (title, id; keyset-paged); the tab is the library's full track list
+- [x] ✕ button in the search box removes all search terms: the text and every filter chip (person chip included)
+- [x] Multiple filters: filters on the **same** tag are ORed, filters on different tags are ANDed, and the text and the person filter are ANDed with the rest [§5 *Filtering*, §9.3]; `TrackQueryBuilder` builds one `keyId = ? AND valueId IN (…)` subquery per key; update its unit tests and add one for same-key OR, different-key AND, plus text and person together
+- [x] **Add to playlist** on the result list: every track matching the current search and filters (all pages, not only the loaded rows), into an existing playlist or a new one made from them (the existing picker); tracks already in a playlist are skipped
+- [x] Thumbnail of the album art on every row of the Albums list and of the Tracks list (`AlbumArt` model; a track with no album uses its own picture); lazy, placeholder meanwhile; served from a small on-disk thumbnail cache in `cacheDir/thumbnails/` (JPEG, at most 160 px, keyed by album, capped at 20 MB, oldest deleted first, cleared after a scan that changed files) plus Coil's memory cache; `TrackRow` gains `albumId` so a row can ask for its album's art [§7 *Thumbnails*, §9.3, §9.5]
+- [x] Remove **All Songs** from the Playlists tab and its detail screen (`DefaultPlaylists`, strings); four defaults remain: Favourites, Recently Added, Never Played, Most Played; README says four (done with the README line below)
+- [x] Thumbnail cache: write/read/evict test (cap respected, cleared after a changing scan, a missing file is regenerated; a half-written file is never visible, since it is written to a temporary file and renamed) [§7 *Thumbnails*]
+- [ ] Check scrolling the full track list with thumbnails on a large library (smoothness, memory); on the emulator the lists show and cache thumbnails (4 albums, 762 bytes to 11 KB each) — a real 16K-track library is still to be tried
+- [x] Tests: empty filter lists all tracks (paging across pages), ✕ clears text and chips, add-all-results to a new and to an existing playlist (more results than one page), All Songs gone
+
+### Mini-player, Track details and tag pills (2026-10-24, from review)
+
+- [x] Mini-player: three lines like a Tracks row (title; album with its date in brackets; artists, smaller), from the playing track's database row
+- [x] Track details: cover, title, album in bold (smaller than the title) with the date in brackets, then Composer, Lyricist and Artists, then **Other tags** (renamed from Tags: everything except those and title/album/date)
+- [x] Every tag value is a pill; a person's pill opens the person details, any other pill opens Tracks with the value as a filter (`BackStack` entries gain a second argument); the split button follows a splittable pill
+- [x] Now Playing: tapping a non-person tag value opens Tracks filtered by it too
+
+### Tracks screen layout (2026-10-24, from review)
+
+- [x] Search box and filters in one bordered container with a labelled **Reset** (replaces the ✕ inside the search box, which didn't say it also reset the filters)
+- [x] Add filter is an icon, and the chips wrap onto more lines (long chips cut with an ellipsis) so it is never pushed out of view
+- [x] Play, Add to queue and Add to playlist are icons
+- [x] Track row: title; then album with its date in brackets and the artists, both smaller (`TrackRow` gains `date`)
+- [x] Reset moved to the bottom of the container and made an icon (add-filter icon on its left), so the search box has the full width; the search box is a slim 40 dp pill (`CompactSearchField`)
+- [x] The three result actions form one tonal capsule; **Add to playlist** is reworked as a bottom sheet (`AddToPlaylistSheet`: highlighted New playlist row with an inline name field, Favourites and playlists as rounded tiles with counts, a toast on success) instead of a plain dialog
+- [ ] The same icon actions on the album, person and playlist detail screens (they still have text buttons) — only if wanted
 
 ## Phase 6 — Now Playing & Queue
 
 - [x] Now Playing: art, title, album, date, seek bar, transport, shuffle/repeat [§9.1]
 - [x] "Tags on the playing track" query as Room `Flow`; 3 configurable slots (defaults `COMPOSER`, `LYRICIST`, `ARTIST`); `PERFORMER` slot shows instrument label; hide missing tags
 - [x] Favourite heart on Now Playing: one tap adds the playing track to Favourites, another removes it; filled state from a Room `Flow` [§9.1] (added 2026-10-24)
-- [ ] Tappable values → Tracks (formerly Search) pushed on back stack (person filter for people keys, tag filter otherwise) — people keys done; other tags need Search to take a tag filter as its argument
+- [x] Tappable values → Tracks (formerly Search) pushed on back stack (person filter for people keys, tag filter otherwise); the back stack entry takes a second argument (the tag key id) for the tag filter
 - [x] Equalizer bottom sheet from top app bar
 - [x] Queue screen: drag-reorder, remove, jump to item
 
