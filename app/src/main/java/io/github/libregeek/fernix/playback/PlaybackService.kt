@@ -43,7 +43,9 @@ class PlaybackService : MediaSessionService() {
         // A fixed session id (instead of the one ExoPlayer picks) keeps the equalizer attached.
         val audioSessionId = getSystemService(AudioManager::class.java).generateAudioSessionId()
         player.audioSessionId = audioSessionId
-        val engine = EqualizerEngine(audioSessionId, (application as FernixApp).container.settings)
+        val container = (application as FernixApp).container
+        PlayRecorder(container::recordPlay).attach(player)
+        val engine = EqualizerEngine(audioSessionId, container.settings)
         equalizer = engine
         session = MediaSession.Builder(this, player)
             .setCallback(EqualizerCallback(engine))

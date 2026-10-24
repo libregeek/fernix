@@ -80,7 +80,7 @@ Phases are ordered so each one ends in something runnable and testable.
 - [x] `POST_NOTIFICATIONS` runtime request (API 33+)
 - [x] Play / enqueue helpers: play all of a list, uncapped queue
 - [x] Equalizer on ExoPlayer audio session id [§8] — engine, controller commands and persistence done; the bottom sheet is Phase 6
-- [ ] Record plays in the service: when a track plays through to its end (auto-transition or end of queue), set `lastPlayedAt` and `playCount + 1` on `Dispatchers.IO`; skipping or stopping early doesn't count [§5, §8] (added 2026-10-24)
+- [x] Record plays in the service: when a track plays through to its end (auto-transition or end of queue), set `lastPlayedAt` and `playCount + 1` on `Dispatchers.IO`; skipping or stopping early doesn't count [§5, §8] (added 2026-10-24)
 - [ ] Verify: background playback, gapless between tracks, resume after process death
 
 ## Phase 5 — Library screens

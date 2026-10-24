@@ -38,11 +38,16 @@ class AppContainer(context: Context) {
 
     val trackSearch: TrackSearch by lazy { TrackSearch(database) }
 
+    /** Called by the playback service when a track plays through; the write runs off the main thread. */
+    fun recordPlay(trackId: Long) {
+        appScope.launch(Dispatchers.IO) { database.trackDao().recordPlay(trackId, System.currentTimeMillis()) }
+    }
+
     /** Main thread only. Connects to the playback service on first use. */
     val playback: PlaybackController by lazy { PlaybackController(appContext) }
 
     /** Outlives activities, so a scan keeps going across rotation and screen changes. */
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val scanner: LibraryScanner by lazy {
         LibraryScanner(database, MediaStoreSource(appContext), MediaStoreTagSource(appContext))
