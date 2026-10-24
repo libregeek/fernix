@@ -50,6 +50,8 @@ import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.playback.PlaybackController
 import io.github.libregeek.fernix.ui.common.RowMenu
+import io.github.libregeek.fernix.ui.common.ListMenu
+import io.github.libregeek.fernix.ui.split.SplitTagsDialog
 
 @Composable
 fun AlbumDetailScreen(
@@ -66,6 +68,7 @@ fun AlbumDetailScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var splitting by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     LaunchedEffect(listState, state.tracks.size) {
@@ -105,6 +108,7 @@ fun AlbumDetailScreen(
                     Text(album.year.toString(), style = MaterialTheme.typography.bodySmall)
                 }
             }
+            if (album != null) ListMenu(onSplitTags = { splitting = true })
         }
         if (state.album != null) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -135,6 +139,7 @@ fun AlbumDetailScreen(
         }
     }
     addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
+    if (splitting) SplitTagsDialog(db, trackIds = { db.trackDao().albumTracks(albumId).map { it.id } }) { splitting = false }
 }
 
 private const val LOAD_AHEAD = 20

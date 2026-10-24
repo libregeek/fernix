@@ -85,5 +85,8 @@ class PersonDetailViewModel(
 
     fun enqueueTrack(track: TrackRow) = playback.enqueue(listOf(track))
 
+    /** The ids of every track of the person, for Split tags. */
+    suspend fun trackIds(): List<Long> = allTracks().map { it.id }
+
     private suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter) }
 }

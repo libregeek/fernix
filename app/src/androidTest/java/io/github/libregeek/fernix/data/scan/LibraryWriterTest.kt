@@ -91,6 +91,40 @@ class LibraryWriterTest {
     }
 
     @Test
+    fun aStoredSplitRule_splitsTheValueAtIngestion_andRecordsTheTrack() = runBlocking {
+        writer.apply(listOf(upsert(1, "ARTIST" to listOf("Ann"))))
+        val artist = scalar("SELECT id FROM tag_keys WHERE `key` = 'ARTIST'")
+        val rule = db.splitRuleDao().insert(
+            io.github.libregeek.fernix.data.db.SplitRuleEntity(
+                keyId = artist,
+                value = "Simon; Garfunkel",
+                parts = TagValues.join(listOf("Simon", "Garfunkel")),
+                createdAt = 1,
+            ),
+        )
+
+        // A new file, and a rescan of a changed one, both carrying the joined value; a new writer per scan.
+        val scan = newWriter()
+        scan.apply(
+            listOf(
+                upsert(2, "ARTIST" to listOf("simon; GARFUNKEL", "Ann")),
+                upsert(1, "ARTIST" to listOf("Simon; Garfunkel"), size = 99),
+            ),
+        )
+        fun artists(mediaStoreId: Long) = db.openHelper.readableDatabase.query(
+            "SELECT v.value FROM track_tags tt JOIN tag_values v ON v.id = tt.valueId JOIN tracks t ON t.id = tt.trackId " +
+                "WHERE t.mediaStoreId = ? AND tt.keyId = ? ORDER BY tt.ord",
+            arrayOf(mediaStoreId, artist),
+        ).use { c -> generateSequence { if (c.moveToNext()) c.getString(0) else null }.toList() }
+        assertEquals(listOf("Simon", "Garfunkel", "Ann"), artists(2))
+        assertEquals(listOf("Simon", "Garfunkel"), artists(1))
+        assertEquals(listOf("Simon", "Garfunkel", "Ann"), TagValues.split(db.trackDao().byId(db.trackDao().idByMediaStoreId(2)!!)!!.artist))
+        assertEquals(2L, scalar("SELECT COUNT(*) FROM split_rule_tracks WHERE ruleId = ?", rule))
+        assertEquals(2L, trackCountFor("ARTIST", "Simon"))
+        assertEquals(2L, personCount("Garfunkel"))
+    }
+
+    @Test
     fun tagRows_keepOrder_andSharedValueIsOneRow() = runBlocking {
         writer.apply(listOf(upsert(1, "ARTIST" to listOf("Zed", "Amy"), "COMPOSER" to listOf("zed"))))
         assertEquals(2L, scalar("SELECT COUNT(*) FROM tag_values"))

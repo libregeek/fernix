@@ -4,14 +4,14 @@ package io.github.libregeek.fernix.data.scan
 import androidx.room.withTransaction
 import io.github.libregeek.fernix.data.db.AlbumEntity
 import io.github.libregeek.fernix.data.db.FernixDatabase
-import io.github.libregeek.fernix.data.db.KeyValueEntity
-import io.github.libregeek.fernix.data.db.PersonEntity
+import io.github.libregeek.fernix.data.db.SplitRuleTrackEntity
+import io.github.libregeek.fernix.data.db.SummaryRefresher
 import io.github.libregeek.fernix.data.db.TagKeyEntity
 import io.github.libregeek.fernix.data.db.TagPair
 import io.github.libregeek.fernix.data.db.TagValueEntity
 import io.github.libregeek.fernix.data.db.TrackEntity
 import io.github.libregeek.fernix.data.db.TrackTagEntity
-import io.github.libregeek.fernix.tags.PeopleTags
+import io.github.libregeek.fernix.tags.SplitRules
 import io.github.libregeek.fernix.tags.TagNormalizer
 import io.github.libregeek.fernix.tags.TrackFields
 
@@ -41,8 +41,11 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
     private val keyIds = HashMap<String, Long>()
     private val valueIds = HashMap<String, Long>()
     private val albumIds = HashMap<Pair<String, Int>, Long>()
+    private val summaries = SummaryRefresher(db)
+    private var splitRules: SplitRules? = null
 
     suspend fun apply(ops: List<LibraryOp>) {
+        val rules = splitRules ?: SplitRules(db.splitRuleDao().allWithKeys()).also { splitRules = it }
         db.withTransaction {
             val tracks = db.trackDao()
             val tags = db.tagDao()
@@ -56,7 +59,9 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
                 }
                 is LibraryOp.SetDateAdded -> tracks.setDateAdded(op.mediaStoreId, op.dateAdded)
                 is LibraryOp.Upsert -> {
-                    val normalized = TagNormalizer.normalize(op.rawTags.orEmpty())
+                    // Stored split rules decide how combined values are stored (spec §5 *Tag splitting*).
+                    val split = rules.apply(TagNormalizer.normalize(op.rawTags.orEmpty()))
+                    val normalized = split.tags
                     val fields = TrackFields.from(normalized)
                     val existing = tracks.idByMediaStoreId(op.media.mediaStoreId)
                     if (existing != null) {
@@ -70,6 +75,9 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
                         lastPlayedAt = previous?.lastPlayedAt,
                     )
                     val trackId = if (existing != null) existing.also { tracks.update(entity) } else tracks.insert(entity)
+                    if (split.appliedRuleIds.isNotEmpty()) {
+                        db.splitRuleDao().insertRuleTracks(split.appliedRuleIds.map { SplitRuleTrackEntity(it, trackId) })
+                    }
                     for ((key, values) in normalized) {
                         val keyId = keyId(key)
                         values.forEachIndexed { ord, value ->
@@ -82,7 +90,7 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
             }
 
             if (newRows.isNotEmpty()) tags.insertTrackTags(newRows)
-            refreshSummaries(touched)
+            summaries.refresh(touched)
         }
     }
 
@@ -122,22 +130,5 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
         val dao = db.tagDao()
         val inserted = dao.insertValue(TagValueEntity(value = value))
         if (inserted > 0) inserted else dao.valueId(value)!!
-    }
-
-    /** Recomputes `key_values` and `people` for just the pairs and values a batch touched. */
-    private suspend fun refreshSummaries(touched: Set<TagPair>) {
-        val tags = db.tagDao()
-        val peopleKeys = tags.peopleKeyIds(PeopleTags.KEYS.toList())
-        for ((keyId, valueId) in touched) {
-            val count = tags.countTracks(keyId, valueId)
-            if (count == 0) tags.deleteKeyValue(keyId, valueId)
-            else tags.upsertKeyValues(listOf(KeyValueEntity(keyId, valueId, count)))
-        }
-        if (peopleKeys.isEmpty()) return
-        for (valueId in touched.mapTo(HashSet()) { it.valueId }) {
-            val count = tags.countPersonTracks(valueId, peopleKeys)
-            if (count == 0) tags.deletePerson(valueId)
-            else tags.upsertPeople(listOf(PersonEntity(valueId, count)))
-        }
     }
 }

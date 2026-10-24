@@ -44,6 +44,8 @@ import io.github.libregeek.fernix.data.db.PlaylistEntryRow
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.playback.PlaybackController
+import io.github.libregeek.fernix.ui.common.ListMenu
+import io.github.libregeek.fernix.ui.split.SplitTagsDialog
 
 @Composable
 fun PlaylistDetailScreen(
@@ -61,6 +63,7 @@ fun PlaylistDetailScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var splitting by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
 
     LaunchedEffect(listState, state.entries.size) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
@@ -78,11 +81,12 @@ fun PlaylistDetailScreen(
                     state.isFavourites -> stringResource(R.string.playlist_favourites)
                     else -> state.name ?: stringResource(R.string.album_unknown)
                 },
-                modifier = Modifier.padding(horizontal = 12.dp),
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (state.exists) ListMenu(onSplitTags = { splitting = true })
         }
         if (state.exists) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -122,6 +126,7 @@ fun PlaylistDetailScreen(
             }
         }
     }
+    if (splitting) SplitTagsDialog(db, trackIds = vm::trackIds) { splitting = false }
 }
 
 @Composable

@@ -51,6 +51,8 @@ import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.PlaybackController
 import io.github.libregeek.fernix.ui.common.RowMenu
+import io.github.libregeek.fernix.ui.common.ListMenu
+import io.github.libregeek.fernix.ui.split.SplitTagsDialog
 
 @Composable
 fun PersonDetailScreen(
@@ -69,6 +71,7 @@ fun PersonDetailScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var splitting by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     LaunchedEffect(listState, state.tracks.size) {
@@ -91,6 +94,7 @@ fun PersonDetailScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (state.name != null) ListMenu(onSplitTags = { splitting = true })
         }
         if (state.name != null) {
             if (state.roles.isNotEmpty()) {
@@ -134,6 +138,7 @@ fun PersonDetailScreen(
         }
     }
     addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
+    if (splitting) SplitTagsDialog(db, trackIds = vm::trackIds) { splitting = false }
 }
 
 @Composable

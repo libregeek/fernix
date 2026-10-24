@@ -115,12 +115,12 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 
 ## Phase 7 — Tag splitting
 
-- [ ] Split dialog: separators (`;`, `/`, `,`, custom), tag selection (default people keys + `GENRE`; `TITLE`/`ALBUM`/`DATE` excluded), choice remembered [§5]
-- [ ] Preview of distinct (tag, value) with parts and library-wide track count; per-row checkbox
-- [ ] Apply: create `split_rules`, rewrite `track_tags` + fixed column library-wide, record `split_rule_tracks`, delete unused values, refresh `key_values`/`people`; background with progress
-- [ ] Apply rules during scan ingestion
-- [ ] "Split tags" in overflow menu of every track list (Search, album, folder, playlist)
-- [ ] Tests: split dedupe/order/trim, rule survives rescan, `AC/DC` left whole
+- [x] Split dialog: separators (`;`, `/`, `,`, custom), tag selection (default people keys + `GENRE`; `TITLE`/`ALBUM`/`DATE` excluded), choice remembered [§5]
+- [x] Preview of distinct (tag, value) with parts and library-wide track count; per-row checkbox
+- [x] Apply: create `split_rules`, rewrite `track_tags` + fixed column library-wide, record `split_rule_tracks`, delete unused values, refresh `key_values`/`people`; background with progress
+- [x] Apply rules during scan ingestion
+- [x] "Split tags" in overflow menu of every track list (Search, album, folder, playlist)
+- [x] Tests: split dedupe/order/trim, rule survives rescan, `AC/DC` left whole
 
 ## Phase 8 — Settings
 

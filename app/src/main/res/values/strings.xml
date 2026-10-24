@@ -23,6 +23,28 @@
     <string name="play">Play</string>
     <string name="pause">Pause</string>
     <string name="queue">Queue</string>
+    <string name="split_tags">Tags to split</string>
+    <string name="split_menu">Split tags</string>
+    <string name="split_title">Split tags</string>
+    <string name="split_separators">Split at</string>
+    <string name="split_custom">Other separator (e.g. \u201C feat. \u201D)</string>
+    <string name="split_preview">Preview</string>
+    <string name="split_back">Back</string>
+    <string name="split_apply">Split %1$d</string>
+    <string name="split_close">Done</string>
+    <string name="split_searching">Looking for combined values\u2026</string>
+    <string name="split_nothing">Nothing to split: none of the chosen tags holds one of the separators in these tracks.</string>
+    <string name="split_all">Check all</string>
+    <string name="split_none">Uncheck all</string>
+    <string name="split_applying">Splitting %1$d of %2$d\u2026</string>
+    <plurals name="split_done">
+        <item quantity="one">Split %d value across your library.</item>
+        <item quantity="other">Split %d values across your library.</item>
+    </plurals>
+    <plurals name="split_tracks_in_library">
+        <item quantity="one">%d track in your library</item>
+        <item quantity="other">%d tracks in your library</item>
+    </plurals>
     <string name="track_details">Track details</string>
     <string name="details_tags">Tags</string>
     <string name="details_technical">Technical details</string>

@@ -42,6 +42,8 @@ import io.github.libregeek.fernix.data.db.TrackRow
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackController
 import io.github.libregeek.fernix.ui.common.RowMenu
+import io.github.libregeek.fernix.ui.common.ListMenu
+import io.github.libregeek.fernix.ui.split.SplitTagsDialog
 
 @Composable
 fun FoldersScreen(
@@ -56,6 +58,7 @@ fun FoldersScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var splitting by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     BackHandler(enabled = state.canGoUp) { vm.up() }
@@ -98,11 +101,12 @@ fun FoldersScreen(
                         }
                         Text(
                             state.path.last().displayName(),
-                            modifier = Modifier.padding(horizontal = 12.dp),
+                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        if (state.tracks.isNotEmpty()) ListMenu(onSplitTags = { splitting = true })
                     }
                 }
             }
@@ -138,6 +142,7 @@ fun FoldersScreen(
         }
     }
     addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
+    if (splitting) SplitTagsDialog(db, trackIds = vm::trackIds) { splitting = false }
 }
 
 @Composable

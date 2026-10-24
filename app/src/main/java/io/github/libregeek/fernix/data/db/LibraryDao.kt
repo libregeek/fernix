@@ -117,6 +117,39 @@ interface TagDao {
     )
     suspend fun valuesOfKeys(trackId: Long, keys: List<String>): List<PlayingTag>
 
+    /**
+     * The distinct (key, value) pairs of [keyIds] on [trackIds]: what a split preview looks through.
+     * Keep [trackIds] and [keyIds] together under SQLite's variable limit (999 on Android 10).
+     */
+    @Query(
+        "SELECT DISTINCT tt.keyId AS keyId, k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
+            "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
+            "WHERE tt.trackId IN (:trackIds) AND tt.keyId IN (:keyIds)",
+    )
+    suspend fun valuesOnTracks(trackIds: List<Long>, keyIds: List<Long>): List<TagValueRef>
+
+    /** How many tracks in the whole library carry the value under the key (from the summary table). */
+    @Query("SELECT trackCount FROM key_values WHERE keyId = :keyId AND valueId = :valueId")
+    suspend fun libraryTrackCount(keyId: Long, valueId: Long): Int?
+
+    /** Every track carrying the value under the key. */
+    @Query("SELECT DISTINCT trackId FROM track_tags WHERE keyId = :keyId AND valueId = :valueId")
+    suspend fun tracksWithValue(keyId: Long, valueId: Long): List<Long>
+
+    /** A track's values under one key, in stored order, with their text. */
+    @Query(
+        "SELECT v.id AS valueId, v.value AS value FROM track_tags tt JOIN tag_values v ON v.id = tt.valueId " +
+            "WHERE tt.trackId = :trackId AND tt.keyId = :keyId ORDER BY tt.ord",
+    )
+    suspend fun valuesOfTrackKey(trackId: Long, keyId: Long): List<TrackKeyValue>
+
+    @Query("DELETE FROM track_tags WHERE trackId = :trackId AND keyId = :keyId")
+    suspend fun deleteTrackKey(trackId: Long, keyId: Long)
+
+    /** Drops the value from the dictionary if no track uses it under any key any more. */
+    @Query("DELETE FROM tag_values WHERE id = :valueId AND NOT EXISTS (SELECT 1 FROM track_tags WHERE valueId = :valueId)")
+    suspend fun deleteValueIfUnused(valueId: Long)
+
     /** Every tag of one track: all keys, each key's values in stored order (Track details). */
     @Query(
         "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
@@ -191,6 +224,10 @@ interface SplitRuleDao {
 
     @Query("SELECT * FROM split_rules WHERE keyId = :keyId AND value = :value")
     suspend fun find(keyId: Long, value: String): SplitRuleEntity?
+
+    /** Every rule with its key name; loaded once per scan to split values as files are ingested. */
+    @Query("SELECT r.id AS id, k.`key` AS `key`, r.value AS value, r.parts AS parts FROM split_rules r JOIN tag_keys k ON k.id = r.keyId")
+    suspend fun allWithKeys(): List<SplitRuleRow>
 
     @Query("SELECT * FROM split_rules WHERE id > :afterId ORDER BY id LIMIT :limit")
     suspend fun page(afterId: Long, limit: Int): List<SplitRuleEntity>
