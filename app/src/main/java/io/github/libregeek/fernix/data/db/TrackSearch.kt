@@ -17,6 +17,18 @@ class TrackSearch(private val db: FernixDatabase) {
         peopleKeyIds = null
     }
 
+    /** Every track matching [filter], title-sorted: the whole list, to play or queue it. */
+    suspend fun all(filter: TrackFilter): List<TrackRow> {
+        val rows = mutableListOf<TrackRow>()
+        var cursor = TrackCursor.START
+        while (true) {
+            val page = page(filter, cursor)
+            rows += page.map { it.track }
+            if (page.size < PAGE_SIZE) return rows
+            cursor = cursor.after(page.last().track)
+        }
+    }
+
     /** One page of results after [after] (start with [TrackCursor.START]). */
     suspend fun page(
         filter: TrackFilter,

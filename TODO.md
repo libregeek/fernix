@@ -94,8 +94,8 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [x] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter
 - [x] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
 - [x] No duplicate tracks in a playlist: adding one already present is a no-op (DAO); the unique index comes with the schema migration above (added 2026-10-24)
-- [ ] Default playlists on the Playlists tab, above the user's own: Favourites (editable), Recently Added, All Songs, Never Played, Most Played (read-only: no remove/rename/delete, not offered by *Add to playlist*); detail screen reused with Play and Shuffle [§5, §9] (added 2026-10-24)
-- [ ] *Add to playlist* picker offers Favourites and user playlists only (added 2026-10-24)
+- [x] Default playlists on the Playlists tab, above the user's own: Favourites (editable), Recently Added, All Songs, Never Played, Most Played (read-only: no remove/rename/delete, not offered by *Add to playlist*); detail screen reused with Play and Shuffle [§5, §9] (added 2026-10-24)
+- [x] *Add to playlist* picker offers Favourites and user playlists only (added 2026-10-24)
 - [ ] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row
 - [ ] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
 - [ ] Album details via album name: tapping an album name anywhere (track rows, Now Playing, track details) opens album art, name, year (hidden when 0) and the track list by disc/track

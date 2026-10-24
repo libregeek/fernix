@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -37,10 +38,15 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AddToPlaylistDialog(db: FernixDatabase, tracks: suspend () -> List<TrackRow>, onDone: () -> Unit) {
     var playlists by remember { mutableStateOf<List<PlaylistRow>?>(null) }
+    val favouritesId by produceState<Long?>(null) { value = db.playlistDao().favouritesId() }
     var creating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { playlists = db.playlistDao().summaries().first() }
+    LaunchedEffect(Unit) {
+        // Favourites first, then the user's own playlists; the read-only defaults are never offered.
+        val dao = db.playlistDao()
+        playlists = listOfNotNull(dao.favouritesSummary().first()) + dao.summaries().first()
+    }
 
     fun addTo(playlistId: Long) {
         scope.launch {
@@ -84,7 +90,11 @@ fun AddToPlaylistDialog(db: FernixDatabase, tracks: suspend () -> List<TrackRow>
                 items(playlists.orEmpty(), key = { it.id }) { playlist ->
                     ListItem(
                         modifier = Modifier.clickable { addTo(playlist.id) },
-                        headlineContent = { Text(playlist.name) },
+                        headlineContent = {
+                            Text(
+                                if (playlist.id == favouritesId) stringResource(R.string.playlist_favourites) else playlist.name,
+                            )
+                        },
                         supportingContent = {
                             Text(pluralStringResource(R.plurals.track_count, playlist.trackCount, playlist.trackCount))
                         },

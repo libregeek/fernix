@@ -140,6 +140,7 @@ fun FernixAppUi(
         if (current == Screen.Playlists) {
             PlaylistsScreen(
                 container.database,
+                container.trackSearch,
                 container.playback,
                 onOpenPlaylist = { backStack.push(Screen.PlaylistDetail, it) },
                 modifier = Modifier.padding(padding),
@@ -150,6 +151,7 @@ fun FernixAppUi(
             PlaylistDetailScreen(
                 backStack.currentArg,
                 container.database,
+                container.trackSearch,
                 container.playback,
                 onBack = { backStack.pop() },
                 modifier = Modifier.padding(padding),

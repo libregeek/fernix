@@ -85,15 +85,5 @@ class PersonDetailViewModel(
 
     fun enqueueTrack(track: TrackRow) = playback.enqueue(listOf(track))
 
-    private suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) {
-        val rows = mutableListOf<TrackRow>()
-        var cursor = TrackCursor.START
-        while (true) {
-            val page = search.page(filter, cursor)
-            rows += page.map { it.track }
-            if (page.size < PAGE_SIZE) break
-            cursor = cursor.after(page.last().track)
-        }
-        rows
-    }
+    private suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter) }
 }

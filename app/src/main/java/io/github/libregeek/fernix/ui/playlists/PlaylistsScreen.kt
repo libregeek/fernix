@@ -37,20 +37,23 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.PlaylistRow
+import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.PlaybackController
 import io.github.libregeek.fernix.ui.common.NameDialog
+import io.github.libregeek.fernix.ui.common.RowMenu
 
 @Composable
 fun PlaylistsScreen(
     db: FernixDatabase,
+    search: TrackSearch,
     playback: PlaybackController,
     onOpenPlaylist: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: PlaylistsViewModel = viewModel(
-        factory = viewModelFactory { initializer { PlaylistsViewModel(db, playback) } },
+        factory = viewModelFactory { initializer { PlaylistsViewModel(db, search, playback) } },
     )
-    val playlists by vm.playlists.collectAsStateWithLifecycle()
+    val state by vm.state.collectAsStateWithLifecycle()
     var creating by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<PlaylistRow?>(null) }
     var deleting by remember { mutableStateOf<PlaylistRow?>(null) }
@@ -60,33 +63,57 @@ fun PlaylistsScreen(
             onClick = { creating = true },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         ) { Text(stringResource(R.string.playlist_new)) }
-        Box(Modifier.fillMaxSize()) {
-            val list = playlists
-            if (list != null && list.isEmpty()) {
-                Text(
-                    stringResource(R.string.playlists_empty),
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(list.orEmpty(), key = { it.id }) { playlist ->
+        LazyColumn(Modifier.fillMaxSize()) {
+            // The five default playlists come first; only Favourites among them can be edited,
+            // and not renamed or deleted either, so none of them has a rename/delete menu.
+            state?.favourites?.let { favourites ->
+                item(key = "favourites") {
                     ListItem(
-                        modifier = Modifier.clickable { onOpenPlaylist(playlist.id) },
-                        headlineContent = { Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        modifier = Modifier.clickable { onOpenPlaylist(favourites.id) },
+                        headlineContent = { Text(stringResource(R.string.playlist_favourites)) },
                         supportingContent = {
-                            Text(pluralStringResource(R.plurals.track_count, playlist.trackCount, playlist.trackCount))
+                            Text(pluralStringResource(R.plurals.track_count, favourites.trackCount, favourites.trackCount))
                         },
                         trailingContent = {
-                            PlaylistMenu(
-                                onPlay = { vm.play(playlist.id) },
-                                onEnqueue = { vm.enqueue(playlist.id) },
-                                onRename = { renaming = playlist },
-                                onDelete = { deleting = playlist },
-                            )
+                            RowMenu(onPlay = { vm.play(favourites.id) }, onEnqueue = { vm.enqueue(favourites.id) })
                         },
                     )
                 }
+            }
+            items(DefaultPlaylists.ReadOnly, key = { "default$it" }) { id ->
+                ListItem(
+                    modifier = Modifier.clickable { onOpenPlaylist(id) },
+                    headlineContent = { Text(stringResource(DefaultPlaylists.title(id))) },
+                    supportingContent = { Text(stringResource(DefaultPlaylists.description(id))) },
+                    trailingContent = { RowMenu(onPlay = { vm.play(id) }, onEnqueue = { vm.enqueue(id) }) },
+                )
+            }
+            val own = state?.playlists.orEmpty()
+            if (state != null && own.isEmpty()) {
+                item(key = "none") {
+                    Text(
+                        stringResource(R.string.playlists_empty),
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+            items(own, key = { it.id }) { playlist ->
+                ListItem(
+                    modifier = Modifier.clickable { onOpenPlaylist(playlist.id) },
+                    headlineContent = { Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    supportingContent = {
+                        Text(pluralStringResource(R.plurals.track_count, playlist.trackCount, playlist.trackCount))
+                    },
+                    trailingContent = {
+                        PlaylistMenu(
+                            onPlay = { vm.play(playlist.id) },
+                            onEnqueue = { vm.enqueue(playlist.id) },
+                            onRename = { renaming = playlist },
+                            onDelete = { deleting = playlist },
+                        )
+                    },
+                )
             }
         }
     }

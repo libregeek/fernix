@@ -197,6 +197,13 @@ interface PlaylistDao {
     fun summaries(): Flow<List<PlaylistRow>>
 
     /** Favourites can't be renamed. */
+    /** Favourites with its entry count; re-emits when it changes. */
+    @Query(
+        "SELECT p.id AS id, p.name AS name, COUNT(e.position) AS trackCount FROM playlists p " +
+            "LEFT JOIN playlist_entries e ON e.playlistId = p.id WHERE p.kind = 'favourites' GROUP BY p.id",
+    )
+    fun favouritesSummary(): Flow<PlaylistRow?>
+
     @Query("UPDATE playlists SET name = :name, updatedAt = :now WHERE id = :id AND kind = 'user'")
     suspend fun rename(id: Long, name: String, now: Long)
 

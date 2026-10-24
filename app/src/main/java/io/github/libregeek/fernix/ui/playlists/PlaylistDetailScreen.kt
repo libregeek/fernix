@@ -41,6 +41,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.PlaylistEntryRow
+import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.playback.PlaybackController
 
@@ -48,13 +49,14 @@ import io.github.libregeek.fernix.playback.PlaybackController
 fun PlaylistDetailScreen(
     playlistId: Long,
     db: FernixDatabase,
+    search: TrackSearch,
     playback: PlaybackController,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: PlaylistDetailViewModel = viewModel(
         key = "playlist$playlistId",
-        factory = viewModelFactory { initializer { PlaylistDetailViewModel(playlistId, db, playback) } },
+        factory = viewModelFactory { initializer { PlaylistDetailViewModel(playlistId, db, search, playback) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -70,14 +72,18 @@ fun PlaylistDetailScreen(
                 Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
             }
             Text(
-                state.name ?: stringResource(R.string.album_unknown),
+                when {
+                    DefaultPlaylists.isReadOnly(playlistId) -> stringResource(DefaultPlaylists.title(playlistId))
+                    state.isFavourites -> stringResource(R.string.playlist_favourites)
+                    else -> state.name ?: stringResource(R.string.album_unknown)
+                },
                 modifier = Modifier.padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (state.name != null) {
+        if (state.exists) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { vm.play() }, enabled = !state.empty) { Text(stringResource(R.string.play)) }
                 OutlinedButton(onClick = { vm.play(shuffle = true) }, enabled = !state.empty) {
@@ -106,7 +112,7 @@ fun PlaylistDetailScreen(
                             EntryMenu(
                                 onPlay = { vm.play(position = entry.position) },
                                 onEnqueue = { vm.enqueue(entry) },
-                                onRemove = { vm.remove(entry) },
+                                onRemove = if (state.readOnly) null else ({ vm.remove(entry) }),
                             )
                         },
                     )
@@ -117,7 +123,7 @@ fun PlaylistDetailScreen(
 }
 
 @Composable
-private fun EntryMenu(onPlay: () -> Unit, onEnqueue: () -> Unit, onRemove: () -> Unit) {
+private fun EntryMenu(onPlay: () -> Unit, onEnqueue: () -> Unit, onRemove: (() -> Unit)?) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
@@ -126,10 +132,12 @@ private fun EntryMenu(onPlay: () -> Unit, onEnqueue: () -> Unit, onRemove: () ->
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.play)) }, onClick = { open = false; onPlay() })
             DropdownMenuItem(text = { Text(stringResource(R.string.add_to_queue)) }, onClick = { open = false; onEnqueue() })
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.playlist_remove_entry)) },
-                onClick = { open = false; onRemove() },
-            )
+            if (onRemove != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.playlist_remove_entry)) },
+                    onClick = { open = false; onRemove() },
+                )
+            }
         }
     }
 }

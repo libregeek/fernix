@@ -46,6 +46,15 @@
         <item quantity="other">%d tracks</item>
     </plurals>
     <string name="playlists_empty">No playlists yet</string>
+    <string name="playlist_favourites">Favourites</string>
+    <string name="playlist_recently_added">Recently Added</string>
+    <string name="playlist_recently_added_desc">Your 50 newest songs</string>
+    <string name="playlist_all_songs">All Songs</string>
+    <string name="playlist_all_songs_desc">Everything in your library</string>
+    <string name="playlist_never_played">Never Played</string>
+    <string name="playlist_never_played_desc">Songs you haven\u2019t played all the way through</string>
+    <string name="playlist_most_played">Most Played</string>
+    <string name="playlist_most_played_desc">Your 50 most-played songs</string>
     <string name="playlist_new">New playlist</string>
     <string name="playlist_name">Playlist name</string>
     <string name="playlist_create">Create</string>
