@@ -20,7 +20,15 @@ Fernix plays the music stored on your phone. It never connects to the internet, 
   - **Search:** search, and combine tag filters
   - **Queue:** see, reorder and edit what's playing next
   - **Albums:** albums grouped by name and year
-  - **Playlists:** create and manage your own playlists; play them in order or shuffled
+  - **Playlists:** Fernix keeps five playlists for you, and you can make your own.
+    - **Favourites:** tap the heart on the Now Playing screen to add the song you're listening to, and tap it again to remove it. You can also add and remove songs from Favourites in any list.
+    - **Recently Added:** your 50 newest songs.
+    - **All Songs:** everything in your library.
+    - **Never Played:** songs you haven't listened to all the way through yet.
+    - **Most Played:** your 50 most-played songs.
+    - **Your own playlists:** create, rename and delete them, add songs from any list, and remove songs again. A song can be in a playlist only once. Play a playlist in order or shuffled.
+
+    Only Favourites and your own playlists can be changed; the other four update themselves. Fernix remembers when you last played each song, on your device only, to keep them up to date.
   - **People:** everyone credited on your tracks — artists, composers, lyricists, conductors, performers and more. Tap a name to see all their tracks.
 - **Background playback:** controls in the notification and on the lock screen.
 - **Built-in equalizer:** open it from the Now Playing screen.
