@@ -33,6 +33,9 @@ data class PlaybackUiState(
     val error: String? = null,
 )
 
+/** One entry of the play queue, as the Queue screen shows it. [index] is its position in the queue. */
+data class QueueItem(val index: Int, val trackId: Long?, val title: String, val artist: String)
+
 /**
  * UI-side handle on the playback service (spec/architecture.md §8): wraps a [MediaController] and
  * exposes playback state as a [StateFlow]. The service is started on first use, not at app start.
@@ -46,6 +49,11 @@ class PlaybackController(context: Context) {
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state
 
+    private val _queue = MutableStateFlow<List<QueueItem>>(emptyList())
+
+    /** The play queue in play order; rebuilt only when the queue itself changes, not on every tick. */
+    val queue: StateFlow<List<QueueItem>> = _queue
+
     private val _equalizer = MutableStateFlow<EqualizerState?>(null)
 
     /** The equalizer, or null until [loadEqualizer] has answered or when the device has none. */
@@ -56,7 +64,10 @@ class PlaybackController(context: Context) {
     private val pending = ArrayDeque<(MediaController) -> Unit>()
 
     private val listener = object : Player.Listener {
-        override fun onEvents(player: Player, events: Player.Events) = publish(player)
+        override fun onEvents(player: Player, events: Player.Events) {
+            publish(player)
+            if (events.contains(Player.EVENT_TIMELINE_CHANGED)) publishQueue(player)
+        }
         override fun onPlayerError(error: PlaybackException) {
             _state.value = _state.value.copy(error = error.errorCodeName)
         }
@@ -81,6 +92,7 @@ class PlaybackController(context: Context) {
                 controller = connected
                 connected.addListener(listener)
                 publish(connected)
+                publishQueue(connected)
                 while (pending.isNotEmpty()) pending.removeFirst()(connected)
             },
             ContextCompat.getMainExecutor(appContext),
@@ -169,7 +181,20 @@ class PlaybackController(context: Context) {
         controller = null
         pending.clear()
         _state.value = PlaybackUiState()
+        _queue.value = emptyList()
         _equalizer.value = null
+    }
+
+    private fun publishQueue(player: Player) {
+        _queue.value = List(player.mediaItemCount) { i ->
+            val item = player.getMediaItemAt(i)
+            QueueItem(
+                index = i,
+                trackId = MediaItems.trackId(item.mediaId),
+                title = item.mediaMetadata.title?.toString().orEmpty(),
+                artist = item.mediaMetadata.artist?.toString().orEmpty(),
+            )
+        }
     }
 
     private fun publish(player: Player) {

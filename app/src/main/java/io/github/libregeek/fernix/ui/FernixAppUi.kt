@@ -44,6 +44,7 @@ import io.github.libregeek.fernix.ui.albums.AlbumDetailScreen
 import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
 import io.github.libregeek.fernix.ui.nowplaying.NowPlayingScreen
+import io.github.libregeek.fernix.ui.queue.QueueScreen
 import io.github.libregeek.fernix.ui.people.PeopleScreen
 import io.github.libregeek.fernix.ui.people.PersonDetailScreen
 import io.github.libregeek.fernix.ui.search.SearchScreen
@@ -61,6 +62,7 @@ private val Screen.label: Int
         Screen.Playlists -> R.string.tab_playlists
         Screen.People -> R.string.tab_people
         Screen.NowPlaying -> R.string.now_playing
+        Screen.Queue -> R.string.queue
         Screen.AlbumDetail -> R.string.tab_albums
         Screen.PersonDetail -> R.string.tab_people
         Screen.PlaylistDetail -> R.string.tab_playlists
@@ -75,6 +77,7 @@ private val Screen.icon: Int
         Screen.Playlists -> R.drawable.ic_playlist
         Screen.People -> R.drawable.ic_people
         Screen.NowPlaying -> R.drawable.ic_play
+        Screen.Queue -> R.drawable.ic_queue_music
         Screen.AlbumDetail -> R.drawable.ic_album
         Screen.PersonDetail -> R.drawable.ic_people
         Screen.PlaylistDetail -> R.drawable.ic_playlist
@@ -135,6 +138,15 @@ fun FernixAppUi(
                 container.playback,
                 onBack = { backStack.pop() },
                 onOpenPerson = { backStack.push(Screen.Search, it) },
+                onOpenQueue = { backStack.push(Screen.Queue) },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.Queue) {
+            QueueScreen(
+                container.playback,
+                onBack = { backStack.pop() },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold

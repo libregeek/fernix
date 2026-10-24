@@ -54,6 +54,7 @@ fun NowPlayingScreen(
     playback: PlaybackController,
     onBack: () -> Unit,
     onOpenPerson: (Long) -> Unit,
+    onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: NowPlayingViewModel = viewModel(
@@ -64,8 +65,13 @@ fun NowPlayingScreen(
     val track = state.track
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        IconButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            IconButton(onClick = onBack) {
+                Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
+            }
+            IconButton(onClick = onOpenQueue) {
+                Icon(painterResource(R.drawable.ic_queue_music), stringResource(R.string.queue))
+            }
         }
         if (track == null) {
             Text(

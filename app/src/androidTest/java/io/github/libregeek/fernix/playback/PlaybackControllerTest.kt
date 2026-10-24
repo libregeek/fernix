@@ -142,4 +142,42 @@ class PlaybackControllerTest {
         assertEquals(0, controller.state.value.queueSize)
         assertTrue(controller.state.value.trackId == null)
     }
+
+    private fun waitForQueue(what: String, condition: (List<QueueItem>) -> Boolean) {
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end) {
+            if (condition(controller.queue.value)) return
+            Thread.sleep(50)
+        }
+        throw AssertionError("Timed out waiting for $what; queue=${controller.queue.value}")
+    }
+
+    private fun titles() = controller.queue.value.map { it.title }
+
+    @Test
+    fun queue_followsPlayEnqueueMoveAndRemove_withTrackIdsAndIndexes() {
+        onMain {
+            controller.playItems(
+                listOf(item(1, "sample.opus", "One"), item(2, "sample.wav", "Two"), item(3, "sample.opus", "Three")),
+            )
+        }
+        waitForQueue("three items") { it.size == 3 }
+        assertEquals(listOf("One", "Two", "Three"), titles())
+        assertEquals(listOf(1L, 2L, 3L), controller.queue.value.map { it.trackId })
+        assertEquals(listOf(0, 1, 2), controller.queue.value.map { it.index })
+        assertEquals("Artist", controller.queue.value[0].artist)
+
+        onMain { controller.moveInQueue(0, 2) }
+        waitForQueue("moved") { it.map { q -> q.title } == listOf("Two", "Three", "One") }
+
+        onMain { controller.removeFromQueue(1) }
+        waitForQueue("removed") { it.map { q -> q.title } == listOf("Two", "One") }
+        assertEquals(listOf(0, 1), controller.queue.value.map { it.index })
+
+        onMain { controller.enqueueItems(listOf(item(4, "sample.wav", "Four"))) }
+        waitForQueue("enqueued") { it.map { q -> q.title } == listOf("Two", "One", "Four") }
+
+        onMain { controller.stop() }
+        waitForQueue("cleared") { it.isEmpty() }
+    }
 }

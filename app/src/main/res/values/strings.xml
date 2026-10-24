@@ -22,6 +22,10 @@
     <string name="now_playing">Now playing</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
+    <string name="queue">Queue</string>
+    <string name="queue_empty">The queue is empty</string>
+    <string name="queue_remove">Remove from queue</string>
+    <string name="queue_reorder">Drag to reorder</string>
     <string name="previous">Previous</string>
     <string name="shuffle">Shuffle</string>
     <string name="repeat_off">Repeat off</string>
