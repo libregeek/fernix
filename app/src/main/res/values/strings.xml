@@ -173,6 +173,26 @@
         <item quantity="other">Scan finished (%1$d files changed)</item>
     </plurals>
     <string name="scan_failed">Scan stopped: %1$s</string>
+    <string name="settings_problems">Problem files</string>
+    <string name="settings_problems_view">View problem files</string>
+    <plurals name="settings_problems_detail">
+        <item quantity="one">Files that could not be indexed or played are listed here for %1$d day.</item>
+        <item quantity="other">Files that could not be indexed or played are listed here for %1$d days.</item>
+    </plurals>
+    <string name="problems_title">Problem files</string>
+    <plurals name="problems_detail">
+        <item quantity="one">Files that could not be indexed or played in the last %1$d day. The list stays on your device.</item>
+        <item quantity="other">Files that could not be indexed or played in the last %1$d days. The list stays on your device.</item>
+    </plurals>
+    <string name="problems_none">No problems.</string>
+    <string name="problems_clear">Clear</string>
+    <string name="problems_clear_confirm">Clear the list of problem files?</string>
+    <string name="problems_kind_index">Could not be indexed</string>
+    <string name="problems_kind_play">Could not be played</string>
+    <string name="problems_reason_tags">its tags could not be read</string>
+    <string name="problems_reason_missing">file not found</string>
+    <string name="problems_reason_permission">no permission to read it</string>
+    <string name="problems_reason_damaged">damaged or unsupported</string>
     <string name="scan_retry">Retry</string>
     <string name="scan_dismiss">Dismiss</string>
     <plurals name="scan_unreadable">

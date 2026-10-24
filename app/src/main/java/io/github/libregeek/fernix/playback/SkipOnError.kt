@@ -9,7 +9,11 @@ import androidx.media3.common.Player
  * stuck: it moves on to the next item and keeps playing. If every item in the queue has failed in a row
  * (e.g. the storage went away, or repeat-all would loop forever) it stops where it is.
  */
-class SkipOnError(private val player: Player) : Player.Listener {
+class SkipOnError(
+    private val player: Player,
+    /** Told which item failed and why, before the player moves on (to log it). */
+    private val onFailed: (mediaId: String?, reason: String) -> Unit = { _, _ -> },
+) : Player.Listener {
 
     private var failures = 0
 
@@ -17,6 +21,7 @@ class SkipOnError(private val player: Player) : Player.Listener {
 
     override fun onPlayerError(error: PlaybackException) {
         failures++
+        onFailed(player.currentMediaItem?.mediaId, error.errorCodeName)
         if (failures < player.mediaItemCount && player.hasNextMediaItem()) {
             player.seekToNextMediaItem()
             player.prepare()

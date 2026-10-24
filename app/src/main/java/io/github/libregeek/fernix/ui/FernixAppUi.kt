@@ -56,6 +56,7 @@ import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
 import io.github.libregeek.fernix.ui.nowplaying.NowPlayingScreen
 import io.github.libregeek.fernix.ui.queue.QueueScreen
+import io.github.libregeek.fernix.ui.problems.ProblemFilesScreen
 import io.github.libregeek.fernix.ui.scan.LibraryFoldersScreen
 import io.github.libregeek.fernix.ui.settings.SettingsScreen
 import io.github.libregeek.fernix.ui.trackdetails.TrackDetailScreen
@@ -81,6 +82,7 @@ private val Screen.label: Int
         Screen.TrackDetail -> R.string.track_details
         Screen.Settings -> R.string.settings
         Screen.LibraryFolders -> R.string.settings_library_folders
+        Screen.ProblemFiles -> R.string.problems_title
         Screen.AlbumDetail -> R.string.tab_albums
         Screen.PersonDetail -> R.string.tab_people
         Screen.PlaylistDetail -> R.string.tab_playlists
@@ -99,6 +101,7 @@ private val Screen.icon: Int
         Screen.TrackDetail -> R.drawable.ic_info
         Screen.Settings -> R.drawable.ic_settings
         Screen.LibraryFolders -> R.drawable.ic_folder
+        Screen.ProblemFiles -> R.drawable.ic_info
         Screen.AlbumDetail -> R.drawable.ic_album
         Screen.PersonDetail -> R.drawable.ic_people
         Screen.PlaylistDetail -> R.drawable.ic_playlist
@@ -183,9 +186,15 @@ fun FernixAppUi(
                 unreadable = (scanState as? ScanState.Finished)?.unreadable ?: 0,
                 onRescan = onRescan,
                 onChangeFolders = { backStack.push(Screen.LibraryFolders) },
+                problems = container.problems,
+                onOpenProblems = { backStack.push(Screen.ProblemFiles) },
                 onBack = { backStack.pop() },
                 modifier = Modifier.padding(padding),
             )
+            return@Scaffold
+        }
+        if (current == Screen.ProblemFiles) {
+            ProblemFilesScreen(container.problems, onBack = { backStack.pop() }, modifier = Modifier.padding(padding))
             return@Scaffold
         }
         if (current == Screen.LibraryFolders) {

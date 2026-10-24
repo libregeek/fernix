@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.data.scan
 
+import io.github.libregeek.fernix.data.ProblemKind
+import io.github.libregeek.fernix.data.ProblemLog
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ class LibraryScanner(
     private val media: MediaSource,
     private val tags: TagSource,
     private val batchSize: Int = BATCH_SIZE,
+    private val problems: ProblemLog? = null,
 ) {
     private val _state = MutableStateFlow<ScanState>(ScanState.Idle)
     val state: StateFlow<ScanState> = _state
@@ -101,7 +104,10 @@ class LibraryScanner(
     /** Reads the file's tags; a file that cannot be read is counted and stored untagged (see [LibraryWriter]). */
     private fun upsert(media: MediaRow): LibraryOp.Upsert {
         val raw = tags.read(media.mediaStoreId)
-        if (raw == null) unreadable++
+        if (raw == null) {
+            unreadable++
+            problems?.add(ProblemKind.Index, media.displayName, media.folderPath, REASON_TAGS_UNREADABLE)
+        }
         return LibraryOp.Upsert(media, raw)
     }
 
@@ -115,5 +121,8 @@ class LibraryScanner(
 
     companion object {
         const val BATCH_SIZE = 500
+
+        /** The reason logged for a file whose tags could not be read. */
+        const val REASON_TAGS_UNREADABLE = "TAGS_UNREADABLE"
     }
 }

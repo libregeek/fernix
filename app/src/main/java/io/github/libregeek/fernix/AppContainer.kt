@@ -20,6 +20,9 @@ import io.github.libregeek.fernix.data.scan.MediaStoreSource
 import io.github.libregeek.fernix.data.scan.MediaStoreTagSource
 import io.github.libregeek.fernix.data.scan.ScanScope
 import io.github.libregeek.fernix.data.scan.ScanState
+import io.github.libregeek.fernix.data.ProblemKind
+import io.github.libregeek.fernix.data.ProblemLog
+import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.playback.PlaybackController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,9 +74,21 @@ class AppContainer(context: Context) {
     val mediaSource: MediaStoreSource by lazy { MediaStoreSource(appContext) }
 
     val scanner: LibraryScanner by lazy {
-        LibraryScanner(database, mediaSource, tagSource)
+        LibraryScanner(database, mediaSource, tagSource, problems = problems)
     }
 
+    /** The files that could not be indexed or played, kept 30 days and viewed from Settings (spec §6 *Errors*). */
+    val problems: ProblemLog by lazy { ProblemLog(File(appContext.filesDir, "problem-files.log")) }
+
+    /** Called by the playback service when the file behind [mediaId] cannot be played; the lookup and write run off the main thread. */
+    fun recordPlayFailure(mediaId: String?, reason: String) {
+        val trackId = mediaId?.let(MediaItems::trackId) ?: return
+        appScope.launch(Dispatchers.IO) {
+            val track = database.trackDao().byId(trackId) ?: return@launch
+            val folder = database.folderDao().byId(track.folderId)?.path.orEmpty()
+            problems.add(ProblemKind.Play, track.displayName, folder, reason)
+        }
+    }
 
     /**
      * Saves a new scan scope and scans with it (spec/architecture.md §6): a wider one adds tracks, a

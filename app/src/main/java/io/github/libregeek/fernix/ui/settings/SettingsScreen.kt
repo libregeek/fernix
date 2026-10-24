@@ -40,7 +40,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.data.ProblemLog
 import io.github.libregeek.fernix.data.Settings
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.github.libregeek.fernix.data.ThemeMode
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -55,6 +59,8 @@ fun SettingsScreen(
     unreadable: Int,
     onRescan: () -> Unit,
     onChangeFolders: () -> Unit,
+    problems: ProblemLog,
+    onOpenProblems: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -91,6 +97,18 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+
+        Section(stringResource(R.string.settings_problems)) {
+            val version by problems.version.collectAsStateWithLifecycle()
+            val count by produceState(0, version) { value = withContext(Dispatchers.IO) { problems.entries().size } }
+            Text(
+                pluralStringResource(R.plurals.settings_problems_detail, ProblemLog.RETENTION_DAYS, ProblemLog.RETENTION_DAYS),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(onClick = onOpenProblems) {
+                Text(if (count > 0) "${stringResource(R.string.settings_problems_view)} ($count)" else stringResource(R.string.settings_problems_view))
             }
         }
 

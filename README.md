@@ -14,6 +14,7 @@ Fernix plays the music stored on your phone. It never connects to the internet, 
 - **You choose what is scanned:** all your external storage (including an SD card), or only the folders you pick. Fernix never browses the rest of your device, and you can change this any time in Settings.
 - **Handles large libraries:** built to stay fast with hundreds of thousands of tracks.
 - **Filter by any tag:** besides artist, album and genre, you can filter on any tag in your files (BPM, label, release type, MusicBrainz IDs, your own custom tags…).
+- **Problem files:** if a file can't be read or played, Fernix skips it, keeps the rest working, and lists it in Settings → Problem files for 30 days. The list stays on your device.
 - **Themes:** the green Fernix theme with a colourful gradient (the default), a Dark theme, or System, which uses Android's own Material colours and follows your phone's light or dark setting. Choose in Settings.
 - **Simple screens:**
   - **Now Playing:** album art, playback controls, shuffle/repeat, and the track's title, album and date, plus three tags of your choice — composers, lyricists and artists by default; swap any of them for others such as conductor, genre or BPM in Settings. Tap a name to see every track that person worked on, or any other value to see all tracks that share it.

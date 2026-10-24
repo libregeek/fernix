@@ -133,6 +133,23 @@ class LibraryScannerTest {
     }
 
     @Test
+    fun anUnreadableFile_isLogged_byNameAndFolder() = runBlocking {
+        val file = java.io.File.createTempFile("problems", ".log")
+        val problems = io.github.libregeek.fernix.data.ProblemLog(file)
+        add(1, "external_primary/Music/Rock", t = arrayOf("TITLE" to listOf("Good")))
+        add(2, "external_primary/Music/Jazz")
+        tags.tags.remove(2)
+        LibraryScanner(db, media, tags, problems = problems).scan(ScanScope.All)
+
+        val logged = problems.entries().single()
+        assertEquals("2.mp3", logged.name)
+        assertEquals("external_primary/Music/Jazz", logged.folder)
+        assertEquals(io.github.libregeek.fernix.data.ProblemKind.Index, logged.kind)
+        file.delete()
+        Unit
+    }
+
+    @Test
     fun aFileRemovedBeforeItIsRead_isRemovedByTheNextScan() = runBlocking {
         add(1, t = arrayOf("TITLE" to listOf("Here")))
         add(2, t = arrayOf("TITLE" to listOf("Gone")))
