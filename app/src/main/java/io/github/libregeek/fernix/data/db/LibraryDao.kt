@@ -90,6 +90,18 @@ interface TagDao {
     @Query("SELECT EXISTS(SELECT 1 FROM people WHERE valueId = :valueId)")
     suspend fun personExists(valueId: Long): Boolean
 
+    @Query("SELECT value FROM tag_values WHERE id = :valueId")
+    suspend fun valueText(valueId: Long): String?
+
+    /** The people tag keys [personId] appears under, with the number of tracks under each. */
+    @Query(
+        "SELECT k.`key` AS `key`, COUNT(DISTINCT tt.trackId) AS trackCount FROM track_tags tt " +
+            "JOIN tag_keys k ON k.id = tt.keyId " +
+            "WHERE tt.valueId = :personId AND tt.keyId IN (:peopleKeyIds) " +
+            "GROUP BY k.id ORDER BY k.`key`",
+    )
+    suspend fun roleCounts(personId: Long, peopleKeyIds: List<Long>): List<RoleCount>
+
     /** The ids of [keys] plus every `PERFORMER:*` key that exists. */
     @Query("SELECT id FROM tag_keys WHERE `key` IN (:keys) OR `key` LIKE 'PERFORMER:%'")
     suspend fun peopleKeyIds(keys: List<String>): List<Long>

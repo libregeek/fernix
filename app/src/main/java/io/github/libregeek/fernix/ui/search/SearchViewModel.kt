@@ -60,10 +60,11 @@ class SearchViewModel(
     private val db: FernixDatabase,
     private val search: TrackSearch,
     private val playback: PlaybackController,
-    initialPerson: PersonChip? = null,
+    /** `tag_values.id` of a person to filter by from the start, or 0. */
+    initialPersonId: Long = 0,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SearchState(person = initialPerson))
+    private val _state = MutableStateFlow(SearchState())
     val state: StateFlow<SearchState> = _state
 
     private var searchJob: Job? = null
@@ -73,7 +74,12 @@ class SearchViewModel(
     private var valuesDone = false
 
     init {
-        if (initialPerson != null) rerun(debounce = false)
+        if (initialPersonId != 0L) {
+            viewModelScope.launch {
+                val name = withContext(Dispatchers.IO) { db.tagDao().valueText(initialPersonId) }
+                if (name != null) setPerson(PersonChip(initialPersonId, name))
+            }
+        }
     }
 
     fun setText(text: String) {

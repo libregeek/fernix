@@ -328,6 +328,22 @@ class DatabaseTest {
     }
 
     @Test
+    fun roleCounts_countDistinctTracksPerPeopleKey_ignoringOtherKeys() = runBlocking {
+        val f = lib.folder()
+        val a = lib.track("A", f)
+        val b = lib.track("B", f)
+        lib.tag(a, "COMPOSER", "Johnson")
+        lib.tag(a, "LYRICIST", "Johnson")
+        lib.tag(b, "COMPOSER", "Johnson")
+        lib.tag(b, "GENRE", "Johnson")
+        lib.refreshSummaries(PeopleTags.KEYS)
+        val keys = db.tagDao().peopleKeyIds(PeopleTags.KEYS.toList())
+        val roles = db.tagDao().roleCounts(lib.valueId("Johnson"), keys)
+        assertEquals(listOf("COMPOSER" to 2, "LYRICIST" to 1), roles.map { it.key to it.trackCount })
+        assertEquals("Johnson", db.tagDao().valueText(lib.valueId("Johnson")))
+    }
+
+    @Test
     fun valuesPage_listsKeyValues_narrowedByTypedPrefix_andPaged() = runBlocking {
         val f = lib.folder()
         listOf("Rock", "Rap", "R_B", "Jazz", "Reggae").forEach { lib.tag(lib.track(it, f), "GENRE", it) }

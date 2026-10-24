@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+package io.github.libregeek.fernix.ui.people
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.data.db.TrackSearch
+import io.github.libregeek.fernix.playback.PlaybackController
+import io.github.libregeek.fernix.ui.common.RowMenu
+
+@Composable
+fun PersonDetailScreen(
+    personId: Long,
+    db: FernixDatabase,
+    search: TrackSearch,
+    playback: PlaybackController,
+    onBack: () -> Unit,
+    onShowInSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val vm: PersonDetailViewModel = viewModel(
+        key = "person$personId",
+        factory = viewModelFactory { initializer { PersonDetailViewModel(personId, db, search, playback) } },
+    )
+    val state by vm.state.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(listState, state.tracks.size) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+            .collect { last -> if (last >= state.tracks.size - LOAD_AHEAD) vm.loadMore() }
+    }
+
+    Column(modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
+            }
+            val name = state.name
+            // No image support yet: initials stand in for the picture (spec §7 "Person images").
+            Initials(name.orEmpty())
+            Text(
+                name ?: stringResource(R.string.album_unknown),
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (state.name != null) {
+            if (state.roles.isNotEmpty()) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    Text(stringResource(R.string.person_roles), style = MaterialTheme.typography.labelMedium)
+                    state.roles.forEach { role ->
+                        Text(
+                            "${role.key} · " + pluralStringResource(R.plurals.track_count, role.trackCount, role.trackCount),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = vm::playAll) { Text(stringResource(R.string.play)) }
+                OutlinedButton(onClick = vm::enqueueAll) { Text(stringResource(R.string.add_to_queue)) }
+                OutlinedButton(onClick = onShowInSearch) { Text(stringResource(R.string.person_show_in_search)) }
+            }
+        }
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                items(state.tracks, key = { it.track.id }) { result ->
+                    val track = result.track
+                    ListItem(
+                        modifier = Modifier.clickable { vm.playFrom(track) },
+                        headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = result.roles.joinToString(", ").ifEmpty { null }?.let {
+                            { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        },
+                        trailingContent = {
+                            RowMenu(onPlay = { vm.playFrom(track) }, onEnqueue = { vm.enqueueTrack(track) })
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Initials(name: String) {
+    val initials = name.split(' ').filter { it.isNotEmpty() }.take(2)
+        .joinToString("") { it.first().uppercase() }
+    Box(
+        Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(initials, color = MaterialTheme.colorScheme.onSecondaryContainer)
+    }
+}
+
+private const val LOAD_AHEAD = 20

@@ -51,10 +51,12 @@ fun SearchScreen(
     db: FernixDatabase,
     search: TrackSearch,
     playback: PlaybackController,
+    personId: Long = 0,
     modifier: Modifier = Modifier,
 ) {
     val vm: SearchViewModel = viewModel(
-        factory = viewModelFactory { initializer { SearchViewModel(db, search, playback) } },
+        key = "search$personId",
+        factory = viewModelFactory { initializer { SearchViewModel(db, search, playback, personId) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()

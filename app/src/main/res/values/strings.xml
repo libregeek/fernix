@@ -38,6 +38,13 @@
     <string name="search_value_hint">Type to narrow the values</string>
     <string name="search_no_values">No values</string>
     <string name="cancel">Cancel</string>
+    <string name="people_empty">No people in your library</string>
+    <string name="person_show_in_search">Show in Search</string>
+    <string name="person_roles">Roles</string>
+    <plurals name="track_count">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
     <string name="folders_empty">No music in this folder</string>
     <string name="volume_internal">Internal storage</string>
     <string name="rescan">Rescan</string>

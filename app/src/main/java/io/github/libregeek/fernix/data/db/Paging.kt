@@ -30,3 +30,6 @@ data class KeyValueRow(val valueId: Long, val value: String, val trackCount: Int
 
 /** A tag key on a track, e.g. the roles a person has on it. */
 data class RoleRow(val trackId: Long, val key: String)
+
+/** A people tag key and the number of tracks a person has under it. */
+data class RoleCount(val key: String, val trackCount: Int)

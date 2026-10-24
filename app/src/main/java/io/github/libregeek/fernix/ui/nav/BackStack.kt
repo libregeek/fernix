@@ -14,6 +14,8 @@ enum class Screen(val isTab: Boolean) {
     NowPlaying(false),
     /** Takes the album id as its argument. */
     AlbumDetail(false),
+    /** Takes the person's `tag_values.id` as its argument. */
+    PersonDetail(false),
 }
 
 /**

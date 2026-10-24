@@ -41,6 +41,8 @@ import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.ui.albums.AlbumDetailScreen
 import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
+import io.github.libregeek.fernix.ui.people.PeopleScreen
+import io.github.libregeek.fernix.ui.people.PersonDetailScreen
 import io.github.libregeek.fernix.ui.search.SearchScreen
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackUiState
@@ -57,6 +59,7 @@ private val Screen.label: Int
         Screen.People -> R.string.tab_people
         Screen.NowPlaying -> R.string.now_playing
         Screen.AlbumDetail -> R.string.tab_albums
+        Screen.PersonDetail -> R.string.tab_people
     }
 
 @get:DrawableRes
@@ -69,6 +72,7 @@ private val Screen.icon: Int
         Screen.People -> R.drawable.ic_people
         Screen.NowPlaying -> R.drawable.ic_play
         Screen.AlbumDetail -> R.drawable.ic_album
+        Screen.PersonDetail -> R.drawable.ic_people
     }
 
 /** App shell: bottom navigation for the five library screens plus the back stack. */
@@ -124,6 +128,28 @@ fun FernixAppUi(
                 container.database,
                 container.trackSearch,
                 container.playback,
+                personId = backStack.currentArg,
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.People) {
+            PeopleScreen(
+                container.database,
+                onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.PersonDetail) {
+            val personId = backStack.currentArg
+            PersonDetailScreen(
+                personId,
+                container.database,
+                container.trackSearch,
+                container.playback,
+                onBack = { backStack.pop() },
+                onShowInSearch = { backStack.push(Screen.Search, personId) },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
