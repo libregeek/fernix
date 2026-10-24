@@ -42,12 +42,23 @@ class BackStackTest {
 
     @Test
     fun savedStateRestoresStack() {
-        val back = BackStack(listOf(Screen.Albums, Screen.Search))
+        val back = BackStack(listOf(Screen.Albums to 0L, Screen.AlbumDetail to 42L))
         val saved = with(BackStack.Saver) {
             object : androidx.compose.runtime.saveable.SaverScope {
                 override fun canBeSaved(value: Any) = true
             }.save(back)!!
         }
-        assertEquals(back.stack, BackStack.Saver.restore(saved)!!.stack)
+        val restored = BackStack.Saver.restore(saved)!!
+        assertEquals(back.stack, restored.stack)
+        assertEquals(42L, restored.currentArg)
+    }
+
+    @Test
+    fun pushWithArgument_exposesItWhileOnTop() {
+        val back = BackStack()
+        back.push(Screen.AlbumDetail, 7)
+        assertEquals(7L, back.currentArg)
+        back.pop()
+        assertEquals(0L, back.currentArg)
     }
 }

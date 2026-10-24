@@ -36,8 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import io.github.libregeek.fernix.AppContainer
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.albums.AlbumDetailScreen
+import io.github.libregeek.fernix.ui.albums.AlbumsScreen
+import io.github.libregeek.fernix.ui.folders.FoldersScreen
 import io.github.libregeek.fernix.data.scan.ScanState
+import io.github.libregeek.fernix.playback.PlaybackUiState
 import io.github.libregeek.fernix.ui.nav.BackStack
 import io.github.libregeek.fernix.ui.nav.Screen
 
@@ -49,6 +54,8 @@ private val Screen.label: Int
         Screen.Albums -> R.string.tab_albums
         Screen.Playlists -> R.string.tab_playlists
         Screen.People -> R.string.tab_people
+        Screen.NowPlaying -> R.string.now_playing
+        Screen.AlbumDetail -> R.string.tab_albums
     }
 
 @get:DrawableRes
@@ -59,11 +66,20 @@ private val Screen.icon: Int
         Screen.Albums -> R.drawable.ic_album
         Screen.Playlists -> R.drawable.ic_playlist
         Screen.People -> R.drawable.ic_people
+        Screen.NowPlaying -> R.drawable.ic_play
+        Screen.AlbumDetail -> R.drawable.ic_album
     }
 
 /** App shell: bottom navigation for the five library screens plus the back stack. */
 @Composable
-fun FernixAppUi(scanState: ScanState, onRescan: () -> Unit) {
+fun FernixAppUi(
+    container: AppContainer,
+    scanState: ScanState,
+    onRescan: () -> Unit,
+    playback: PlaybackUiState,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+) {
     val backStack = rememberSaveable(saver = BackStack.Saver) { BackStack() }
     val current = backStack.current
 
@@ -72,18 +88,55 @@ fun FernixAppUi(scanState: ScanState, onRescan: () -> Unit) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            CompactNavBar {
-                Screen.entries.filter { it.isTab }.forEach { tab ->
-                    CompactNavItem(
-                        selected = tab == backStack.stack.first(),
-                        onClick = { backStack.switchTab(tab) },
-                        icon = tab.icon,
-                        description = stringResource(tab.label),
-                    )
+            Column {
+                if (current != Screen.NowPlaying) {
+                    MiniPlayer(playback, onOpen = { backStack.push(Screen.NowPlaying) }, onPlayPause = onPlayPause, onNext = onNext)
+                }
+                CompactNavBar {
+                    Screen.entries.filter { it.isTab }.forEach { tab ->
+                        CompactNavItem(
+                            selected = tab == backStack.stack.first(),
+                            onClick = { backStack.switchTab(tab) },
+                            icon = tab.icon,
+                            description = stringResource(tab.label),
+                        )
+                    }
                 }
             }
         },
     ) { padding ->
+        if (current == Screen.Folders) {
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                if (scanState is ScanState.Running) {
+                    Text(
+                        scanState.describe(),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                FoldersScreen(container.database, container.playback)
+            }
+            return@Scaffold
+        }
+        if (current == Screen.Albums) {
+            AlbumsScreen(
+                container.database,
+                container.playback,
+                onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.AlbumDetail) {
+            AlbumDetailScreen(
+                backStack.currentArg,
+                container.database,
+                container.playback,
+                onBack = { backStack.pop() },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
         Box(
             Modifier.fillMaxSize().padding(padding),
             contentAlignment = Alignment.Center,

@@ -369,4 +369,27 @@ class DatabaseTest {
         val text = lib.plan(TrackQueryBuilder.build(TrackFilter(text = "abc"), keys))
         assertTrue(text, text.contains("tracks_fts"))
     }
+
+    // --- folders ---
+
+    private suspend fun folderAt(path: String, parent: Long? = null): Long =
+        db.folderDao().insert(FolderEntity(parentId = parent, name = path.substringAfterLast('/'), path = path))
+
+    @Test
+    fun subtreeTracks_includesDescendants_notPrefixSiblings_andOrdersByFolderThenName() = runBlocking {
+        val vol = folderAt("v")
+        val music = folderAt("v/Music", vol)
+        val rock = folderAt("v/Music/Rock", music)
+        val sibling = folderAt("v/Music2", vol)
+        lib.track("b", rock, displayName = "b.mp3")
+        lib.track("z", music, displayName = "z.mp3")
+        lib.track("A", music, displayName = "A.mp3")
+        lib.track("other", sibling)
+
+        val (low, high) = FolderPaths.subtreeRange("v/Music")
+        val rows = db.trackDao().subtreeTracks("v/Music", low, high)
+
+        assertEquals(listOf("A", "z", "b"), rows.map { it.title })
+        assertEquals(listOf("A", "z"), db.trackDao().folderTracks(music).map { it.title })
+    }
 }

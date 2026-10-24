@@ -41,6 +41,9 @@ interface AlbumDao {
             "ORDER BY album, year LIMIT :limit",
     )
     suspend fun page(afterAlbum: String, afterYear: Int, limit: Int): List<AlbumEntity>
+
+    @Query("SELECT * FROM albums WHERE id = :id")
+    suspend fun byId(id: Long): AlbumEntity?
 }
 
 @Dao

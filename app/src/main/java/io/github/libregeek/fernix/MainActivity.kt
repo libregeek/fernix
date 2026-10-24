@@ -34,7 +34,14 @@ class MainActivity : ComponentActivity() {
                         val scanState by container.scanner.state.collectAsStateWithLifecycle()
                         val playback by container.playback.state.collectAsStateWithLifecycle()
                         NotificationPermissionEffect(container.settings, playback.isPlaying)
-                        FernixAppUi(scanState = scanState, onRescan = container::startScan)
+                        FernixAppUi(
+                            container = container,
+                            scanState = scanState,
+                            onRescan = container::startScan,
+                            playback = playback,
+                            onPlayPause = container.playback::playPause,
+                            onNext = container.playback::next,
+                        )
                     }
                 }
             }

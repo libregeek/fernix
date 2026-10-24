@@ -66,6 +66,13 @@ interface TrackDao {
         limit: Int,
     ): List<TrackRow>
 
+    /** Every track of an album, in the order of [albumPage]. */
+    @Query(
+        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks WHERE albumId = :albumId " +
+            "ORDER BY COALESCE(discNumber, 0), COALESCE(trackNumber, 0), id",
+    )
+    suspend fun albumTracks(albumId: Long): List<TrackRow>
+
     /** Tracks directly in a folder, by file name. Start with `afterName = ""`, `afterId = 0`. */
     @Query(
         "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks " +
@@ -74,6 +81,27 @@ interface TrackDao {
             "ORDER BY displayName COLLATE NOCASE, id LIMIT :limit",
     )
     suspend fun folderPage(folderId: Long, afterName: String, afterId: Long, limit: Int): List<TrackRow>
+
+    /** Every track directly in a folder, in the order of [folderPage]. */
+    @Query(
+        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks " +
+            "WHERE folderId = :folderId ORDER BY displayName COLLATE NOCASE, id",
+    )
+    suspend fun folderTracks(folderId: Long): List<TrackRow>
+
+    /**
+     * Every track in a folder and its sub-folders, folder by folder (path order) and by file name
+     * within each. [path] is the folder's `folders.path`; [low] and [high] are
+     * [FolderPaths.subtreeRange], so the sub-folders are a range scan on the unique `path` index
+     * with bound arguments (no `LIKE`).
+     */
+    @Query(
+        "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs FROM tracks t " +
+            "JOIN folders f ON f.id = t.folderId " +
+            "WHERE f.path = :path OR (f.path >= :low AND f.path < :high) " +
+            "ORDER BY f.path, t.displayName COLLATE NOCASE, t.id",
+    )
+    suspend fun subtreeTracks(path: String, low: String, high: String): List<TrackRow>
 
     /** Runs a query from [TrackQueryBuilder]. */
     @RawQuery

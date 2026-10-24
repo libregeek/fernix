@@ -44,43 +44,43 @@ Phases are ordered so each one ends in something runnable and testable.
 
 ## Phase 3 — Storage permission & scanning
 
-- [ ] Approved permissions in the manifest: `READ_MEDIA_AUDIO`, `READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) [§3]
-- [ ] Runtime permission flow + denied/rationale state
-- [ ] Scan scope settings: `scan_scope` (`all` | `selected`) and `scan_folders` in `Settings` + tests [§6]
-- [ ] Library folders screen: in-app chooser (volumes → folder tree, reads only `VOLUME_NAME` + `RELATIVE_PATH`), shown on first launch before the first scan [§6, §9]
-- [ ] MediaStore discovery cursor ordered by `_ID`, limited to mounted volumes and the scan scope (folder test in code) [§6.1]
-- [ ] Constant-memory merge-walk diff against `tracks` cursor (new / changed / vanished / out of scope) [§6.2]
-- [ ] Unmounted volumes: skip them, keep their tracks (and playlist entries), show as unavailable [§6]
-- [ ] Folder tree builder from `VOLUME_NAME` + `RELATIVE_PATH` [§5]
-- [ ] Tag ingestion: `openFileDescriptor` → `TagReader`; derive `trackNumber`, `discNumber`, `year`, album link [§6.3]
-- [ ] Batched persistence (~500 tracks/transaction), id caches, `track_tags` replace on re-parse, `key_values` and `people` recompute [§6.4]
-- [ ] Post-scan cleanup (unused folders, albums, tag values) [§6.5]
-- [ ] Scan runner on `Dispatchers.IO` with progress `StateFlow`; resumable after interruption
-- [ ] Trigger: first launch after permission + manual rescan action
-- [ ] Tests: diff logic (JVM), ingestion with fixture files (instrumented), interrupted-scan resume
-- [ ] Verify on emulator with MP3 (ID3v2.4 multi-value), Ogg Vorbis, Opus, FLAC, WAV fixtures
-- [ ] Verify with an emulated SD card: its files appear as their own volume, and `MediaStore` `_ID`s don't collide with the primary volume's (if they do, key `tracks` by volume + id and update §5)
+- [x] Approved permissions in the manifest: `READ_MEDIA_AUDIO`, `READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) [§3]
+- [x] Runtime permission flow + denied/rationale state
+- [x] Scan scope settings: `scan_scope` (`all` | `selected`) and `scan_folders` in `Settings` + tests [§6]
+- [x] Library folders screen: in-app chooser (volumes → folder tree, reads only `VOLUME_NAME` + `RELATIVE_PATH`), shown on first launch before the first scan [§6, §9]
+- [x] MediaStore discovery cursor ordered by `_ID`, limited to mounted volumes and the scan scope (folder test in code) [§6.1]
+- [x] Constant-memory merge-walk diff against `tracks` cursor (new / changed / vanished / out of scope) [§6.2]
+- [ ] Unmounted volumes: skip them, keep their tracks (and playlist entries), show as unavailable [§6] — skip/keep logic done; the "unavailable" display waits for the Phase 5 screens
+- [x] Folder tree builder from `VOLUME_NAME` + `RELATIVE_PATH` [§5]
+- [x] Tag ingestion: `openFileDescriptor` → `TagReader`; derive `trackNumber`, `discNumber`, `year`, album link [§6.3]
+- [x] Batched persistence (~500 tracks/transaction), id caches, `track_tags` replace on re-parse, `key_values` and `people` recompute [§6.4]
+- [x] Post-scan cleanup (unused folders, albums, tag values) [§6.5]
+- [x] Scan runner on `Dispatchers.IO` with progress `StateFlow`; resumable after interruption
+- [x] Trigger: first launch after permission + manual rescan action
+- [x] Tests: diff logic (JVM), ingestion with fixture files (instrumented), interrupted-scan resume
+- [x] Verify on emulator with MP3 (ID3v2.4 multi-value), Ogg Vorbis, Opus, FLAC, WAV fixtures
+- [x] Verify with an emulated SD card: its files appear as their own volume, and `MediaStore` `_ID`s don't collide with the primary volume's (if they do, key `tracks` by volume + id and update §5)
 
 ## Phase 4 — Playback
 
-- [ ] Add Media3 `exoplayer` + `session` [§2]
-- [ ] Approved permissions/service: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS`, `WAKE_LOCK`; service with `foregroundServiceType="mediaPlayback"` [§3]
-- [ ] `MediaSessionService` hosting one ExoPlayer (`setWakeMode(WAKE_MODE_LOCAL)`, audio focus, gapless) [§8]
-- [ ] `MediaItem.mediaId = tracks.id`; queue items carry id, content URI, title/artist/album only
-- [ ] `MediaController` wrapper in `AppContainer` exposing playback state as `StateFlow`
-- [ ] Notification / lock-screen controls
-- [ ] `POST_NOTIFICATIONS` runtime request (API 33+)
-- [ ] Play / enqueue helpers: play all of a list, uncapped queue
-- [ ] Equalizer on ExoPlayer audio session id [§8]
+- [x] Add Media3 `exoplayer` + `session` [§2]
+- [x] Approved permissions/service: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS`, `WAKE_LOCK`; service with `foregroundServiceType="mediaPlayback"` [§3]
+- [x] `MediaSessionService` hosting one ExoPlayer (`setWakeMode(WAKE_MODE_LOCAL)`, audio focus, gapless) [§8]
+- [x] `MediaItem.mediaId = tracks.id`; queue items carry id, content URI, title/artist/album only
+- [x] `MediaController` wrapper in `AppContainer` exposing playback state as `StateFlow`
+- [x] Notification / lock-screen controls
+- [x] `POST_NOTIFICATIONS` runtime request (API 33+)
+- [x] Play / enqueue helpers: play all of a list, uncapped queue
+- [x] Equalizer on ExoPlayer audio session id [§8] — engine, controller commands and persistence done; the bottom sheet is Phase 6
 - [ ] Verify: background playback, gapless between tracks, resume after process death
 
 ## Phase 5 — Library screens
 
 Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 
-- [ ] Persistent mini-player bar → Now Playing / Queue [§9]
-- [ ] Folders: tree browse (volume roots; skip level when single volume), play/enqueue folder or track
-- [ ] Albums: list (name + year, year hidden when 0) and album detail by disc/track
+- [x] Persistent mini-player bar → Now Playing / Queue [§9]
+- [x] Folders: tree browse (volume roots; skip level when single volume), play/enqueue folder or track
+- [x] Albums: list (name + year, year hidden when 0) and album detail by disc/track (art waits for Coil)
 - [ ] Search: FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
 - [ ] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter
 - [ ] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
