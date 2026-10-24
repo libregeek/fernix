@@ -98,7 +98,8 @@ class AudioPathTest {
         )
     }
 
-    // The fixtures are mono 16-bit sine waves (scripts/generate-test-fixtures.py).
+    // The fixtures are mono 16-bit sine waves (scripts/generate-test-fixtures.py). Lossy formats arrive as
+    // 16-bit PCM on newer platform decoders and as float on API 29's; both keep every decoded value.
 
     @Test
     fun wav_reachesTheAudioTrack_atItsOwnRateChannelsAndDepth() = assertPcm16("sample.wav", 8000, AudioFormat.CHANNEL_OUT_MONO)
@@ -107,16 +108,16 @@ class AudioPathTest {
     fun flac_reachesTheAudioTrack_atItsOwnRateChannels_andNoLowerDepth() = assertLossless16("sample.flac", 22050, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
-    fun mp3_reachesTheAudioTrack_atItsOwnRateAndChannels() = assertPcm16("sample.mp3", 22050, AudioFormat.CHANNEL_OUT_MONO)
+    fun mp3_reachesTheAudioTrack_atItsOwnRateAndChannels() = assertLossless16("sample.mp3", 22050, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
     fun m4aAac_reachesTheAudioTrack_atItsOwnRateAndChannels_andNoLowerDepth() = assertLossless16("sample.m4a", 22050, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
-    fun oggVorbis_reachesTheAudioTrack_atItsOwnRateAndChannels() = assertPcm16("sample.ogg", 22050, AudioFormat.CHANNEL_OUT_MONO)
+    fun oggVorbis_reachesTheAudioTrack_atItsOwnRateAndChannels() = assertLossless16("sample.ogg", 22050, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
-    fun opus_reachesTheAudioTrack_atOpusOwn48kHz_notResampled() = assertPcm16("sample.opus", 48000, AudioFormat.CHANNEL_OUT_MONO)
+    fun opus_reachesTheAudioTrack_atOpusOwn48kHz_notResampled() = assertLossless16("sample.opus", 48000, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
     fun theDefaultsStay_noSpeedPitchSilenceSkippingOrVolumeChange() {
