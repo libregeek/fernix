@@ -28,7 +28,7 @@ Design priorities:
 
 ### Audio formats
 
-MP3, Ogg Vorbis, Opus, FLAC, WAV. All are decoded by the platform `MediaCodec` on Android 10+, so no FFmpeg or other decoder extension is needed.
+MP3, Ogg Vorbis, Opus, FLAC, WAV and **AAC in M4A** (`.m4a`, added 2026-10-24). All are decoded by the platform `MediaCodec` on Android 10+, so no FFmpeg or other decoder extension is needed. (An `.m4a` can also hold Apple Lossless: TagLib reads its tags and bit depth, but playback depends on the device's decoder, which is not guaranteed.)
 
 ---
 
@@ -285,10 +285,10 @@ TagLib's `PropertyMap` interface normalises all formats to key → list-of-value
 
 - TagLib is a git submodule pinned to a release tag; utfcpp comes in as TagLib's own submodule at the commit TagLib pins (`git submodule update --init --recursive`). Built from `app/src/main/cpp/CMakeLists.txt` via `add_subdirectory`.
 - TagLib is built as a static library (`BUILD_SHARED_LIBS=OFF`) and linked into `libfernix.so`; STL is `c++_static`.
-- Compiled-in TagLib modules: MPEG (MP3), Vorbis/Opus/FLAC/Ogg (`WITH_VORBIS`), RIFF/WAV (`WITH_RIFF`), APE (`WITH_APE`, needed for APEv2 tags in MP3 files), zlib. Disabled: ASF, DSF, Matroska, MOD, MP4, Shorten, TrueAudio, C bindings.
+- Compiled-in TagLib modules: MPEG (MP3), Vorbis/Opus/FLAC/Ogg (`WITH_VORBIS`), RIFF/WAV (`WITH_RIFF`), **MP4 (`WITH_MP4`, for the tags, cover and properties of `.m4a`)**, APE (`WITH_APE`, needed for APEv2 tags in MP3 files), zlib. Disabled: ASF, DSF, Matroska, MOD, Shorten, TrueAudio, C bindings. M4A atoms map to the usual property keys (`©nam` → `TITLE`, `©ART` → `ARTIST`, `©wrt` → `COMPOSER`, `trkn` → `TRACKNUMBER` as `3/12`, the cover → the `PICTURE` complex property); other atoms become tag keys of their own, like any other tag.
 - Files are opened from Kotlin with `ParcelFileDescriptor.detachFd()`; ownership of the fd passes to native code, where TagLib's `FileStream(fd, true)` closes it.
 - NDK and CMake versions are pinned in `app/build.gradle.kts` (`ndkVersion`, `externalNativeBuild.cmake.version`); the SDK-provided CMake is used, not the system one.
-- **Audio properties:** the track details screen (§9) shows technical details from TagLib's `AudioProperties` (length, bitrate, sample rate, channels, bits per sample where the format has it), read on demand through a second JNI call on the same fd. They are not stored in the database. The codec/format is derived from the MIME type or file extension, since `AudioProperties` does not name it.
+- **Audio properties:** the track details screen (§9) shows technical details from TagLib's `AudioProperties` (length, bitrate, sample rate, channels, bits per sample where the format has it: FLAC, WAV and Apple Lossless, not AAC, which is lossy), read on demand through a second JNI call on the same fd. They are not stored in the database. The codec/format is derived from the MIME type or file extension, since `AudioProperties` does not name it.
 - **Pictures:** embedded pictures are read on demand through TagLib's complex properties (`PICTURE`: picture type, description, MIME type, bytes) via another JNI call, and handed to Coil as bytes. Full-size art is never stored in the database or on disk; Coil's memory cache holds decoded images. Only small list thumbnails are cached on disk (*Thumbnails* below). Picture types follow ID3v2 `APIC` types (and the FLAC/Vorbis `METADATA_BLOCK_PICTURE` types, which are the same list).
 - **Thumbnails:** list rows (Albums, Tracks) show a thumbnail of the album art, loaded lazily for the rows on screen. A row shows the placeholder until its art arrives, so scrolling never waits for a file.
   - **Cache by album.** The thumbnail is keyed by album (not by track): the first time a row needs it, the album's art is read from its file (§9.9), scaled down to at most **160 px**, and saved as a small JPEG (about 5–10 KB) in the app's **cache directory** (`cacheDir/thumbnails/`; art that doesn't exist is remembered with an empty marker file, so it isn't searched for again); later requests, in this session or after a restart, read that file instead of the audio file. Coil's memory cache keeps the decoded thumbnails of the rows in view.

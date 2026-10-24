@@ -264,7 +264,7 @@ private fun TagRow(
     Row(Modifier.fillMaxWidth()) {
         Text(
             label,
-            modifier = Modifier.width(92.dp).padding(top = 2.dp),
+            modifier = Modifier.width(108.dp).padding(top = 2.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
@@ -319,7 +319,7 @@ private fun Fact(label: String, value: String) {
     Row(Modifier.fillMaxWidth()) {
         Text(
             label,
-            modifier = Modifier.width(92.dp).padding(top = 2.dp),
+            modifier = Modifier.width(108.dp).padding(top = 2.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

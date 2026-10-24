@@ -8,7 +8,7 @@ Fernix plays the music stored on your phone. It never connects to the internet, 
 
 ## Features
 
-- **Plays your local music:** MP3, Ogg Vorbis, Opus, FLAC and WAV, with gapless playback.
+- **Plays your local music:** MP3, Ogg Vorbis, Opus, FLAC, WAV and AAC (M4A), with gapless playback.
 - **Reads your tags properly:** full support for ID3v2.4 and Vorbis comments, including tags with several values, such as a track with two artists.
 - **Splits combined values one at a time:** in Settings you choose the delimiters (`;`, `/`, `,` or your own, as many as you like). On a track's details page, a value such as `Simon; Garfunkel` that contains one of them gets a split button; tap it to turn the value into separate entries, for every track that has it. Nothing is split unless you ask, and Fernix never changes your files.
 - **You choose what is scanned:** all your external storage (including an SD card), or only the folders you pick. Fernix never browses the rest of your device, and you can change this any time in Settings.

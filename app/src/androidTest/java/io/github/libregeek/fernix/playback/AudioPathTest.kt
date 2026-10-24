@@ -110,6 +110,9 @@ class AudioPathTest {
     fun mp3_reachesTheAudioTrack_atItsOwnRateAndChannels() = assertPcm16("sample.mp3", 22050, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test
+    fun m4aAac_reachesTheAudioTrack_atItsOwnRateAndChannels_andNoLowerDepth() = assertLossless16("sample.m4a", 22050, AudioFormat.CHANNEL_OUT_MONO)
+
+    @Test
     fun oggVorbis_reachesTheAudioTrack_atItsOwnRateAndChannels() = assertPcm16("sample.ogg", 22050, AudioFormat.CHANNEL_OUT_MONO)
 
     @Test

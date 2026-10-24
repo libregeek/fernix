@@ -92,6 +92,6 @@ data class AudioProperties(
     val bitrateKbps: Int,
     val sampleRateHz: Int,
     val channels: Int,
-    /** Only FLAC and WAV report it. */
+    /** Only FLAC, WAV and ALAC report it. */
     val bitsPerSample: Int,
 )

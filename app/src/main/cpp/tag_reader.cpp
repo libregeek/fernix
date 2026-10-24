@@ -11,6 +11,7 @@
 #include <audioproperties.h>
 #include <fileref.h>
 #include <flac/flacproperties.h>
+#include <mp4/mp4properties.h>
 #include <riff/wav/wavproperties.h>
 #include <tfilestream.h>
 #include <tpropertymap.h>
@@ -132,7 +133,7 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadPictures(JNIEnv *env, j
 }
 
 // Takes ownership of fd. Returns { lengthMs, bitrateKbps, sampleRate, channels, bitsPerSample };
-// a field the format does not report is 0 (only FLAC and WAV have bits per sample). Returns null
+// a field the format does not report is 0 (only FLAC, WAV and ALAC have bits per sample). Returns null
 // if the file cannot be read or has no audio properties (spec §7 "Audio properties").
 extern "C" JNIEXPORT jintArray JNICALL
 Java_io_github_libregeek_fernix_tags_TagReader_nativeReadAudioProperties(JNIEnv *env, jclass, jint fd) {
@@ -155,6 +156,9 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadAudioProperties(JNIEnv 
             bits = flac->bitsPerSample();
         } else if (const auto *wav = dynamic_cast<const TagLib::RIFF::WAV::Properties *>(properties)) {
             bits = wav->bitsPerSample();
+        } else if (const auto *mp4 = dynamic_cast<const TagLib::MP4::Properties *>(properties)) {
+            // Only a lossless ALAC has a bit depth; AAC is lossy and TagLib's 16 for it means nothing.
+            if (mp4->codec() == TagLib::MP4::Properties::ALAC) bits = mp4->bitsPerSample();
         }
         values[0] = properties->lengthInMilliseconds();
         values[1] = properties->bitrate();

@@ -18,6 +18,7 @@ from pathlib import Path
 
 from mutagen.flac import FLAC, Picture
 from mutagen.id3 import APIC, ID3, TALB, TCOM, TCON, TDRC, TEXT, TIT2, TPE1, TRCK
+from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggvorbis import OggVorbis
 
 ART_ONLY = "--art-only" in sys.argv
@@ -171,6 +172,20 @@ def main() -> None:
         f.add_picture(picture())
         f.save()
 
+        # M4A (AAC in MP4): iTunes-style atoms, two artists, track "3 of 12" and a cover.
+        m4a = tmp / "sample.m4a"
+        ffmpeg(m4a, "-c:a", "aac", "-b:a", "48k")
+        m = MP4(m4a)
+        m["\xa9nam"] = ["M4a Song"]
+        m["\xa9ART"] = ["Shared Artist", "Second Artist"]
+        m["\xa9alb"] = ["M4a Album"]
+        m["\xa9day"] = ["2022"]
+        m["\xa9gen"] = ["Soundtrack"]
+        m["\xa9wrt"] = ["M4a Composer"]
+        m["trkn"] = [(3, 12)]
+        m["covr"] = [MP4Cover(png_1x1(), imageformat=MP4Cover.FORMAT_PNG)]
+        m.save()
+
         # Opus and WAV: the formats the tag tests also cover.
         opus = tmp / "sample.opus"
         ffmpeg(opus, "-c:a", "libopus", "-b:a", "24k",
@@ -201,7 +216,7 @@ def main() -> None:
             check=True,
         )
 
-        for path in (mp3, ogg, flac, opus, wav, hires_flac, hires_wav):
+        for path in (mp3, ogg, flac, m4a, opus, wav, hires_flac, hires_wav):
             (OUT / path.name).write_bytes(path.read_bytes())
             print(f"{path.name}: {path.stat().st_size} bytes")
         art_fixtures(OUT, OUT)

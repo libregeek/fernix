@@ -193,6 +193,38 @@ class TagReaderTest {
     }
 
     @Test
+    fun m4a_readsItunesAtomsAsPropertyKeys_withMultipleArtists() {
+        val tags = read("sample.m4a")!!
+        assertEquals(listOf("M4a Song"), tags["TITLE"])
+        assertEquals(listOf("Shared Artist", "Second Artist"), tags["ARTIST"])
+        assertEquals(listOf("M4a Album"), tags["ALBUM"])
+        assertEquals(listOf("2022"), tags["DATE"])
+        assertEquals(listOf("Soundtrack"), tags["GENRE"])
+        assertEquals(listOf("M4a Composer"), tags["COMPOSER"])
+        assertEquals(listOf("3/12"), tags["TRACKNUMBER"])
+        assertFalse("the cover is not a tag", tags.keys.any { it.contains("COVR") || it.contains("PICTURE") })
+    }
+
+    @Test
+    fun m4a_cover_isReadAsAPicture() {
+        val found = pictures("sample.m4a")!!
+        assertEquals(1, found.size)
+        assertEquals("image/png", found.single().mimeType)
+        assertTrue(found.single().data.isNotEmpty())
+        assertNotNull(Picture.cover(found))
+    }
+
+    @Test
+    fun audioProperties_m4aAac_hasNoBitDepth_becauseAacIsLossy() {
+        val p = properties("sample.m4a")!!
+        assertEquals(22050, p.sampleRateHz)
+        assertEquals(1, p.channels)
+        assertEquals(0, p.bitsPerSample)
+        assertTrue("length ${p.lengthMs}", p.lengthMs in 1500..2500)
+        assertTrue("bitrate ${p.bitrateKbps}", p.bitrateKbps > 0)
+    }
+
+    @Test
     fun allKeysAreUppercase() {
         for (asset in listOf("sample.mp3", "sample.ogg", "sample.flac")) {
             val tags = read(asset)!!
