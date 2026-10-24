@@ -52,6 +52,7 @@ fun PlaylistDetailScreen(
     search: TrackSearch,
     playback: PlaybackController,
     onBack: () -> Unit,
+    onOpenTrack: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: PlaylistDetailViewModel = viewModel(
@@ -113,6 +114,7 @@ fun PlaylistDetailScreen(
                                 onPlay = { vm.play(position = entry.position) },
                                 onEnqueue = { vm.enqueue(entry) },
                                 onRemove = if (state.readOnly) null else ({ vm.remove(entry) }),
+                                onDetails = { onOpenTrack(track.id) },
                             )
                         },
                     )
@@ -123,7 +125,7 @@ fun PlaylistDetailScreen(
 }
 
 @Composable
-private fun EntryMenu(onPlay: () -> Unit, onEnqueue: () -> Unit, onRemove: (() -> Unit)?) {
+private fun EntryMenu(onPlay: () -> Unit, onEnqueue: () -> Unit, onRemove: (() -> Unit)?, onDetails: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
@@ -132,6 +134,7 @@ private fun EntryMenu(onPlay: () -> Unit, onEnqueue: () -> Unit, onRemove: (() -
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.play)) }, onClick = { open = false; onPlay() })
             DropdownMenuItem(text = { Text(stringResource(R.string.add_to_queue)) }, onClick = { open = false; onEnqueue() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.track_details)) }, onClick = { open = false; onDetails() })
             if (onRemove != null) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.playlist_remove_entry)) },

@@ -43,7 +43,12 @@ import io.github.libregeek.fernix.playback.PlaybackController
 import io.github.libregeek.fernix.ui.common.RowMenu
 
 @Composable
-fun FoldersScreen(db: FernixDatabase, playback: PlaybackController, modifier: Modifier = Modifier) {
+fun FoldersScreen(
+    db: FernixDatabase,
+    playback: PlaybackController,
+    onOpenTrack: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val vm: FoldersViewModel = viewModel(
         factory = viewModelFactory { initializer { FoldersViewModel(db, playback) } },
     )
@@ -117,6 +122,7 @@ fun FoldersScreen(db: FernixDatabase, playback: PlaybackController, modifier: Mo
                             onPlay = { vm.playTrack(track) },
                             onEnqueue = { vm.enqueueTrack(track) },
                             onAddToPlaylist = { addTracks = { listOf(track) } },
+                            onDetails = { onOpenTrack(track.id) },
                         )
                     },
                 )

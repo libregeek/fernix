@@ -45,6 +45,7 @@ import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
 import io.github.libregeek.fernix.ui.nowplaying.NowPlayingScreen
 import io.github.libregeek.fernix.ui.queue.QueueScreen
+import io.github.libregeek.fernix.ui.trackdetails.TrackDetailScreen
 import io.github.libregeek.fernix.ui.people.PeopleScreen
 import io.github.libregeek.fernix.ui.people.PersonDetailScreen
 import io.github.libregeek.fernix.ui.search.SearchScreen
@@ -63,6 +64,7 @@ private val Screen.label: Int
         Screen.People -> R.string.tab_people
         Screen.NowPlaying -> R.string.now_playing
         Screen.Queue -> R.string.queue
+        Screen.TrackDetail -> R.string.track_details
         Screen.AlbumDetail -> R.string.tab_albums
         Screen.PersonDetail -> R.string.tab_people
         Screen.PlaylistDetail -> R.string.tab_playlists
@@ -78,6 +80,7 @@ private val Screen.icon: Int
         Screen.People -> R.drawable.ic_people
         Screen.NowPlaying -> R.drawable.ic_play
         Screen.Queue -> R.drawable.ic_queue_music
+        Screen.TrackDetail -> R.drawable.ic_info
         Screen.AlbumDetail -> R.drawable.ic_album
         Screen.PersonDetail -> R.drawable.ic_people
         Screen.PlaylistDetail -> R.drawable.ic_playlist
@@ -95,6 +98,7 @@ fun FernixAppUi(
 ) {
     val backStack = rememberSaveable(saver = BackStack.Saver) { BackStack() }
     val current = backStack.current
+    val openTrack: (Long) -> Unit = { backStack.push(Screen.TrackDetail, it) }
 
     BackHandler(enabled = backStack.canPop) { backStack.pop() }
 
@@ -127,7 +131,7 @@ fun FernixAppUi(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                FoldersScreen(container.database, container.playback)
+                FoldersScreen(container.database, container.playback, onOpenTrack = openTrack)
             }
             return@Scaffold
         }
@@ -139,6 +143,20 @@ fun FernixAppUi(
                 onBack = { backStack.pop() },
                 onOpenPerson = { backStack.push(Screen.Search, it) },
                 onOpenQueue = { backStack.push(Screen.Queue) },
+                onOpenTrack = openTrack,
+                onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.TrackDetail) {
+            TrackDetailScreen(
+                backStack.currentArg,
+                container.database,
+                container.trackFiles,
+                onBack = { backStack.pop() },
+                onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
+                onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -157,6 +175,7 @@ fun FernixAppUi(
                 container.trackSearch,
                 container.playback,
                 personId = backStack.currentArg,
+                onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -178,6 +197,7 @@ fun FernixAppUi(
                 container.trackSearch,
                 container.playback,
                 onBack = { backStack.pop() },
+                onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -199,6 +219,7 @@ fun FernixAppUi(
                 container.playback,
                 onBack = { backStack.pop() },
                 onShowInSearch = { backStack.push(Screen.Search, personId) },
+                onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -218,6 +239,7 @@ fun FernixAppUi(
                 container.database,
                 container.playback,
                 onBack = { backStack.pop() },
+                onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold

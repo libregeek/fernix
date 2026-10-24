@@ -2,10 +2,12 @@
 package io.github.libregeek.fernix
 
 import android.content.Context
+import android.os.ParcelFileDescriptor
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.ui.art.contentResolverOpener
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.data.scan.LibraryScanner
 import io.github.libregeek.fernix.data.scan.MediaStoreSource
@@ -25,6 +27,9 @@ class AppContainer(context: Context) {
     private val appContext = context.applicationContext
 
     val settings: Settings by lazy { Settings(appContext) }
+
+    /** Opens the file of a track by its MediaStore id (read-only), or null if it can't be opened. */
+    val trackFiles: (Long) -> ParcelFileDescriptor? by lazy { contentResolverOpener(appContext.contentResolver) }
 
     val database: FernixDatabase by lazy {
         Room.databaseBuilder(appContext, FernixDatabase::class.java, FernixDatabase.FILE_NAME)

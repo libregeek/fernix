@@ -57,6 +57,7 @@ fun PersonDetailScreen(
     playback: PlaybackController,
     onBack: () -> Unit,
     onShowInSearch: () -> Unit,
+    onOpenTrack: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: PersonDetailViewModel = viewModel(
@@ -121,6 +122,7 @@ fun PersonDetailScreen(
                                 onPlay = { vm.playFrom(track) },
                                 onEnqueue = { vm.enqueueTrack(track) },
                                 onAddToPlaylist = { addTracks = { listOf(track) } },
+                                onDetails = { onOpenTrack(track.id) },
                             )
                         },
                     )

@@ -57,6 +57,7 @@ fun SearchScreen(
     search: TrackSearch,
     playback: PlaybackController,
     personId: Long = 0,
+    onOpenTrack: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: SearchViewModel = viewModel(
@@ -124,6 +125,7 @@ fun SearchScreen(
                         onPlay = { vm.playFrom(result.track) },
                         onEnqueue = { vm.enqueueTrack(result.track) },
                         onAddToPlaylist = { addTracks = { listOf(result.track) } },
+                        onDetails = { onOpenTrack(result.track.id) },
                     )
                 }
             }
@@ -186,7 +188,13 @@ fun SearchScreen(
 }
 
 @Composable
-private fun ResultRow(result: TrackResult, onPlay: () -> Unit, onEnqueue: () -> Unit, onAddToPlaylist: () -> Unit) {
+private fun ResultRow(
+    result: TrackResult,
+    onPlay: () -> Unit,
+    onEnqueue: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onDetails: () -> Unit,
+) {
     val track = result.track
     // With a person filter the roles on the track lead; otherwise artist · album.
     val subtitle = if (result.roles.isNotEmpty()) {
@@ -198,7 +206,7 @@ private fun ResultRow(result: TrackResult, onPlay: () -> Unit, onEnqueue: () -> 
         modifier = Modifier.clickable(onClick = onPlay),
         headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = subtitle.ifEmpty { null }?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-        trailingContent = { RowMenu(onPlay = onPlay, onEnqueue = onEnqueue, onAddToPlaylist = onAddToPlaylist) },
+        trailingContent = { RowMenu(onPlay = onPlay, onEnqueue = onEnqueue, onAddToPlaylist = onAddToPlaylist, onDetails = onDetails) },
     )
 }
 

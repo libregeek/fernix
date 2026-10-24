@@ -57,6 +57,7 @@ fun AlbumDetailScreen(
     db: FernixDatabase,
     playback: PlaybackController,
     onBack: () -> Unit,
+    onOpenTrack: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: AlbumDetailViewModel = viewModel(
@@ -125,6 +126,7 @@ fun AlbumDetailScreen(
                                 onPlay = { vm.playFrom(track) },
                                 onEnqueue = { vm.enqueueTrack(track) },
                                 onAddToPlaylist = { addTracks = { listOf(track) } },
+                                onDetails = { onOpenTrack(track.id) },
                             )
                         },
                     )

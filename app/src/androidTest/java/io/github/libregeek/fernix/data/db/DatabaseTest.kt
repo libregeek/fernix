@@ -417,6 +417,22 @@ class DatabaseTest {
         assertEquals(null, db.trackDao().observe(a).first())
     }
 
+    @Test
+    fun allTagsOf_listsEveryKeyWithAllValues_ofThatTrackOnly_andFolderById() = runBlocking {
+        val f = lib.folder("Rock")
+        val a = lib.track("A", f)
+        val b = lib.track("B", f)
+        lib.tag(a, "GENRE", "Rock")
+        lib.tag(a, "ARTIST", "Zed", "Amy")
+        lib.tag(b, "BPM", "99")
+        assertEquals(
+            listOf("ARTIST" to "Zed", "ARTIST" to "Amy", "GENRE" to "Rock"),
+            db.tagDao().allTagsOf(a).first().map { it.key to it.value },
+        )
+        assertEquals("Rock", db.folderDao().byId(f)!!.name)
+        assertEquals(null, db.folderDao().byId(9999))
+    }
+
     // --- default playlists and play history ---
 
     @Test

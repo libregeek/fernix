@@ -43,8 +43,20 @@ object TagReader {
         }
     }
 
+    /**
+     * Reads the technical details of the file behind [pfd] (consumes it, like [readProperties]).
+     * Null if the file can't be read.
+     */
+    fun readAudioProperties(pfd: ParcelFileDescriptor): AudioProperties? {
+        val v = nativeReadAudioProperties(pfd.detachFd()) ?: return null
+        return AudioProperties(v[0], v[1], v[2], v[3], v[4])
+    }
+
     @JvmStatic
     private external fun nativeTaglibVersion(): String
+
+    @JvmStatic
+    private external fun nativeReadAudioProperties(fd: Int): IntArray?
 
     @JvmStatic
     private external fun nativeReadPictures(fd: Int): Array<Any>?
@@ -73,3 +85,13 @@ class Picture(val type: Int, val mimeType: String, val description: String, val 
         fun cover(pictures: List<Picture>): Picture? = pictures.firstOrNull { it.type == FRONT_COVER } ?: pictures.firstOrNull()
     }
 }
+
+/** Technical details from TagLib; a field the format doesn't report is 0 and is not shown (spec §7, §9). */
+data class AudioProperties(
+    val lengthMs: Int,
+    val bitrateKbps: Int,
+    val sampleRateHz: Int,
+    val channels: Int,
+    /** Only FLAC and WAV report it. */
+    val bitsPerSample: Int,
+)

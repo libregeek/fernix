@@ -24,6 +24,9 @@ interface FolderDao {
     )
     suspend fun childrenPage(parentId: Long, afterName: String, afterId: Long, limit: Int): List<FolderEntity>
 
+    @Query("SELECT * FROM folders WHERE id = :id")
+    suspend fun byId(id: Long): FolderEntity?
+
     @Query("SELECT * FROM folders WHERE path = :path")
     suspend fun byPath(path: String): FolderEntity?
 }
@@ -105,6 +108,14 @@ interface TagDao {
             "WHERE tt.trackId = :trackId AND tt.keyId IN (:keyIds) ORDER BY k.`key`, tt.ord",
     )
     fun playingTags(trackId: Long, keyIds: List<Long>): Flow<List<PlayingTag>>
+
+    /** Every tag of one track: all keys, each key's values in stored order (Track details). */
+    @Query(
+        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
+            "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
+            "WHERE tt.trackId = :trackId ORDER BY k.`key`, tt.ord",
+    )
+    fun allTagsOf(trackId: Long): Flow<List<PlayingTag>>
 
     /** Whether [valueId] is still a person (a rescan or a split can remove one). */
     @Query("SELECT EXISTS(SELECT 1 FROM people WHERE valueId = :valueId)")

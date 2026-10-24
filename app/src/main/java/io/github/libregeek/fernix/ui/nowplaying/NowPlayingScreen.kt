@@ -60,6 +60,8 @@ fun NowPlayingScreen(
     onBack: () -> Unit,
     onOpenPerson: (Long) -> Unit,
     onOpenQueue: () -> Unit,
+    onOpenTrack: (Long) -> Unit,
+    onOpenAlbum: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: NowPlayingViewModel = viewModel(
@@ -79,6 +81,9 @@ fun NowPlayingScreen(
             Row {
                 IconButton(onClick = { showEqualizer = true }) {
                     Icon(painterResource(R.drawable.ic_equalizer), stringResource(R.string.equalizer))
+                }
+                IconButton(onClick = { onOpenTrack(track?.id ?: return@IconButton) }, enabled = track != null) {
+                    Icon(painterResource(R.drawable.ic_info), stringResource(R.string.track_details))
                 }
                 IconButton(onClick = onOpenQueue) {
                     Icon(painterResource(R.drawable.ic_queue_music), stringResource(R.string.queue))
@@ -138,7 +143,11 @@ fun NowPlayingScreen(
                     )
                 }
             }
-            Detail(track.album.takeIf { it.isNotEmpty() }?.let { io.github.libregeek.fernix.playback.MediaItems.display(it) })
+            // The album name opens the album (spec §9, Album details).
+            Detail(
+                track.album.takeIf { it.isNotEmpty() }?.let { io.github.libregeek.fernix.playback.MediaItems.display(it) },
+                onClick = track.albumId?.let { id -> { onOpenAlbum(id) } },
+            )
             Detail(track.date.takeIf { it.isNotEmpty() }?.let { io.github.libregeek.fernix.playback.MediaItems.display(it) })
 
             state.lines.forEach { line -> TagLineRow(line, onOpenPerson) }
@@ -199,12 +208,13 @@ private fun nextRepeatMode(mode: Int) = when (mode) {
 }
 
 @Composable
-private fun Detail(text: String?) {
+private fun Detail(text: String?, onClick: (() -> Unit)? = null) {
     if (text == null) return
     Text(
         text,
+        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = if (onClick != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )

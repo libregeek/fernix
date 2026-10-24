@@ -9,6 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -36,6 +37,8 @@ class TagReaderTest {
     }
 
     private fun read(asset: String): Map<String, List<String>>? = withFile(asset, TagReader::readProperties)
+
+    private fun properties(asset: String): AudioProperties? = withFile(asset, TagReader::readAudioProperties)
 
     private fun pictures(asset: String): List<Picture>? = withFile(asset, TagReader::readPictures)
 
@@ -150,6 +153,43 @@ class TagReaderTest {
     fun fileWithoutPictures_givesAnEmptyList_andNonAudioGivesNull() {
         assertEquals(emptyList<Picture>(), pictures("sample.opus"))
         assertNull(pictures("notaudio.txt"))
+    }
+
+    // The fixtures are 2 s mono sine waves (the WAV is 1 s at 8 kHz); see scripts/generate-test-fixtures.py.
+    @Test
+    fun audioProperties_wav_reportsBitsPerSample() {
+        val p = properties("sample.wav")!!
+        assertEquals(8000, p.sampleRateHz)
+        assertEquals(1, p.channels)
+        assertEquals(16, p.bitsPerSample)
+        assertTrue("length ${p.lengthMs}", p.lengthMs in 950..1050)
+    }
+
+    @Test
+    fun audioProperties_flac_reportsBitsPerSample() {
+        val p = properties("sample.flac")!!
+        assertEquals(22050, p.sampleRateHz)
+        assertEquals(1, p.channels)
+        assertEquals(16, p.bitsPerSample)
+        assertTrue("length ${p.lengthMs}", p.lengthMs in 1900..2100)
+    }
+
+    @Test
+    fun audioProperties_lossyFormats_haveNoBitsPerSample() {
+        for (asset in listOf("sample.mp3", "sample.ogg", "sample.opus")) {
+            val p = properties(asset)!!
+            assertEquals(asset, 0, p.bitsPerSample)
+            assertEquals(asset, 1, p.channels)
+            assertTrue("$asset length ${p.lengthMs}", p.lengthMs in 1500..2500)
+            assertTrue("$asset bitrate ${p.bitrateKbps}", p.bitrateKbps > 0)
+        }
+        assertEquals(22050, properties("sample.mp3")!!.sampleRateHz)
+        assertEquals(32, properties("sample.mp3")!!.bitrateKbps)
+    }
+
+    @Test
+    fun audioProperties_ofNonAudio_isNull() {
+        assertNull(properties("notaudio.txt"))
     }
 
     @Test
