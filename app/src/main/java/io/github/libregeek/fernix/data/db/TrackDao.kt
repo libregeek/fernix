@@ -43,10 +43,14 @@ interface TrackDao {
      * `Dispatchers.IO`.
      */
     @Query(
-        "SELECT t.mediaStoreId, t.sizeBytes, t.dateModified, t.displayName, f.path AS folderPath " +
+        "SELECT t.mediaStoreId, t.sizeBytes, t.dateModified, t.dateAdded, t.displayName, f.path AS folderPath " +
             "FROM tracks t JOIN folders f ON f.id = t.folderId ORDER BY t.mediaStoreId",
     )
     fun storedCursor(): Cursor
+
+    /** Sets only `dateAdded`, for a track stored before the column existed. */
+    @Query("UPDATE tracks SET dateAdded = :dateAdded WHERE mediaStoreId = :mediaStoreId")
+    suspend fun setDateAdded(mediaStoreId: Long, dateAdded: Long)
 
     @Query("SELECT COUNT(*) FROM tracks")
     suspend fun count(): Int

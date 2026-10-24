@@ -171,13 +171,18 @@ interface PlaylistDao {
     @Insert
     suspend fun insertEntry(entry: PlaylistEntryEntity)
 
-    @Query("SELECT * FROM playlists ORDER BY name COLLATE NOCASE, id")
+    /** The user's own playlists; Favourites is separate (see [favouritesId]). */
+    @Query("SELECT * FROM playlists WHERE kind = 'user' ORDER BY name COLLATE NOCASE, id")
     suspend fun all(): List<PlaylistEntity>
+
+    @Query("SELECT id FROM playlists WHERE kind = 'favourites'")
+    suspend fun favouritesId(): Long?
 
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_entries WHERE playlistId = :playlistId")
     suspend fun nextPosition(playlistId: Long): Int
 
-    @Query("DELETE FROM playlists WHERE id = :id")
+    /** Favourites can't be deleted. */
+    @Query("DELETE FROM playlists WHERE id = :id AND kind = 'user'")
     suspend fun delete(id: Long)
 
     @Query("SELECT * FROM playlists WHERE id = :id")
@@ -186,12 +191,13 @@ interface PlaylistDao {
     /** Playlists by name with their entry counts; re-emits when playlists or entries change. */
     @Query(
         "SELECT p.id AS id, p.name AS name, COUNT(e.position) AS trackCount FROM playlists p " +
-            "LEFT JOIN playlist_entries e ON e.playlistId = p.id " +
+            "LEFT JOIN playlist_entries e ON e.playlistId = p.id WHERE p.kind = 'user' " +
             "GROUP BY p.id ORDER BY p.name COLLATE NOCASE, p.id",
     )
     fun summaries(): Flow<List<PlaylistRow>>
 
-    @Query("UPDATE playlists SET name = :name, updatedAt = :now WHERE id = :id")
+    /** Favourites can't be renamed. */
+    @Query("UPDATE playlists SET name = :name, updatedAt = :now WHERE id = :id AND kind = 'user'")
     suspend fun rename(id: Long, name: String, now: Long)
 
     @Query("UPDATE playlists SET updatedAt = :now WHERE id = :id")

@@ -44,9 +44,10 @@ Phases are ordered so each one ends in something runnable and testable.
 
 ### Default playlists and play history (added 2026-10-24) [§5]
 
-- [ ] Schema: `tracks.dateAdded`, `tracks.playCount`, `tracks.lastPlayedAt` (+ indexes), `playlists.kind`; unique index `(playlistId, trackId)` on `playlist_entries` (the migration removes any existing duplicate entries first); Room version bump with a migration (backfill `dateAdded` from MediaStore on the next scan); update schema export and DAO/entity tests
-- [ ] Create the Favourites row (`kind = 'favourites'`) with the database; toggle adds or removes a track
-- [ ] Scan: read `DATE_ADDED`; a re-parse keeps `playCount` and `lastPlayedAt`
+- [x] Schema: `tracks.dateAdded`, `tracks.playCount`, `tracks.lastPlayedAt` (+ indexes), `playlists.kind`; unique index `(playlistId, trackId)` on `playlist_entries` (the migration removes any existing duplicate entries first); Room version bump with a migration (backfill `dateAdded` from MediaStore on the next scan); update schema export and DAO/entity tests
+- [x] Create the Favourites row (`kind = 'favourites'`) with the database (new-database callback and the migration); it can't be renamed or deleted (DAO guards)
+- [ ] Favourites toggle: add or remove a track by id (DAO) + test
+- [x] Scan: read `DATE_ADDED` (rows stored before the column get it from a cheap `DateAdded` diff event, no re-parse); a re-parse keeps `playCount` and `lastPlayedAt`
 - [ ] Queries (keyset-paged where unbounded) + tests: Recently Added (50, `dateAdded DESC`), All Songs, Never Played, Most Played (50, `playCount > 0`), Favourites membership as a `Flow`
 
 ## Phase 3 — Storage permission & scanning

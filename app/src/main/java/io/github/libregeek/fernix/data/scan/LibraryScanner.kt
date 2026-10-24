@@ -78,6 +78,7 @@ class LibraryScanner(
                         is DiffEvent.New -> LibraryOp.Upsert(event.media, tags.read(event.media.mediaStoreId))
                         is DiffEvent.Changed -> LibraryOp.Upsert(event.media, tags.read(event.media.mediaStoreId))
                         is DiffEvent.Vanished -> LibraryOp.Remove(event.mediaStoreId)
+                        is DiffEvent.DateAdded -> LibraryOp.SetDateAdded(event.mediaStoreId, event.dateAdded)
                     }
                     if (pending.size >= batchSize) flush()
                 }

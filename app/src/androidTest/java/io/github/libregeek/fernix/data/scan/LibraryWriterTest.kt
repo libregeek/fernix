@@ -72,6 +72,25 @@ class LibraryWriterTest {
     }
 
     @Test
+    fun reparse_keepsPlayHistory_andStoresDateAdded_setDateAddedTouchesOnlyThatColumn() = runBlocking {
+        writer.apply(listOf(LibraryOp.Upsert(media(1).copy(dateAdded = 100), mapOf("TITLE" to listOf("Old")))))
+        val id = db.trackDao().idByMediaStoreId(1)!!
+        assertEquals(100L, db.trackDao().byId(id)!!.dateAdded)
+
+        db.trackDao().update(db.trackDao().byId(id)!!.copy(playCount = 3, lastPlayedAt = 555))
+        writer.apply(listOf(LibraryOp.Upsert(media(1, size = 99).copy(dateAdded = 200), mapOf("TITLE" to listOf("New")))))
+        val after = db.trackDao().byId(id)!!
+        assertEquals("New", after.title)
+        assertEquals(200L, after.dateAdded)
+        assertEquals(3, after.playCount)
+        assertEquals(555L, after.lastPlayedAt)
+
+        writer.apply(listOf(LibraryOp.SetDateAdded(1, 300)))
+        val touched = db.trackDao().byId(id)!!
+        assertEquals(after.copy(dateAdded = 300), touched)
+    }
+
+    @Test
     fun tagRows_keepOrder_andSharedValueIsOneRow() = runBlocking {
         writer.apply(listOf(upsert(1, "ARTIST" to listOf("Zed", "Amy"), "COMPOSER" to listOf("zed"))))
         assertEquals(2L, scalar("SELECT COUNT(*) FROM tag_values"))

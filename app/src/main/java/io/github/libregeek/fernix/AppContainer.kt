@@ -31,6 +31,8 @@ class AppContainer(context: Context) {
             // The scan writes batches while a read cursor over `tracks` is open; that needs WAL,
             // which Room would otherwise skip on low-RAM devices.
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+            .addMigrations(FernixDatabase.MIGRATION_1_2)
+            .addCallback(FernixDatabase.CREATE_CALLBACK)
             .build()
     }
 

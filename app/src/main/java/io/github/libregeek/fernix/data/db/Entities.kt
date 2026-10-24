@@ -66,6 +66,9 @@ data class AlbumEntity(
         Index(value = ["folderId"]),
         Index(value = ["title"]),
         Index(value = ["albumId", "discNumber", "trackNumber"]),
+        Index(value = ["dateAdded"]),
+        Index(value = ["playCount"]),
+        Index(value = ["lastPlayedAt"]),
     ],
 )
 data class TrackEntity(
@@ -77,6 +80,12 @@ data class TrackEntity(
     val durationMs: Long,
     val dateModified: Long,
     val sizeBytes: Long,
+    /** MediaStore `DATE_ADDED`, epoch seconds; 0 until the scan has read it. */
+    @ColumnInfo(defaultValue = "0") val dateAdded: Long = 0,
+    /** Times the track played through to its end; written by the playback service, never by a scan. */
+    @ColumnInfo(defaultValue = "0") val playCount: Int = 0,
+    /** Epoch milliseconds of the last full play; null means never played. */
+    val lastPlayedAt: Long? = null,
     @ColumnInfo(collate = ColumnInfo.NOCASE) val title: String = "",
     val album: String = "",
     val date: String = "",
@@ -208,11 +217,18 @@ data class SplitRuleTrackEntity(
 data class PlaylistEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
+    /** [KIND_USER] or [KIND_FAVOURITES]. */
+    @ColumnInfo(defaultValue = "'user'") val kind: String = KIND_USER,
     val createdAt: Long,
     val updatedAt: Long,
-)
+) {
+    companion object {
+        const val KIND_USER = "user"
+        const val KIND_FAVOURITES = "favourites"
+    }
+}
 
-/** Entries are read `ORDER BY position`; gaps are fine and the same track may appear twice. */
+/** Entries are read `ORDER BY position`; gaps are fine. A track is in a playlist at most once. */
 @Entity(
     tableName = "playlist_entries",
     primaryKeys = ["playlistId", "position"],
@@ -230,7 +246,7 @@ data class PlaylistEntity(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index(value = ["trackId"])],
+    indices = [Index(value = ["trackId"]), Index(value = ["playlistId", "trackId"], unique = true)],
 )
 data class PlaylistEntryEntity(
     val playlistId: Long,

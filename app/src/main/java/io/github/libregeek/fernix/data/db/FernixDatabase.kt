@@ -3,6 +3,8 @@ package io.github.libregeek.fernix.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
@@ -20,7 +22,7 @@ import androidx.room.RoomDatabase
         PlaylistEntity::class,
         PlaylistEntryEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class FernixDatabase : RoomDatabase() {
@@ -34,5 +36,49 @@ abstract class FernixDatabase : RoomDatabase() {
 
     companion object {
         const val FILE_NAME = "fernix.db"
+
+        /** Name stored for the Favourites row; the UI shows its own localised title for that kind. */
+        const val FAVOURITES_NAME = "Favourites"
+
+        /**
+         * Version 2: play history and date added on `tracks`, `playlists.kind` with the Favourites
+         * row, and one entry per track in a playlist (spec/architecture.md §5).
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE tracks ADD COLUMN dateAdded INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE tracks ADD COLUMN playCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE tracks ADD COLUMN lastPlayedAt INTEGER")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_tracks_dateAdded ON tracks (dateAdded)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_tracks_playCount ON tracks (playCount)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_tracks_lastPlayedAt ON tracks (lastPlayedAt)")
+
+                db.execSQL("ALTER TABLE playlists ADD COLUMN kind TEXT NOT NULL DEFAULT 'user'")
+                // Keep the first entry of each track before the unique index goes on.
+                db.execSQL(
+                    "DELETE FROM playlist_entries WHERE EXISTS (SELECT 1 FROM playlist_entries e2 " +
+                        "WHERE e2.playlistId = playlist_entries.playlistId " +
+                        "AND e2.trackId = playlist_entries.trackId AND e2.position < playlist_entries.position)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_playlist_entries_playlistId_trackId " +
+                        "ON playlist_entries (playlistId, trackId)",
+                )
+                insertFavourites(db)
+            }
+        }
+
+        /** Creates the Favourites row on a new database (the migration does it for existing ones). */
+        val CREATE_CALLBACK = object : Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) = insertFavourites(db)
+        }
+
+        private fun insertFavourites(db: SupportSQLiteDatabase) {
+            val now = System.currentTimeMillis()
+            db.execSQL(
+                "INSERT INTO playlists (name, kind, createdAt, updatedAt) VALUES (?, ?, ?, ?)",
+                arrayOf<Any>(FAVOURITES_NAME, PlaylistEntity.KIND_FAVOURITES, now, now),
+            )
+        }
     }
 }

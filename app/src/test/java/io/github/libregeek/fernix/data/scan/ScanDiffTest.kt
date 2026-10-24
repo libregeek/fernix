@@ -28,6 +28,20 @@ class ScanDiffTest {
     }
 
     @Test
+    fun differentDateAdded_alone_isNotAChange_butReportsTheDate() {
+        val m = media(1).copy(dateAdded = 777)
+        val (events, counts) = walk(listOf(m), listOf(stored(1)))
+        assertEquals(listOf<DiffEvent>(DiffEvent.DateAdded(1, 777)), events)
+        assertEquals(DiffCounts(0, 0, 0, 1), counts)
+    }
+
+    @Test
+    fun sameDateAdded_reportsNothing() {
+        val (events, _) = walk(listOf(media(1).copy(dateAdded = 5)), listOf(stored(1).copy(dateAdded = 5)))
+        assertEquals(emptyList<DiffEvent>(), events)
+    }
+
+    @Test
     fun emptyBoth_noEvents() {
         val (events, counts) = walk(emptyList(), emptyList())
         assertEquals(emptyList<DiffEvent>(), events)

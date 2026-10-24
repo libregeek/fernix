@@ -10,6 +10,7 @@ class StoredRows(private val cursor: Cursor) : Iterator<StoredRow>, AutoCloseabl
     private val modified = cursor.getColumnIndexOrThrow("dateModified")
     private val name = cursor.getColumnIndexOrThrow("displayName")
     private val folder = cursor.getColumnIndexOrThrow("folderPath")
+    private val added = cursor.getColumnIndexOrThrow("dateAdded")
 
     override fun hasNext(): Boolean = !cursor.isClosed && !cursor.isLast && !cursor.isAfterLast
 
@@ -21,6 +22,7 @@ class StoredRows(private val cursor: Cursor) : Iterator<StoredRow>, AutoCloseabl
             dateModified = cursor.getLong(modified),
             displayName = cursor.getString(name),
             folderPath = cursor.getString(folder),
+            dateAdded = cursor.getLong(added),
         )
     }
 

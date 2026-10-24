@@ -80,6 +80,7 @@ class MediaStoreSource(context: Context) : MediaSource {
         private val id = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media._ID) ?: -1
         private val size = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE) ?: -1
         private val modified = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED) ?: -1
+        private val added = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED) ?: -1
         private val duration = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION) ?: -1
         private val volume = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media.VOLUME_NAME) ?: -1
         private val relativePath = cursor?.getColumnIndexOrThrow(MediaStore.Audio.Media.RELATIVE_PATH) ?: -1
@@ -100,6 +101,7 @@ class MediaStoreSource(context: Context) : MediaSource {
                 displayName = c.getString(displayName).orEmpty(),
                 folderPath = ScanScope.folderPath(c.getString(volume).orEmpty(), c.getString(relativePath).orEmpty()),
                 durationMs = c.getLong(duration),
+                dateAdded = c.getLong(added),
             )
         }
 
@@ -113,6 +115,7 @@ class MediaStoreSource(context: Context) : MediaSource {
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.SIZE,
             MediaStore.Audio.Media.DATE_MODIFIED,
+            MediaStore.Audio.Media.DATE_ADDED,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.VOLUME_NAME,
             MediaStore.Audio.Media.RELATIVE_PATH,

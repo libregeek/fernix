@@ -7,6 +7,11 @@ plugins {
 }
 
 android {
+    // The exported Room schemas are read by the migration test to build the old database.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+
     namespace = "io.github.libregeek.fernix"
     compileSdk = 37
     ndkVersion = "28.2.13676358"

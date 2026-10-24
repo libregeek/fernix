@@ -11,6 +11,8 @@ data class MediaRow(
     val folderPath: String,
     /** Not used for change detection; stored when the track is (re)parsed. */
     val durationMs: Long = 0,
+    /** MediaStore `DATE_ADDED` (epoch seconds). Not used for change detection. */
+    val dateAdded: Long = 0,
 )
 
 /** A row of the `tracks` cursor joined to `folders`, with the fields used for change detection. */
@@ -20,6 +22,7 @@ data class StoredRow(
     val dateModified: Long,
     val displayName: String,
     val folderPath: String,
+    val dateAdded: Long = 0,
 )
 
 sealed interface DiffEvent {
@@ -28,6 +31,9 @@ sealed interface DiffEvent {
 
     /** Stored, but size, date, folder or name differ. */
     data class Changed(val media: MediaRow) : DiffEvent
+
+    /** Unchanged except for `dateAdded` (a row stored before the column existed): no re-parse needed. */
+    data class DateAdded(val mediaStoreId: Long, val dateAdded: Long) : DiffEvent
 
     /** Stored, but gone from MediaStore or out of scope, on a mounted volume. */
     data class Vanished(val mediaStoreId: Long) : DiffEvent
@@ -80,6 +86,7 @@ object ScanDiff {
                         onEvent(DiffEvent.Changed(m))
                         changed++
                     } else {
+                        if (m.dateAdded != s.dateAdded) onEvent(DiffEvent.DateAdded(m.mediaStoreId, m.dateAdded))
                         unchanged++
                     }
                     m = if (inScope.hasNext()) inScope.next() else null

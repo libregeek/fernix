@@ -25,6 +25,9 @@ sealed interface LibraryOp {
     class Upsert(val media: MediaRow, val rawTags: Map<String, List<String>>?) : LibraryOp
 
     data class Remove(val mediaStoreId: Long) : LibraryOp
+
+    /** Sets `dateAdded` of a stored track without re-reading its file. */
+    data class SetDateAdded(val mediaStoreId: Long, val dateAdded: Long) : LibraryOp
 }
 
 /**
@@ -51,6 +54,7 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
                     touched += tracks.tagPairs(id)
                     tracks.deleteById(id)
                 }
+                is LibraryOp.SetDateAdded -> tracks.setDateAdded(op.mediaStoreId, op.dateAdded)
                 is LibraryOp.Upsert -> {
                     val normalized = TagNormalizer.normalize(op.rawTags.orEmpty())
                     val fields = TrackFields.from(normalized)
@@ -59,7 +63,12 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
                         touched += tracks.tagPairs(existing)
                         tracks.deleteTags(existing)
                     }
-                    val entity = trackEntity(op.media, fields, existing ?: 0)
+                    // A re-parse keeps the play history, which the scan doesn't own (spec §5, §6.4).
+                    val previous = existing?.let { tracks.byId(it) }
+                    val entity = trackEntity(op.media, fields, existing ?: 0).copy(
+                        playCount = previous?.playCount ?: 0,
+                        lastPlayedAt = previous?.lastPlayedAt,
+                    )
                     val trackId = if (existing != null) existing.also { tracks.update(entity) } else tracks.insert(entity)
                     for ((key, values) in normalized) {
                         val keyId = keyId(key)
@@ -85,6 +94,7 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
         durationMs = media.durationMs,
         dateModified = media.dateModified,
         sizeBytes = media.sizeBytes,
+        dateAdded = media.dateAdded,
         title = fields.title,
         album = fields.album,
         date = fields.date,
