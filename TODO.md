@@ -26,7 +26,7 @@ Phases are ordered so each one ends in something runnable and testable.
 
 - [x] `AppContainer` owned by `FernixApp` (manual DI) [§2, §4]
 - [x] `TagValues` codec: join/split on `U+001F` + unit tests [§5]
-- [x] Hand-rolled back stack + bottom navigation shell (Folders, Search, Albums, Playlists, People) with empty screens [§2, §9]
+- [x] Hand-rolled back stack + bottom navigation shell (Folders, Search → renamed Tracks in Phase 5b, Albums, Playlists, People) with empty screens [§2, §9]
 - [x] `SharedPreferences` wrapper for settings (Now Playing slots, last split choice) [§2]
 - [x] People-tag-keys constant (incl. `PERFORMER:*` matching) + unit tests [§5]
 
@@ -90,11 +90,11 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [x] Persistent mini-player bar → Now Playing / Queue [§9]
 - [x] Folders: tree browse (volume roots; skip level when single volume), play/enqueue folder or track
 - [x] Albums: list (name + year, year hidden when 0) and album detail by disc/track (art waits for Coil)
-- [x] Search: FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
-- [x] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter
+- [x] Search (now the Tracks screen, see Phase 5b): FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
+- [x] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter (renamed "Show in Tracks" in Phase 5b)
 - [x] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
 - [x] No duplicate tracks in a playlist: adding one already present is a no-op (DAO); the unique index comes with the schema migration above (added 2026-10-24)
-- [x] Default playlists on the Playlists tab, above the user's own: Favourites (editable), Recently Added, All Songs, Never Played, Most Played (read-only: no remove/rename/delete, not offered by *Add to playlist*); detail screen reused with Play and Shuffle [§5, §9] (added 2026-10-24)
+- [x] Default playlists on the Playlists tab, above the user's own: Favourites (editable), Recently Added, All Songs (removed in Phase 5b), Never Played, Most Played (read-only: no remove/rename/delete, not offered by *Add to playlist*); detail screen reused with Play and Shuffle [§5, §9] (added 2026-10-24)
 - [x] *Add to playlist* picker offers Favourites and user playlists only (added 2026-10-24)
 - [x] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row
 - [x] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
@@ -104,12 +104,27 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [ ] Vector icons copied in as drawables (no `material-icons-extended`), including heart (filled and outline) for Favourites
 - [x] Scan progress indicator (a bar and the file count above the mini-player on every screen; Folders, Albums and People reload when a scan finishes)
 
+## Phase 5b — Tracks screen redesign (2026-10-24)
+
+The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§5, §9.6].
+
+- [ ] Rename Search → Tracks: bottom-nav label and a music-note icon instead of the magnifier, screen/back-stack names, strings, "Show in Tracks" on person details, README
+- [ ] Tracks lists **every track** when there is no search text and no filter (title, id; keyset-paged); the tab is the library's full track list
+- [ ] ✕ button in the search box removes all search terms: the text and every filter chip (person chip included)
+- [ ] Multiple filters: filters on the **same** tag are ORed, filters on different tags are ANDed, and the text and the person filter are ANDed with the rest [§5 *Filtering*, §9.3]; `TrackQueryBuilder` builds one `keyId = ? AND valueId IN (…)` subquery per key; update its unit tests and add one for same-key OR, different-key AND, plus text and person together
+- [ ] **Add to playlist** on the result list: every track matching the current search and filters (all pages, not only the loaded rows), into an existing playlist or a new one made from them (the existing picker); tracks already in a playlist are skipped
+- [ ] Thumbnail of the album art on every row of the Albums list and of the Tracks list (`AlbumArt` model; a track with no album uses its own picture); lazy, placeholder meanwhile; served from a small on-disk thumbnail cache in `cacheDir/thumbnails/` (JPEG, at most 160 px, keyed by album, capped at 20 MB, oldest deleted first, cleared after a scan that changed files) plus Coil's memory cache; `TrackRow` gains `albumId` so a row can ask for its album's art [§7 *Thumbnails*, §9.3, §9.5]
+- [ ] Remove **All Songs** from the Playlists tab and its detail screen (`DefaultPlaylists`, strings); four defaults remain: Favourites, Recently Added, Never Played, Most Played; README says four
+- [ ] Thumbnail cache: write/read/evict test (cap respected, cleared after a changing scan, a missing or corrupt file is regenerated) [§7 *Thumbnails*]
+- [ ] Check scrolling the full track list with thumbnails on a large library (smoothness, memory) and on the emulator
+- [ ] Tests: empty filter lists all tracks (paging across pages), ✕ clears text and chips, add-all-results to a new and to an existing playlist (more results than one page), All Songs gone
+
 ## Phase 6 — Now Playing & Queue
 
 - [x] Now Playing: art, title, album, date, seek bar, transport, shuffle/repeat [§9.1]
 - [x] "Tags on the playing track" query as Room `Flow`; 3 configurable slots (defaults `COMPOSER`, `LYRICIST`, `ARTIST`); `PERFORMER` slot shows instrument label; hide missing tags
 - [x] Favourite heart on Now Playing: one tap adds the playing track to Favourites, another removes it; filled state from a Room `Flow` [§9.1] (added 2026-10-24)
-- [ ] Tappable values → Search pushed on back stack (person filter for people keys, tag filter otherwise) — people keys done; other tags need Search to take a tag filter as its argument
+- [ ] Tappable values → Tracks (formerly Search) pushed on back stack (person filter for people keys, tag filter otherwise) — people keys done; other tags need Search to take a tag filter as its argument
 - [x] Equalizer bottom sheet from top app bar
 - [x] Queue screen: drag-reorder, remove, jump to item
 

@@ -208,17 +208,16 @@ One constant in code: `ARTIST`, `ALBUMARTIST`, `AUTHOR`, `COMPOSER`, `LYRICIST`,
 
 #### Default playlists
 
-Five playlists are always present, in this order, above the user's own playlists. Of these, only **Favourites** can be changed by the user; the other four are read-only and maintained by the app. They cannot be renamed, deleted, added to or removed from, and they are not offered by *Add to playlist*. The user's own playlists (below them) stay fully editable: create, rename, delete, add and remove tracks.
+Four playlists are always present, in this order, above the user's own playlists. Of these, only **Favourites** can be changed by the user; the other three are read-only and maintained by the app. They cannot be renamed, deleted, added to or removed from, and they are not offered by *Add to playlist*. The user's own playlists (below them) stay fully editable: create, rename, delete, add and remove tracks.
 
 | Playlist | Stored? | Contents and order |
 |---|---|---|
 | **Favourites** | Yes: one `playlists` row with `kind = 'favourites'`, created with the database, plus `playlist_entries` | The tracks the user added, in the order added (append at `MAX(position) + 1`). A track appears once. The user adds and removes tracks (Now Playing shortcut, *Add to playlist*, *Remove from playlist*). Cannot be renamed or deleted. |
 | **Recently Added** | No: a query | The **50** tracks with the latest `dateAdded`: `ORDER BY dateAdded DESC, id DESC LIMIT 50`. |
-| **All Songs** | No: a query | Every track, by `title, id`: the keyset-paged list of §5 *Filtering* with an empty filter. |
 | **Never Played** | No: a query | Tracks with `lastPlayedAt IS NULL`, by `title, id`, keyset-paged. |
 | **Most Played** | No: a query | The **50** tracks with `playCount > 0`, `ORDER BY playCount DESC, lastPlayedAt DESC, id`. |
 
-The four read-only playlists have no rows of their own, so they are always current and cost no storage. Their detail screen is the same as any playlist's (Play, Shuffle, track list) without the remove action. A scan or tag re-parse keeps `playCount` and `lastPlayedAt`; deleting a track removes it from Favourites through the cascade, like any playlist.
+The three read-only playlists have no rows of their own, so they are always current and cost no storage. Their detail screen is the same as any playlist's (Play, Shuffle, track list) without the remove action. A scan or tag re-parse keeps `playCount` and `lastPlayedAt`; deleting a track removes it from Favourites through the cascade, like any playlist.
 
 **What counts as a play:** a track counts as played when it **plays through to its end** (ExoPlayer moves on to the next item, or the queue ends, on its own). Skipping, removing it from the queue or stopping before the end does not count, and nor does pausing. When it counts, the playback service sets `lastPlayedAt` to the current time and adds 1 to `playCount` (§8).
 
@@ -226,15 +225,15 @@ The four read-only playlists have no rows of their own, so they are always curre
 
 ### Filtering
 
-Filters are built with `@RawQuery` as track-id subqueries combined with `INTERSECT`, and applied as `t.id IN (…)`. Values are always bound as arguments, never concatenated into SQL.
+Filters are built with `@RawQuery` as track-id subqueries combined with `INTERSECT` (an AND between filters on **different** keys, the person and the text; several values of the **same** key are an OR inside that key's subquery), and applied as `t.id IN (…)`. Values are always bound as arguments, never concatenated into SQL.
 
 | Filter | Track-id subquery |
 |---|---|
-| Tag filter: key `K`, value `V` | `SELECT trackId FROM track_tags WHERE valueId = ? AND keyId = ?` |
+| Tag filter: key `K`, values `V1…Vn` | `SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (?, …)`: one subquery per **key**, so several values of the same key are ORed |
 | Person filter (any role) | `SELECT trackId FROM track_tags WHERE valueId = ? AND keyId IN (people key ids)` |
 | Free text | `SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ?` |
 
-Results are sorted by `title, id` and keyset-paged. With a person filter active, each result also shows that person's roles on the track (the tag keys of the matching rows).
+Results are sorted by `title, id` and keyset-paged. With no filter at all the query lists **every track** (the *Tracks* screen, §9). With a person filter active, each result also shows that person's roles on the track (the tag keys of the matching rows).
 
 The value picker for a tag key lists its `key_values` joined to `tag_values`, sorted by value, paged, and narrowed by typing (`LIKE ? || '%'` on the `NOCASE` column, which uses the index).
 
@@ -290,7 +289,10 @@ TagLib's `PropertyMap` interface normalises all formats to key → list-of-value
 - Files are opened from Kotlin with `ParcelFileDescriptor.detachFd()`; ownership of the fd passes to native code, where TagLib's `FileStream(fd, true)` closes it.
 - NDK and CMake versions are pinned in `app/build.gradle.kts` (`ndkVersion`, `externalNativeBuild.cmake.version`); the SDK-provided CMake is used, not the system one.
 - **Audio properties:** the track details screen (§9) shows technical details from TagLib's `AudioProperties` (length, bitrate, sample rate, channels, bits per sample where the format has it), read on demand through a second JNI call on the same fd. They are not stored in the database. The codec/format is derived from the MIME type or file extension, since `AudioProperties` does not name it.
-- **Pictures:** embedded pictures are read on demand through TagLib's complex properties (`PICTURE`: picture type, description, MIME type, bytes) via another JNI call, and handed to Coil as bytes. Nothing is stored in the database or written to disk; Coil's memory cache holds decoded images. Picture types follow ID3v2 `APIC` types (and the FLAC/Vorbis `METADATA_BLOCK_PICTURE` types, which are the same list).
+- **Pictures:** embedded pictures are read on demand through TagLib's complex properties (`PICTURE`: picture type, description, MIME type, bytes) via another JNI call, and handed to Coil as bytes. Full-size art is never stored in the database or on disk; Coil's memory cache holds decoded images. Only small list thumbnails are cached on disk (*Thumbnails* below). Picture types follow ID3v2 `APIC` types (and the FLAC/Vorbis `METADATA_BLOCK_PICTURE` types, which are the same list).
+- **Thumbnails:** list rows (Albums, Tracks) show a thumbnail of the album art, loaded lazily for the rows on screen. A row shows the placeholder until its art arrives, so scrolling never waits for a file.
+  - **Cache by album.** The thumbnail is keyed by album (not by track): the first time a row needs it, the album's art is read from its file (§9.9), scaled down to at most **160 px**, and saved as a small JPEG (about 5 KB) in the app's **cache directory** (`cacheDir/thumbnails/`); later requests, in this session or after a restart, read that file instead of the audio file. Coil's memory cache keeps the decoded thumbnails of the rows in view.
+  - **Bounded and disposable.** The folder is capped at **20 MB** (oldest files are deleted when it is full), is cleared by Android when it needs space, and is cleared by Fernix after a scan that added, changed or removed files (so changed art is never stale). It is the only thing Fernix writes for pictures: no database column, nothing in shared storage, no full-size copies. Now Playing, Track details and the album header still read the full-size picture from the file.
 - The JNI layer returns a flat `String[]` of alternating key/value pairs (a multi-value tag repeats its key once per value); Kotlin groups it into `Map<String, List<String>>`. No exceptions cross the boundary: failures return null and are logged.
 
 ---
@@ -323,7 +325,7 @@ A person's image is an embedded picture whose type is a role: Lead artist (7), A
 
 ## 9. User Interface
 
-Material 3 defaults, dynamic color on Android 12+, light/dark themes. Bottom navigation for the five library screens (Folders, Search, Albums, Playlists, People); Now Playing and Queue are reached from a persistent mini-player bar.
+Material 3 defaults, dynamic color on Android 12+, light/dark themes. Bottom navigation for the five library screens (Folders, Tracks, Albums, Playlists, People); Now Playing and Queue are reached from a persistent mini-player bar.
 
 All long lists (tracks, albums, people, folders, filter values) are keyset-paged from the database (§5) and rendered in `LazyColumn`s.
 
@@ -332,20 +334,26 @@ All long lists (tracks, albums, people, folders, filter values) are keyset-paged
    - Title, album and date are always shown and cannot be changed.
    - **Now Playing tags:** **3 slots**, each set in Settings to any tag key in the library (`tag_keys`) except `TITLE`, `ALBUM` and `DATE`, or left empty. Defaults, in order: `COMPOSER`, `LYRICIST`, `ARTIST`. With title, album and date, Now Playing shows at most **6 tags**. Stored in `SharedPreferences`. A tag the playing track doesn't have is hidden. Each tag is shown one entry per value, as stored in `track_tags` (after any split rules).
    - All details come from the database, never from the file: the playing `MediaItem.mediaId` is `tracks.id`; title, album and date come from the `tracks` row, and the tags from the "tags on the playing track" query (§5), which reads only that track's rows via the `track_tags` PK. Both are observed as Room `Flow`s, so a split applied while the track plays updates the screen immediately.
-   - Every value is tappable and opens **Search** pushed onto the back stack (Back returns to Now Playing). A value of a people tag key opens a person filter (§5), listing every track the person contributed to in any role; any other tag (e.g. `GENRE`, `BPM`) opens a tag filter for that key and value.
+   - Every value is tappable and opens **Tracks** pushed onto the back stack (Back returns to Now Playing). A value of a people tag key opens a person filter (§5), listing every track the person contributed to in any role; any other tag (e.g. `GENRE`, `BPM`) opens a tag filter for that key and value.
    - An equalizer icon in the top app bar opens the equalizer in a bottom sheet (not a separate screen).
    - **Favourite button:** a heart next to the title that adds the playing track to Favourites (§5) with a **single tap**, and removes it with another tap. It is filled while the track is in Favourites, observed as a Room `Flow` so it also follows changes made elsewhere. No dialog and no confirmation.
 2. **Folders** — browse the `folders` tree (built from the DB, not the filesystem); play/enqueue a folder or a track.
-3. **Search** — free-text search (FTS) over title, album, artist, composer and lyricist, plus arbitrary tag filters (pick any tag key present in the library, then one or more values) and an optional person filter, shown as a removable chip with the person's name. All filters combine with AND. Results are sorted by title. With a person filter, each result shows the person's roles on that track. Results can be played or enqueued. If a person filter refers to a person deleted by a rescan or a split, the chip is dropped.
+3. **Tracks** — every track in the library, by title (keyset-paged), narrowed by a **search box** and by **filters**; it replaces the former Search screen.
+   - **Search box:** free-text search (FTS) over title, album, artist, composer and lyricist. It has a **✕ button** that removes all search terms at once: the text and every filter chip, so the list is every track again.
+   - **Filters:** any number, each a removable chip. A tag filter is a tag key picked from the library plus a value; a person filter is a chip with the person's name. **Filters on the same tag are ORed; filters on different tags are ANDed** (Genre: Rock, Genre: Pop and Label: X means (Rock or Pop) and X), and the text and the person filter are ANDed with the rest.
+   - **Thumbnails:** every row has a small thumbnail of its **album art** (the album's art as in §9.9; a track without an album shows its own front cover or first picture), with the album placeholder while loading or when there is none. See §7 *Thumbnails*.
+   - **Results** are sorted by title. With a person filter, each result shows the person's roles on that track. If a person filter refers to a person deleted by a rescan or a split, the chip is dropped.
+   - **Actions on the result list:** Play, Add to queue, and **Add to playlist**, which adds every track matching the current search and filters (not only the rows loaded so far) to an existing playlist or to a **new playlist** made from them; the picker of §9.6 offers both. A track already in the playlist is skipped (§5).
+   - Reached with a person already set from Now Playing, Track details and the person details' **Show in Tracks**.
 4. **Queue** — current play queue from the `MediaController`, opened from the queue icon in Now Playing's top bar; tap a row to jump to it, the ✕ removes it, and the handle drags it to a new place (it moves by the number of rows it was dragged over, on release). The playing row is highlighted and the list opens on it. The `MediaController` wrapper publishes the queue as a list only when the queue itself changes (not on every playback tick), so a queue of tens of thousands of tracks stays cheap.
-5. **Albums** — albums (name + year), sorted by album then year; album detail lists tracks by disc/track number.
-6. **Playlists** — the five **default playlists** first (Favourites, Recently Added, All Songs, Never Played, Most Played; §5), then the user's own playlists. Only Favourites is editable among the defaults; the other four are read-only and show no remove, rename or delete action. For the user's own playlists: create, rename, delete; add tracks from any track list (the picker offers Favourites and the user's playlists, never the read-only ones); remove entries (no reordering). Playlist detail has **Play** (in playlist order) and **Shuffle** (same queue with ExoPlayer shuffle mode on).
+5. **Albums** — albums (name + year), sorted by album then year, each row with a **thumbnail of the album art** (§7 *Pictures*, *Thumbnails*); album detail lists tracks by disc/track number.
+6. **Playlists** — the four **default playlists** first (Favourites, Recently Added, Never Played, Most Played; §5), then the user's own playlists. Only Favourites is editable among the defaults; the other three are read-only and show no remove, rename or delete action. For the user's own playlists: create, rename, delete; add tracks from any track list (the picker offers Favourites and the user's playlists, never the read-only ones); remove entries (no reordering). Playlist detail has **Play** (in playlist order) and **Shuffle** (same queue with ExoPlayer shuffle mode on).
 7. **People** — every person once (no grouping by role), sorted by name, with their track count. Tapping a person opens the **person details** screen (below).
-   - **Person details:** image (from a role-typed embedded picture, §7 *Person images*, else initials), name, roles (each people tag key the person appears under, with the track count per role, from `track_tags`) and the paged list of all their tracks (the person filter of §5, sorted by title, each row showing the roles on that track). Play/enqueue the list; **Show in Search** opens Search with the person filter. The screen is also reached by tapping a people value in Now Playing and track details.
+   - **Person details:** image (from a role-typed embedded picture, §7 *Person images*, else initials), name, roles (each people tag key the person appears under, with the track count per role, from `track_tags`) and the paged list of all their tracks (the person filter of §5, sorted by title, each row showing the roles on that track). Play/enqueue the list; **Show in Tracks** opens Tracks with the person filter. The screen is also reached by tapping a people value in Now Playing and track details.
 9. **Album details** — opened by tapping an album name anywhere (track rows, Now Playing, track details, Albums list): album art, name, year (hidden when 0) and the tracks by disc/track number; Play/enqueue the album. Art is the front-cover picture (type 3, else the first picture) of the first track that has one.
 10. **Track details** — opened from the overflow menu of any track row, or from Now Playing. Read from the file on demand (the fd of the content URI) plus the database:
    - cover art (front cover, else first picture);
-   - **all tags:** every `track_tags` key with its values in `ord` order (after any splits); people and album values are tappable (person details, album details), other values open a tag filter in Search; a value holding one of the Settings delimiters has a **split button** (§5 *Tag splitting*), which asks for confirmation and splits it library-wide;
+   - **all tags:** every `track_tags` key with its values in `ord` order (after any splits); people and album values are tappable (person details, album details), other values open a tag filter in Tracks; a value holding one of the Settings delimiters has a **split button** (§5 *Tag splitting*), which asks for confirmation and splits it library-wide;
    - **technical details:** format, duration, bitrate, sample rate, channels, bits per sample (§7 *Audio properties*; fields TagLib doesn't report are hidden);
    - **file details:** file name, folder, volume, size, modified date, content URI, from the `tracks` and `folders` rows.
 8. **Settings** — reached from the overflow menu in the library screens' top app bar.
