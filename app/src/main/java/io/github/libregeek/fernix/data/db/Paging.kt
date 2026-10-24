@@ -6,6 +6,9 @@ import androidx.room.Embedded
 /** Rows per page of every list (spec/architecture.md §5). */
 const val PAGE_SIZE = 200
 
+/** Size of the *Recently Added* and *Most Played* default playlists (spec/architecture.md §5). */
+const val DEFAULT_PLAYLIST_SIZE = 50
+
 /** Lightweight track row for lists; everything else is loaded from the database when needed. */
 data class TrackRow(
     val id: Long,

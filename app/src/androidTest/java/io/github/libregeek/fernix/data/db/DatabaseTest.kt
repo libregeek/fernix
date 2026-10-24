@@ -373,6 +373,93 @@ class DatabaseTest {
         assertEquals(emptyList<PlaylistRow>(), dao.summaries().first())
     }
 
+    // --- default playlists and play history ---
+
+    @Test
+    fun recentlyAdded_isTheNewest50_byDateAddedThenId() = runBlocking {
+        val f = lib.folder()
+        val ids = (1..55).map { lib.track("T$it", f, dateAdded = it.toLong()) }
+        val tied1 = lib.track("tied1", f, dateAdded = 100)
+        val tied2 = lib.track("tied2", f, dateAdded = 100)
+        val rows = db.trackDao().recentlyAdded()
+        assertEquals(DEFAULT_PLAYLIST_SIZE, rows.size)
+        assertEquals(listOf(tied2, tied1, ids[54], ids[53]), rows.take(4).map { it.id })
+        // 57 tracks: the two ties plus T55 down to T8 make the 50.
+        assertEquals("T8", rows.last().title)
+        assertTrue(rows.none { it.title == "T7" })
+    }
+
+    @Test
+    fun neverPlayed_isTitleSortedAndShrinksAsTracksArePlayed() = runBlocking {
+        val f = lib.folder()
+        lib.track("B", f)
+        val a = lib.track("A", f)
+        lib.track("C", f, playCount = 1, lastPlayedAt = 5)
+        assertEquals(listOf("A", "B"), titles(search.page(TrackFilter(neverPlayed = true))))
+        db.trackDao().recordPlay(a, now = 9)
+        assertEquals(listOf("B"), titles(search.page(TrackFilter(neverPlayed = true))))
+        // All Songs is simply the empty filter.
+        assertEquals(listOf("A", "B", "C"), titles(search.page(TrackFilter())))
+    }
+
+    @Test
+    fun mostPlayed_ordersByCountThenLatestPlay_excludesUnplayed_andRecordPlayCounts() = runBlocking {
+        val f = lib.folder()
+        lib.track("never", f)
+        val low = lib.track("low", f, playCount = 1, lastPlayedAt = 50)
+        val oldTie = lib.track("oldTie", f, playCount = 3, lastPlayedAt = 10)
+        val newTie = lib.track("newTie", f, playCount = 3, lastPlayedAt = 20)
+        assertEquals(listOf(newTie, oldTie, low), db.trackDao().mostPlayed().map { it.id })
+
+        db.trackDao().recordPlay(low, now = 99)
+        db.trackDao().recordPlay(low, now = 100)
+        db.trackDao().recordPlay(low, now = 101)
+        val after = db.trackDao().byId(low)!!
+        assertEquals(4, after.playCount)
+        assertEquals(101L, after.lastPlayedAt)
+        assertEquals(low, db.trackDao().mostPlayed().first().id)
+    }
+
+    @Test
+    fun mostPlayed_isCappedAt50() = runBlocking {
+        val f = lib.folder()
+        repeat(60) { lib.track("T$it", f, playCount = it + 1, lastPlayedAt = 1) }
+        val rows = db.trackDao().mostPlayed()
+        assertEquals(DEFAULT_PLAYLIST_SIZE, rows.size)
+        assertEquals("T59", rows.first().title)
+    }
+
+    @Test
+    fun favourites_toggleAddsOnceAndRemoves_flowFollows_deletedTrackLeaves() = runBlocking {
+        val f = lib.folder()
+        val a = lib.track("A", f)
+        val b = lib.track("B", f)
+        val dao = db.playlistDao()
+        // The in-memory test database has no creation callback, so create Favourites like it does.
+        dao.insert(PlaylistEntity(name = FernixDatabase.FAVOURITES_NAME, kind = PlaylistEntity.KIND_FAVOURITES, createdAt = 1, updatedAt = 1))
+        val favourites = dao.favouritesId()!!
+
+        assertEquals(false, dao.isFavourite(a).first())
+        assertEquals(true, dao.toggleFavourite(a, now = 5))
+        assertEquals(true, dao.isFavourite(a).first())
+        assertEquals(false, dao.isFavourite(b).first())
+        assertEquals(listOf("A"), dao.tracks(favourites).map { it.title })
+
+        // Adding the same track again from "Add to playlist" is a no-op.
+        dao.append(favourites, listOf(a), now = 6)
+        assertEquals(1, dao.tracks(favourites).size)
+
+        assertEquals(false, dao.toggleFavourite(a, now = 7))
+        assertEquals(false, dao.isFavourite(a).first())
+        assertEquals(emptyList<String>(), dao.tracks(favourites).map { it.title })
+
+        dao.toggleFavourite(b, now = 8)
+        db.trackDao().deleteById(b)
+        assertEquals(emptyList<String>(), dao.tracks(favourites).map { it.title })
+        // Favourites never shows among the user's playlists.
+        assertEquals(emptyList<PlaylistRow>(), dao.summaries().first())
+    }
+
     @Test
     fun valuesPage_listsKeyValues_narrowedByTypedPrefix_andPaged() = runBlocking {
         val f = lib.folder()

@@ -233,6 +233,32 @@ interface PlaylistDao {
     )
     suspend fun insertEntryIfAbsent(playlistId: Long, position: Int, trackId: Long)
 
+    @Query("DELETE FROM playlist_entries WHERE playlistId = :playlistId AND trackId = :trackId")
+    suspend fun removeTrack(playlistId: Long, trackId: Long)
+
+    /** Whether [trackId] is in Favourites; re-emits when Favourites changes. */
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM playlist_entries e JOIN playlists p ON p.id = e.playlistId " +
+            "WHERE p.kind = 'favourites' AND e.trackId = :trackId)",
+    )
+    fun isFavourite(trackId: Long): Flow<Boolean>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM playlist_entries WHERE playlistId = :playlistId AND trackId = :trackId)")
+    suspend fun contains(playlistId: Long, trackId: Long): Boolean
+
+    /** The one-tap favourite: adds the track to Favourites, or removes it if already there. Returns the new state. */
+    @Transaction
+    suspend fun toggleFavourite(trackId: Long, now: Long): Boolean {
+        val favourites = favouritesId() ?: return false
+        if (contains(favourites, trackId)) {
+            removeTrack(favourites, trackId)
+            touch(favourites, now)
+            return false
+        }
+        append(favourites, listOf(trackId), now)
+        return true
+    }
+
     /** Appends [trackIds] in order, skipping tracks already in the playlist (and repeats in the list). */
     @Transaction
     suspend fun append(playlistId: Long, trackIds: List<Long>, now: Long) {

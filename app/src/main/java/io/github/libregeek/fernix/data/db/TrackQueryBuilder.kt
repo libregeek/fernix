@@ -10,6 +10,8 @@ data class TrackFilter(
     val tags: List<TagCondition> = emptyList(),
     /** `tag_values.id` of a person; matches the person in any role. */
     val personValueId: Long? = null,
+    /** Only tracks that have never played through (`lastPlayedAt IS NULL`). */
+    val neverPlayed: Boolean = false,
 )
 
 /** SQL text plus the arguments to bind to its `?` placeholders. */
@@ -55,6 +57,7 @@ object TrackQueryBuilder {
         val sql = buildString {
             append("SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs ")
             append("FROM tracks t WHERE (t.title, t.id) > (?, ?)")
+            if (filter.neverPlayed) append(" AND t.lastPlayedAt IS NULL")
             if (subqueries.isNotEmpty()) {
                 append(" AND t.id IN (")
                 append(subqueries.joinToString(" INTERSECT "))

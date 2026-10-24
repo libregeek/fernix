@@ -107,6 +107,24 @@ interface TrackDao {
     )
     suspend fun subtreeTracks(path: String, low: String, high: String): List<TrackRow>
 
+    /** *Recently Added*: the [DEFAULT_PLAYLIST_SIZE] newest tracks (spec/architecture.md §5). */
+    @Query(
+        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks " +
+            "ORDER BY dateAdded DESC, id DESC LIMIT $DEFAULT_PLAYLIST_SIZE",
+    )
+    suspend fun recentlyAdded(): List<TrackRow>
+
+    /** *Most Played*: the [DEFAULT_PLAYLIST_SIZE] tracks played most, ties by most recent play. */
+    @Query(
+        "SELECT id, mediaStoreId, title, album, artist, durationMs FROM tracks WHERE playCount > 0 " +
+            "ORDER BY playCount DESC, lastPlayedAt DESC, id LIMIT $DEFAULT_PLAYLIST_SIZE",
+    )
+    suspend fun mostPlayed(): List<TrackRow>
+
+    /** A track played through to its end (spec §5 *What counts as a play*). */
+    @Query("UPDATE tracks SET playCount = playCount + 1, lastPlayedAt = :now WHERE id = :trackId")
+    suspend fun recordPlay(trackId: Long, now: Long)
+
     /** Runs a query from [TrackQueryBuilder]. */
     @RawQuery
     suspend fun rawPage(query: SupportSQLiteQuery): List<TrackRow>

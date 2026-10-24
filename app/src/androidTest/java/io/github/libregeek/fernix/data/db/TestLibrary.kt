@@ -25,6 +25,9 @@ class TestLibrary(val db: FernixDatabase) {
         disc: Int? = null,
         number: Int? = null,
         displayName: String = "$title.mp3",
+        dateAdded: Long = 0,
+        playCount: Int = 0,
+        lastPlayedAt: Long? = null,
     ): Long = db.trackDao().insert(
         TrackEntity(
             mediaStoreId = nextMediaStoreId++,
@@ -39,6 +42,9 @@ class TestLibrary(val db: FernixDatabase) {
             discNumber = disc,
             trackNumber = number,
             albumId = albumId,
+            dateAdded = dateAdded,
+            playCount = playCount,
+            lastPlayedAt = lastPlayedAt,
         ),
     )
 

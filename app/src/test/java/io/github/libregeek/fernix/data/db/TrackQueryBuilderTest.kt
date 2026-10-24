@@ -22,6 +22,17 @@ class TrackQueryBuilderTest {
     }
 
     @Test
+    fun neverPlayed_addsAFixedCondition_withoutArguments() {
+        val q = TrackQueryBuilder.build(TrackFilter(neverPlayed = true), emptyList())
+        assertEquals(
+            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs " +
+                "FROM tracks t WHERE (t.title, t.id) > (?, ?) AND t.lastPlayedAt IS NULL$tail",
+            q.sql,
+        )
+        assertEquals(listOf<Any>("", 0L, PAGE_SIZE), q.args)
+    }
+
+    @Test
     fun cursorAndLimit_areBound() {
         val q = TrackQueryBuilder.build(TrackFilter(), emptyList(), TrackCursor("Abbey", 7), 50)
         assertEquals(listOf<Any>("Abbey", 7L, 50), q.args)
