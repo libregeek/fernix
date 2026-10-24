@@ -81,7 +81,7 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [x] Persistent mini-player bar → Now Playing / Queue [§9]
 - [x] Folders: tree browse (volume roots; skip level when single volume), play/enqueue folder or track
 - [x] Albums: list (name + year, year hidden when 0) and album detail by disc/track (art waits for Coil)
-- [ ] Search: FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
+- [x] Search: FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
 - [ ] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter
 - [ ] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
 - [ ] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row

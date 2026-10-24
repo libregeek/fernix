@@ -29,6 +29,15 @@
     <string name="albums_empty">No albums in your library</string>
     <string name="album_back">Back</string>
     <string name="album_unknown">Unknown album</string>
+    <string name="search_hint">Search title, album, artist…</string>
+    <string name="search_no_results">No matching tracks</string>
+    <string name="search_add_filter">Add filter</string>
+    <string name="search_remove_filter">Remove filter</string>
+    <string name="search_pick_key">Filter by tag</string>
+    <string name="search_pick_value">%1$s</string>
+    <string name="search_value_hint">Type to narrow the values</string>
+    <string name="search_no_values">No values</string>
+    <string name="cancel">Cancel</string>
     <string name="folders_empty">No music in this folder</string>
     <string name="volume_internal">Internal storage</string>
     <string name="rescan">Rescan</string>

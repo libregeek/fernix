@@ -41,6 +41,7 @@ import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.ui.albums.AlbumDetailScreen
 import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
+import io.github.libregeek.fernix.ui.search.SearchScreen
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackUiState
 import io.github.libregeek.fernix.ui.nav.BackStack
@@ -116,6 +117,15 @@ fun FernixAppUi(
                 }
                 FoldersScreen(container.database, container.playback)
             }
+            return@Scaffold
+        }
+        if (current == Screen.Search) {
+            SearchScreen(
+                container.database,
+                container.trackSearch,
+                container.playback,
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
         if (current == Screen.Albums) {

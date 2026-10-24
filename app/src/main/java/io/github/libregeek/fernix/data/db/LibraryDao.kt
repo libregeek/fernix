@@ -86,6 +86,10 @@ interface TagDao {
     @Query("SELECT * FROM tag_keys ORDER BY `key`")
     suspend fun allKeys(): List<TagKeyEntity>
 
+    /** Whether [valueId] is still a person (a rescan or a split can remove one). */
+    @Query("SELECT EXISTS(SELECT 1 FROM people WHERE valueId = :valueId)")
+    suspend fun personExists(valueId: Long): Boolean
+
     /** The ids of [keys] plus every `PERFORMER:*` key that exists. */
     @Query("SELECT id FROM tag_keys WHERE `key` IN (:keys) OR `key` LIKE 'PERFORMER:%'")
     suspend fun peopleKeyIds(keys: List<String>): List<Long>
