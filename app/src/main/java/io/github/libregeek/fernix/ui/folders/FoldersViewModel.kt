@@ -148,12 +148,6 @@ class FoldersViewModel(
         }
     }
 
-    /** The ids of the tracks directly in the open folder, for Split tags. */
-    suspend fun trackIds(): List<Long> {
-        val folder = stack.lastOrNull() ?: return emptyList()
-        return withContext(Dispatchers.IO) { db.trackDao().folderTracks(folder.id).map { it.id } }
-    }
-
     fun enqueueTrack(track: TrackRow) = playback.enqueue(listOf(track))
 
     /** Plays a folder and everything below it, folder by folder. */

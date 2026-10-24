@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,7 +47,6 @@ fun SettingsScreen(
     settings: Settings,
     scanning: Boolean,
     onRescan: () -> Unit,
-    onOpenSplitRules: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,9 +79,34 @@ fun SettingsScreen(
             OutlinedButton(onClick = vm::restoreDefaults) { Text(stringResource(R.string.settings_restore_defaults)) }
         }
 
-        Section(stringResource(R.string.settings_split_rules)) {
-            Text(stringResource(R.string.settings_split_rules_detail), style = MaterialTheme.typography.bodyMedium)
-            OutlinedButton(onClick = onOpenSplitRules) { Text(stringResource(R.string.settings_split_rules)) }
+        Section(stringResource(R.string.settings_delimiters)) {
+            Text(stringResource(R.string.settings_delimiters_detail), style = MaterialTheme.typography.bodyMedium)
+            state.delimiters.forEach { delimiter ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "\u201C$delimiter\u201D",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    IconButton(onClick = { vm.removeDelimiter(delimiter) }) {
+                        Icon(painterResource(R.drawable.ic_close), stringResource(R.string.settings_delimiter_remove))
+                    }
+                }
+            }
+            var typed by remember { mutableStateOf("") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { typed = it },
+                    label = { Text(stringResource(R.string.settings_delimiter_new)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                Button(onClick = { vm.addDelimiter(typed); typed = "" }, enabled = typed.isNotBlank()) {
+                    Text(stringResource(R.string.settings_delimiter_add))
+                }
+            }
+            OutlinedButton(onClick = vm::restoreDelimiters) { Text(stringResource(R.string.settings_restore_defaults)) }
         }
     }
 

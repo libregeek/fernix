@@ -47,17 +47,13 @@ class DatabaseTest {
         lib.tag(t, "ARTIST", "A")
         val playlist = db.playlistDao().insert(PlaylistEntity(name = "p", createdAt = 0, updatedAt = 0))
         db.playlistDao().insertEntry(PlaylistEntryEntity(playlist, 0, t))
-        val rule = db.splitRuleDao().insert(SplitRuleEntity(keyId = lib.keyId("ARTIST"), value = "A;B", parts = "A\u001FB", createdAt = 0))
-        db.splitRuleDao().insertRuleTracks(listOf(SplitRuleTrackEntity(rule, t)))
 
         db.trackDao().deleteById(t)
 
         fun count(table: String) = db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM $table").use { it.moveToFirst(); it.getInt(0) }
         assertEquals(0, count("track_tags"))
         assertEquals(0, count("playlist_entries"))
-        assertEquals(0, count("split_rule_tracks"))
         assertEquals(1, count("playlists"))
-        assertEquals(1, count("split_rules"))
     }
 
     @Test

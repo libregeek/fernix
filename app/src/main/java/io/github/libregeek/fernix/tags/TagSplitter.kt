@@ -6,8 +6,11 @@ object TagSplitter {
 
     val DEFAULT_SEPARATORS = listOf(";", "/", ",")
 
-    /** Tags that can never be split: they hold one thing (spec §5). */
-    val UNSPLITTABLE_KEYS = setOf("TITLE", "ALBUM", "DATE")
+    /**
+     * Tags that can never be split: each holds one thing (spec §5). The numbers are here because
+     * `3/12` is track 3 of 12, not two values.
+     */
+    val UNSPLITTABLE_KEYS = setOf("TITLE", "ALBUM", "DATE", "TRACKNUMBER", "DISCNUMBER")
 
     /** Whether [value] holds any of the [separators]. */
     fun contains(value: String, separators: List<String>): Boolean =

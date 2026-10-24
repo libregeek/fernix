@@ -4,14 +4,12 @@ package io.github.libregeek.fernix.data.scan
 import androidx.room.withTransaction
 import io.github.libregeek.fernix.data.db.AlbumEntity
 import io.github.libregeek.fernix.data.db.FernixDatabase
-import io.github.libregeek.fernix.data.db.SplitRuleTrackEntity
 import io.github.libregeek.fernix.data.db.SummaryRefresher
 import io.github.libregeek.fernix.data.db.TagKeyEntity
 import io.github.libregeek.fernix.data.db.TagPair
 import io.github.libregeek.fernix.data.db.TagValueEntity
 import io.github.libregeek.fernix.data.db.TrackEntity
 import io.github.libregeek.fernix.data.db.TrackTagEntity
-import io.github.libregeek.fernix.tags.SplitRules
 import io.github.libregeek.fernix.tags.TagNormalizer
 import io.github.libregeek.fernix.tags.TrackFields
 
@@ -42,10 +40,8 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
     private val valueIds = HashMap<String, Long>()
     private val albumIds = HashMap<Pair<String, Int>, Long>()
     private val summaries = SummaryRefresher(db)
-    private var splitRules: SplitRules? = null
 
     suspend fun apply(ops: List<LibraryOp>) {
-        val rules = splitRules ?: SplitRules(db.splitRuleDao().allWithKeys()).also { splitRules = it }
         db.withTransaction {
             val tracks = db.trackDao()
             val tags = db.tagDao()
@@ -59,9 +55,7 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
                 }
                 is LibraryOp.SetDateAdded -> tracks.setDateAdded(op.mediaStoreId, op.dateAdded)
                 is LibraryOp.Upsert -> {
-                    // Stored split rules decide how combined values are stored (spec §5 *Tag splitting*).
-                    val split = rules.apply(TagNormalizer.normalize(op.rawTags.orEmpty()))
-                    val normalized = split.tags
+                    val normalized = TagNormalizer.normalize(op.rawTags.orEmpty())
                     val fields = TrackFields.from(normalized)
                     val existing = tracks.idByMediaStoreId(op.media.mediaStoreId)
                     if (existing != null) {
@@ -75,9 +69,6 @@ class LibraryWriter(private val db: FernixDatabase, private val folders: FolderR
                         lastPlayedAt = previous?.lastPlayedAt,
                     )
                     val trackId = if (existing != null) existing.also { tracks.update(entity) } else tracks.insert(entity)
-                    if (split.appliedRuleIds.isNotEmpty()) {
-                        db.splitRuleDao().insertRuleTracks(split.appliedRuleIds.map { SplitRuleTrackEntity(it, trackId) })
-                    }
                     for ((key, values) in normalized) {
                         val keyId = keyId(key)
                         values.forEachIndexed { ord, value ->

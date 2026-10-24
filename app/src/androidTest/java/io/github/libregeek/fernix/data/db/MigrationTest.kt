@@ -39,9 +39,9 @@ class MigrationTest {
         context.deleteDatabase(file.name)
     }
 
-    private fun createVersion1(fill: SQLiteDatabase.() -> Unit) {
+    private fun createVersion(version: Int, fill: SQLiteDatabase.() -> Unit) {
         val json = InstrumentationRegistry.getInstrumentation().context.assets
-            .open("${FernixDatabase::class.java.name}/1.json").bufferedReader().use { JSONObject(it.readText()) }
+            .open("${FernixDatabase::class.java.name}/$version.json").bufferedReader().use { JSONObject(it.readText()) }
         val entities = json.getJSONObject("database").getJSONArray("entities")
         file.parentFile!!.mkdirs()
         val db = SQLiteDatabase.openOrCreateDatabase(file, null)
@@ -60,7 +60,7 @@ class MigrationTest {
                 }
             }
             db.fill()
-            db.version = 1
+            db.version = version
         } finally {
             db.close()
         }
@@ -73,13 +73,13 @@ class MigrationTest {
     )
 
     private fun open() = Room.databaseBuilder(context, FernixDatabase::class.java, file.name)
-        .addMigrations(FernixDatabase.MIGRATION_1_2)
+        .addMigrations(FernixDatabase.MIGRATION_1_2, FernixDatabase.MIGRATION_2_3)
         .allowMainThreadQueries()
         .build()
 
     @Test
     fun migrate1To2_addsColumnsAndFavourites_keepsData_dropsDuplicateEntries() = runBlocking {
-        createVersion1 {
+        createVersion(1) {
             execSQL("INSERT INTO folders (id, parentId, name, path) VALUES (1, NULL, 'Music', 'vol/Music')")
             addTrack(1, "A")
             addTrack(2, "B")
@@ -121,6 +121,30 @@ class MigrationTest {
             }
             playlists.append(1, listOf(1, 2), now = 10)
             assertEquals(2, playlists.tracks(1).size)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun migrate2To3_dropsTheSplitRuleTables_keepsEverythingElse() = runBlocking {
+        createVersion(2) {
+            execSQL("INSERT INTO folders (id, parentId, name, path) VALUES (1, NULL, 'Music', 'vol/Music')")
+            addTrack(1, "A")
+            execSQL("INSERT INTO tag_keys (id, `key`) VALUES (1, 'ARTIST')")
+            execSQL("INSERT INTO split_rules (id, keyId, value, parts, createdAt) VALUES (1, 1, 'X; Y', 'X\u001FY', 1)")
+            execSQL("INSERT INTO split_rule_tracks (ruleId, trackId) VALUES (1, 1)")
+            execSQL("INSERT INTO playlists (id, name, kind, createdAt, updatedAt) VALUES (1, 'Mix', 'user', 1, 1)")
+        }
+
+        val db = open()
+        try {
+            assertEquals("A", db.trackDao().byId(1)!!.title)
+            assertEquals("Mix", db.playlistDao().byId(1)!!.name)
+            val tables = db.openHelper.readableDatabase.query("SELECT name FROM sqlite_master WHERE type = 'table'")
+                .use { c -> generateSequence { if (c.moveToNext()) c.getString(0) else null }.toSet() }
+            assertTrue(tables.none { it.startsWith("split_rule") })
+            assertTrue("tag_keys" in tables)
         } finally {
             db.close()
         }

@@ -53,46 +53,40 @@ class TagSplitServiceTest {
         return listOf(a, b, c, d)
     }
 
+    private suspend fun candidate(trackId: Long, key: String, text: String, delimiters: List<String> = separators): SplitCandidate? {
+        val ref = db.tagDao().valuesOfTrackKey(trackId, lib.keyId(key)).single { it.value == text }
+        return service.candidateFor(key, ref.valueId, ref.value, delimiters)
+    }
+
     @Test
-    fun preview_listsEachCombinedValueOnce_withPartsAndLibraryWideCount() = runBlocking {
-        val (a, b, c) = library()
-        val artist = lib.keyId("ARTIST")
-        val preview = service.preview(listOf(a, b, c), listOf(artist), separators)
-        assertEquals(listOf("AC/DC", "Simon; Garfunkel"), preview.map { it.value })
-        val simon = preview.single { it.value == "Simon; Garfunkel" }
+    fun candidateFor_givesThePartsAndTheLibraryWideCount() = runBlocking {
+        val (a, _, c) = library()
+        val simon = candidate(a, "ARTIST", "Simon; Garfunkel")!!
         assertEquals(listOf("Simon", "Garfunkel"), simon.parts)
-        assertEquals(2, simon.libraryTracks)
-        assertEquals(listOf("AC", "DC"), preview.single { it.value == "AC/DC" }.parts)
+        assertEquals(2, simon.libraryTracks) // tracks A and B carry it
+        assertEquals(listOf("AC", "DC"), candidate(c, "ARTIST", "AC/DC")!!.parts)
     }
 
     @Test
-    fun preview_onlyLooksAtTheListsTracks_theChosenKeys_andTheChosenSeparators() = runBlocking {
+    fun candidateFor_isNullWhenTheDelimitersLeaveTheValueAlone_orTheTagCantBeSplit() = runBlocking {
         val (a, _, c, d) = library()
-        val artist = lib.keyId("ARTIST")
-        assertEquals(emptyList<String>(), service.preview(listOf(d), listOf(artist), separators).map { it.value })
-        // GENRE isn't a chosen key; the comma isn't a chosen separator.
-        assertEquals(listOf("Simon; Garfunkel"), service.preview(listOf(a), listOf(artist), separators).map { it.value })
-        assertEquals(emptyList<String>(), service.preview(listOf(a, c), listOf(artist), listOf(",")).map { it.value })
-        assertEquals(emptyList<String>(), service.preview(emptyList(), listOf(artist), separators).map { it.value })
+        assertNull(candidate(d, "ARTIST", "Ann")) // no delimiter in it
+        assertNull(candidate(a, "ARTIST", "Simon; Garfunkel", delimiters = listOf(","))) // not one of the chosen delimiters
+        assertNull(candidate(a, "ARTIST", "Simon; Garfunkel", delimiters = emptyList()))
+        // AC/DC stays whole as long as "/" isn't a delimiter.
+        assertNull(candidate(c, "ARTIST", "AC/DC", delimiters = listOf(";")))
+        lib.tag(d, "TITLE", "A; B")
+        assertNull(candidate(d, "TITLE", "A; B")) // TITLE, ALBUM and DATE are never split
+        assertNull(service.candidateFor("NO_SUCH_KEY", 1, "A; B", separators))
     }
 
     @Test
-    fun preview_worksOnLongTrackLists() = runBlocking {
-        val f = lib.folder()
-        val ids = (1..1500).map { lib.track("T$it", f).also { id -> lib.tag(id, "GENRE", "Rock/Pop") } }
-        val preview = service.preview(ids, listOf(lib.keyId("GENRE")), separators)
-        assertEquals(1, preview.size)
-    }
-
-    @Test
-    fun apply_rewritesTagsInPlace_dedupes_updatesFixedColumn_andLeavesUncheckedValuesWhole() = runBlocking {
+    fun split_rewritesTagsInPlace_dedupes_updatesFixedColumn_andLeavesUncheckedValuesWhole() = runBlocking {
         val (a, b, c, d) = library()
         val artist = lib.keyId("ARTIST")
-        val simon = service.preview(listOf(a, b), listOf(artist), separators).single { it.value == "Simon; Garfunkel" }
+        val simon = candidate(a, "ARTIST", "Simon; Garfunkel")!!
 
-        val progress = mutableListOf<Pair<Int, Int>>()
-        service.apply(listOf(simon)) { done, total -> progress += done to total }
-        assertEquals(listOf(1 to 1), progress)
+        service.split(simon)
 
         // The dictionary keeps the first spelling of a value (spec §5): B's lowercase "simon" came first.
         assertEquals(listOf("simon", "Garfunkel"), values(a, "ARTIST"))
@@ -117,41 +111,31 @@ class TagSplitServiceTest {
         assertEquals(2, db.tagDao().libraryTrackCount(artist, db.tagDao().valueId("Garfunkel")!!))
         val people = db.tagDao().peoplePage("", 0, PAGE_SIZE).associate { it.name to it.trackCount }
         assertEquals(mapOf("AC/DC" to 1, "Ann" to 1, "Garfunkel" to 2, "simon" to 2, "Zed" to 1), people)
-
-        // The rule and the tracks it touched are recorded, so a rescan and an undo can use them.
-        val rule = db.splitRuleDao().find(artist, "Simon; Garfunkel")!!
-        assertEquals(listOf("Simon", "Garfunkel"), TagValues.split(rule.parts))
-        assertEquals(
-            setOf(a, b),
-            db.openHelper.readableDatabase.query("SELECT trackId FROM split_rule_tracks WHERE ruleId = ${rule.id}")
-                .use { c2 -> generateSequence { if (c2.moveToNext()) c2.getLong(0) else null }.toSet() },
-        )
     }
 
     @Test
-    fun apply_isLibraryWide_notOnlyOnTheListsTracks() = runBlocking {
+    fun split_isLibraryWide_notOnlyOnTheListsTracks() = runBlocking {
         val (a, b) = library()
         val artist = lib.keyId("ARTIST")
-        // The preview came from track A only, but track B carries the same value.
-        val simon = service.preview(listOf(a), listOf(artist), separators).single()
-        service.apply(listOf(simon))
+        // The split is asked for on track A only, but track B carries the same value.
+        val simon = candidate(a, "ARTIST", "Simon; Garfunkel")!!
+        service.split(simon)
         assertEquals(listOf("Zed", "simon", "Garfunkel"), values(b, "ARTIST"))
     }
 
     @Test
-    fun apply_twice_isHarmless_andAValueStillUsedUnderAnotherKeyStaysInTheDictionary() = runBlocking {
+    fun split_twice_isHarmless_andAValueStillUsedUnderAnotherKeyStaysInTheDictionary() = runBlocking {
         val f = lib.folder()
         val a = lib.track("A", f)
         lib.tag(a, "ARTIST", "X; Y")
         lib.tag(a, "COMPOSER", "X; Y")
         lib.refreshSummaries(PeopleTags.KEYS)
         val artist = lib.keyId("ARTIST")
-        val candidate = service.preview(listOf(a), listOf(artist), separators).single()
-        service.apply(listOf(candidate))
-        service.apply(listOf(candidate))
+        val candidate = candidate(a, "ARTIST", "X; Y")!!
+        service.split(candidate)
+        service.split(candidate)
         assertEquals(listOf("X", "Y"), values(a, "ARTIST"))
         assertEquals(listOf("X; Y"), values(a, "COMPOSER"))
         assertNotNull(db.tagDao().valueId("X; Y")) // still the composer
-        assertEquals(1, db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM split_rules").use { it.moveToFirst(); it.getInt(0) })
     }
 }

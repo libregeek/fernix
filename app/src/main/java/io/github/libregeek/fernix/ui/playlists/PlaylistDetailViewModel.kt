@@ -128,8 +128,5 @@ class PlaylistDetailViewModel(
         }
     }
 
-    /** The ids of every track of the playlist, for Split tags. */
-    suspend fun trackIds(): List<Long> = withContext(Dispatchers.IO) { tracks.load(playlistId).map { it.id } }
-
     fun enqueue(entry: PlaylistEntryRow) = playback.enqueue(listOf(entry.track))
 }

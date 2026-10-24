@@ -134,18 +134,16 @@ All six fixed fields are multi-value (ID3v2.4 null-separated text frames; repeat
 
 At ingestion every value is trimmed and empty values are dropped, once, before anything is written. Keys are uppercased, and a value repeated under the same key (ignoring case) is kept once, in its first position, since `track_tags` has one row per (track, key, value). Not stored in the tag tables (still readable from the file through TagLib when needed): the keys `LYRICS` and `ACOUSTID_FINGERPRINT`, and any value longer than 512 characters.
 
-### Tag splitting (manual, user-controlled)
+### Tag splitting (manual, one value at a time)
 
-A single tag value may hold several entries written with a separator, e.g. `ARTIST=Simon; Garfunkel`. **Scanning never splits values on its own.** The user splits them from a track list (§9):
+A single tag value may hold several entries written with a delimiter, e.g. `ARTIST=Simon; Garfunkel`. **Scanning never splits values on its own, and there is no bulk splitting**: the user splits a value they are looking at, as in Quod Libet:
 
-1. **Split tags** in a track list's overflow menu acts on the tracks in that list.
-2. A dialog picks the **separators** (`;`, `/`, `,`, plus any custom string such as ` feat. `) and the **tags** to split (default: people tag keys + `GENRE`; `TITLE`, `ALBUM` and `DATE` cannot be split). The last choice is remembered in `SharedPreferences`.
-3. A **preview** lists each distinct (tag, value) in those tracks that contains a chosen separator, the parts it would become, and how many tracks in the whole library carry it. Each row has a checkbox, so values such as `AC/DC` can be left whole.
-4. **Apply** creates one **split rule** per checked row and applies it library-wide: on every track carrying that (tag, value), the joined value is replaced by its parts in `track_tags` and in the fixed column, and the joined value is deleted from the dictionary once unused. Parts are trimmed, empties dropped, case-insensitive duplicates dropped, order kept.
+1. In **Settings** (§9) the user sets the **delimiters**, any number of them (default `;`, `/`, `,`; any string such as ` feat. `, used as typed, spaces included). Stored in `SharedPreferences`.
+2. On **Track details** (§9) every tag value that contains one of the delimiters shows a **split button** next to it (`TITLE`, `ALBUM`, `DATE`, `TRACKNUMBER` and `DISCNUMBER` never do: they hold one thing, and `3/12` is track 3 of 12).
+3. The button asks for confirmation, showing the parts the value would become and how many tracks in the whole library carry it.
+4. Confirming splits the value in **every track carrying that exact (tag, value)**, not just the one on screen: the joined value is replaced by its parts in `track_tags` and in the fixed column, and deleted from the dictionary once unused. Parts are trimmed, empties dropped, case-insensitive duplicates dropped, order kept. The summary tables are updated and the tags on the screen update by themselves (they are a Room `Flow`).
 
-Split rules are stored (`split_rules`) so the decision survives rescans: when a file is ingested, a value matching a rule is stored as its parts. A rule is keyed by (tag, value), so a new file carrying the same joined value is split the same way.
-
-Fernix never writes to audio files; splitting changes only the database. Rules are listed in **Settings**, where deleting one re-reads the files of the tracks it was applied to (`split_rule_tracks`), restoring the joined value.
+**Nothing is stored about a split**: there are no split rules. A split is a plain edit of the database, and since a scan reads only new or changed files (§6.2), the other tracks keep it across rescans. A track whose file changes is read again and shows what the file says, so its value comes back whole (and its split button with it). Fernix never writes to audio files. Changing or removing a delimiter does not affect splits already made. There is no undo.
 
 ### People tag keys
 
@@ -200,10 +198,6 @@ One constant in code: `ARTIST`, `ALBUMARTIST`, `AUTHOR`, `COMPOSER`, `LYRICIST`,
 
 - A person is a value that occurs under at least one people tag key, regardless of role: one person can be artist on one track and composer + lyricist on another.
 - `trackCount` is the number of distinct tracks the person is credited on.
-
-**`split_rules`** — `(id, keyId, value, parts, createdAt)`; unique index `(keyId, value)`, `value` `COLLATE NOCASE`; `parts` is the `U+001F`-joined list of parts.
-
-**`split_rule_tracks`** — `(ruleId, trackId)`, PK `(ruleId, trackId)`; index `(trackId)`; cascading deletes from both `split_rules` and `tracks`. The tracks a rule was applied to, used to undo it.
 
 **`playlists`** — `(id, name, kind, createdAt, updatedAt)`; `kind` is `user` (created by the user) or `favourites` (the one built-in editable playlist, see *Default playlists*).
 
@@ -273,7 +267,7 @@ The scope is stored in `SharedPreferences`: `scan_scope` (`all` or `selected`) a
 1. **Discovery** — query `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI` (which spans all external volumes) for `_ID`, `SIZE`, `DATE_MODIFIED`, `DATE_ADDED`, `DURATION`, `VOLUME_NAME`, `RELATIVE_PATH`, `DISPLAY_NAME`, ordered by `_ID`, restricted to the mounted volumes and the scan scope above.
 2. **Diff** — merge-walk the MediaStore cursor and a `tracks` cursor (joined to `folders`), both ordered by `mediaStoreId`, in constant memory (no map of the whole library). New or changed files (size, date, folder or name) are queued for parsing; vanished or out-of-scope ones are deleted (except tracks on unmounted volumes).
 3. **Tag ingestion** — `ContentResolver.openFileDescriptor(uri, "r")` → fd passed to native code → TagLib reads through a file-descriptor stream (`TagLib::FileStream(fd, true)` or a custom `IOStream`) → returns the `PropertyMap` as `Map<String, List<String>>`.
-4. **Persist** — values are normalised and existing split rules applied (§5), then each batch of ~500 tracks is written in one Room transaction (`folders`, `albums`, `tracks`, `tag_keys`, `tag_values`, `track_tags`, `split_rule_tracks`, `key_values`, `people`). A re-parsed track has its `track_tags` rows replaced and keeps its `playCount` and `lastPlayedAt`. Key and value ids and the split rules are cached in memory for the duration of the scan.
+4. **Persist** — values are normalised, then each batch of ~500 tracks is written in one Room transaction (`folders`, `albums`, `tracks`, `tag_keys`, `tag_values`, `track_tags`, `key_values`, `people`). A re-parsed track has its `track_tags` rows replaced and keeps its `playCount` and `lastPlayedAt`. Key and value ids and the split rules are cached in memory for the duration of the scan.
 5. **Clean up** — after the scan, unused folders, albums and tag values are deleted.
 
 Each committed batch is final, so an interrupted scan resumes where it stopped on the next run (the diff skips what is already stored). The library is usable while a scan runs, and the UI shows progress. Scanning runs on `Dispatchers.IO` and never blocks the UI.
@@ -333,7 +327,6 @@ Material 3 defaults, dynamic color on Android 12+, light/dark themes. Bottom nav
 
 All long lists (tracks, albums, people, folders, filter values) are keyset-paged from the database (§5) and rendered in `LazyColumn`s.
 
-Every track list (Search results, album detail, folder, playlist detail) has **Split tags** in its overflow menu, which runs the manual tag-splitting flow of §5 on the tracks in that list. The split runs in the background with progress shown.
 
 1. **Now Playing** — album art, title, album, date, the user's **Now Playing tags**, seek bar, play/pause/next/previous, shuffle/repeat.
    - Title, album and date are always shown and cannot be changed.
@@ -352,13 +345,13 @@ Every track list (Search results, album detail, folder, playlist detail) has **S
 9. **Album details** — opened by tapping an album name anywhere (track rows, Now Playing, track details, Albums list): album art, name, year (hidden when 0) and the tracks by disc/track number; Play/enqueue the album. Art is the front-cover picture (type 3, else the first picture) of the first track that has one.
 10. **Track details** — opened from the overflow menu of any track row, or from Now Playing. Read from the file on demand (the fd of the content URI) plus the database:
    - cover art (front cover, else first picture);
-   - **all tags:** every `track_tags` key with its values in `ord` order (after split rules); people and album values are tappable (person details, album details), other values open a tag filter in Search;
+   - **all tags:** every `track_tags` key with its values in `ord` order (after any splits); people and album values are tappable (person details, album details), other values open a tag filter in Search; a value holding one of the Settings delimiters has a **split button** (§5 *Tag splitting*), which asks for confirmation and splits it library-wide;
    - **technical details:** format, duration, bitrate, sample rate, channels, bits per sample (§7 *Audio properties*; fields TagLib doesn't report are hidden);
    - **file details:** file name, folder, volume, size, modified date, content URI, from the `tracks` and `folders` rows.
 8. **Settings** — reached from the overflow menu in the library screens' top app bar.
    - **Library folders:** choose *All external storage* or *Selected folders* with the in-app chooser (§6), and rescan. Saving a narrower scope shows how many tracks and playlist entries will be removed and asks for confirmation.
    - **Now Playing tags:** set, change or clear each of the 3 tag slots shown on Now Playing, and restore the defaults.
-   - **Split rules:** lists the rules (tag, joined value → parts), paged; deleting a rule undoes it (§5).
+   - **Split delimiters:** the delimiters used by the split button on Track details (§5): add any string, remove, restore the defaults.
 
 ---
 

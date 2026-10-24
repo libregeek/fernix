@@ -54,7 +54,6 @@ import io.github.libregeek.fernix.ui.folders.FoldersScreen
 import io.github.libregeek.fernix.ui.nowplaying.NowPlayingScreen
 import io.github.libregeek.fernix.ui.queue.QueueScreen
 import io.github.libregeek.fernix.ui.settings.SettingsScreen
-import io.github.libregeek.fernix.ui.settings.SplitRulesScreen
 import io.github.libregeek.fernix.ui.trackdetails.TrackDetailScreen
 import io.github.libregeek.fernix.ui.people.PeopleScreen
 import io.github.libregeek.fernix.ui.people.PersonDetailScreen
@@ -76,7 +75,6 @@ private val Screen.label: Int
         Screen.Queue -> R.string.queue
         Screen.TrackDetail -> R.string.track_details
         Screen.Settings -> R.string.settings
-        Screen.SplitRules -> R.string.settings_split_rules
         Screen.AlbumDetail -> R.string.tab_albums
         Screen.PersonDetail -> R.string.tab_people
         Screen.PlaylistDetail -> R.string.tab_playlists
@@ -94,7 +92,6 @@ private val Screen.icon: Int
         Screen.Queue -> R.drawable.ic_queue_music
         Screen.TrackDetail -> R.drawable.ic_info
         Screen.Settings -> R.drawable.ic_more_vert
-        Screen.SplitRules -> R.drawable.ic_more_vert
         Screen.AlbumDetail -> R.drawable.ic_album
         Screen.PersonDetail -> R.drawable.ic_people
         Screen.PlaylistDetail -> R.drawable.ic_playlist
@@ -167,16 +164,6 @@ fun FernixAppUi(
                 container.settings,
                 scanning = scanState is ScanState.Running,
                 onRescan = onRescan,
-                onOpenSplitRules = { backStack.push(Screen.SplitRules) },
-                onBack = { backStack.pop() },
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.SplitRules) {
-            SplitRulesScreen(
-                container.database,
-                container.tagSource,
                 onBack = { backStack.pop() },
                 modifier = Modifier.padding(padding),
             )
@@ -186,6 +173,7 @@ fun FernixAppUi(
             TrackDetailScreen(
                 backStack.currentArg,
                 container.database,
+                container.settings,
                 container.trackFiles,
                 onBack = { backStack.pop() },
                 onOpenPerson = { backStack.push(Screen.PersonDetail, it) },

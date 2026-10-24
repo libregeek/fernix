@@ -18,7 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,7 +43,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import coil3.compose.AsyncImage
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.tags.TagSplitter
+import io.github.libregeek.fernix.ui.nowplaying.TagValue
 import io.github.libregeek.fernix.tags.AudioProperties
 import io.github.libregeek.fernix.ui.art.TrackArt
 import io.github.libregeek.fernix.ui.nowplaying.TagLine
@@ -54,6 +61,7 @@ import java.util.Date
 fun TrackDetailScreen(
     trackId: Long,
     db: FernixDatabase,
+    settings: Settings,
     openFile: (Long) -> android.os.ParcelFileDescriptor?,
     onBack: () -> Unit,
     onOpenPerson: (Long) -> Unit,
@@ -62,10 +70,11 @@ fun TrackDetailScreen(
 ) {
     val vm: TrackDetailViewModel = viewModel(
         key = "track$trackId",
-        factory = viewModelFactory { initializer { TrackDetailViewModel(trackId, db, openFile) } },
+        factory = viewModelFactory { initializer { TrackDetailViewModel(trackId, db, settings, openFile) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val track = state.track
+    LaunchedEffect(Unit) { vm.reloadDelimiters() }
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         IconButton(onClick = onBack) {
@@ -109,8 +118,37 @@ fun TrackDetailScreen(
 
         if (state.tags.isNotEmpty()) {
             Section(stringResource(R.string.details_tags)) {
-                state.tags.forEach { line -> TagBlock(line, track.albumId, onOpenPerson, onOpenAlbum) }
+                state.tags.forEach { line ->
+                    TagBlock(line, track.albumId, state.delimiters, onOpenPerson, onOpenAlbum, onSplit = { vm.askSplit(line.label, it) })
+                }
             }
+        }
+
+        state.pendingSplit?.let { split ->
+            AlertDialog(
+                onDismissRequest = { if (!state.splitting) vm.cancelSplit() },
+                title = { Text(stringResource(R.string.split_value)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("${split.key}: ${split.value}")
+                        Text(
+                            "\u2192 " + split.parts.joinToString(" | "),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            pluralStringResource(R.plurals.split_applies_to, split.libraryTracks, split.libraryTracks),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = vm::confirmSplit, enabled = !state.splitting) { Text(stringResource(R.string.split_confirm)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = vm::cancelSplit, enabled = !state.splitting) { Text(stringResource(R.string.cancel)) }
+                },
+            )
         }
 
         state.audio?.let { audio ->
@@ -149,7 +187,14 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 
 /** A tag key with every value. The ALBUM value opens the album; a person's name opens the person. */
 @Composable
-private fun TagBlock(line: TagLine, albumId: Long?, onOpenPerson: (Long) -> Unit, onOpenAlbum: (Long) -> Unit) {
+private fun TagBlock(
+    line: TagLine,
+    albumId: Long?,
+    delimiters: List<String>,
+    onOpenPerson: (Long) -> Unit,
+    onOpenAlbum: (Long) -> Unit,
+    onSplit: (TagValue) -> Unit,
+) {
     Column {
         Text(line.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         line.values.forEach { value ->
@@ -158,12 +203,21 @@ private fun TagBlock(line: TagLine, albumId: Long?, onOpenPerson: (Long) -> Unit
                 line.label == "ALBUM" && albumId != null -> ({ onOpenAlbum(albumId) })
                 else -> null
             }
-            Text(
-                value.text,
-                modifier = if (open != null) Modifier.clickable(onClick = open) else Modifier,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (open != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            )
+            // A value that holds one of the delimiters from Settings can be split (TITLE, ALBUM and DATE never).
+            val splittable = line.label !in TagSplitter.UNSPLITTABLE_KEYS && TagSplitter.contains(value.text, delimiters)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    value.text,
+                    modifier = (if (open != null) Modifier.clickable(onClick = open) else Modifier).weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (open != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                )
+                if (splittable) {
+                    IconButton(onClick = { onSplit(value) }) {
+                        Icon(painterResource(R.drawable.ic_call_split), stringResource(R.string.split_value))
+                    }
+                }
+            }
         }
     }
 }

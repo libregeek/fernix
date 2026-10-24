@@ -33,14 +33,8 @@ data class PersonRow(val valueId: Long, val name: String, val trackCount: Int)
 
 data class KeyValueRow(val valueId: Long, val value: String, val trackCount: Int)
 
-/** A (key, value) on some tracks that a split could act on. */
-data class TagValueRef(val keyId: Long, val key: String, val valueId: Long, val value: String)
-
 /** One value of a track under one key, with its stored text. */
 data class TrackKeyValue(val valueId: Long, val value: String)
-
-/** A split rule with its key name, for matching values while a file is ingested. */
-data class SplitRuleRow(val id: Long, val key: String, val value: String, val parts: String)
 
 /** A track's id and the MediaStore id of its file. */
 data class TrackFile(val id: Long, val mediaStoreId: Long)

@@ -33,7 +33,7 @@ Phases are ordered so each one ends in something runnable and testable.
 ## Phase 2 — Database (Room)
 
 - [x] Add Room + KSP dependencies [§2]
-- [x] Entities: `tracks`, `folders`, `albums`, `tag_keys`, `tag_values`, `track_tags`, `key_values`, `people`, `split_rules`, `split_rule_tracks`, `playlists`, `playlist_entries` with the exact indexes/collations/FKs/cascades from §5
+- [x] Entities: `tracks`, `folders`, `albums`, `tag_keys`, `tag_values`, `track_tags`, `key_values`, `people`, `playlists`, `playlist_entries` with the exact indexes/collations/FKs/cascades from §5
 - [x] `tracks_fts` (`@Fts4`, external content, `unicode61 remove_diacritics=1`)
 - [x] DAOs with keyset paging (`(sortKey, id) > (?, ?) … LIMIT 200`) for tracks, albums, people, folders, key values
 - [x] Filter builder with `@RawQuery` + `INTERSECT` (tag, person, FTS), all values bound [§5]
@@ -115,19 +115,20 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 
 ## Phase 7 — Tag splitting
 
-- [x] Split dialog: separators (`;`, `/`, `,`, custom), tag selection (default people keys + `GENRE`; `TITLE`/`ALBUM`/`DATE` excluded), choice remembered [§5]
-- [x] Preview of distinct (tag, value) with parts and library-wide track count; per-row checkbox
-- [x] Apply: create `split_rules`, rewrite `track_tags` + fixed column library-wide, record `split_rule_tracks`, delete unused values, refresh `key_values`/`people`; background with progress
-- [x] Apply rules during scan ingestion
-- [x] "Split tags" in overflow menu of every track list (Search, album, folder, playlist)
-- [x] Tests: split dedupe/order/trim, rule survives rescan, `AC/DC` left whole
+Reworked on 2026-10-24: one value at a time from Track details, with delimiters set in Settings (no bulk dialog from track lists), and no stored rules (a split is a plain database edit; rescans read only changed files, so splits persist for unchanged tracks; no undo).
+
+- [x] Delimiters in Settings: any number, add / remove / restore defaults, spaces kept [§5, §9]
+- [x] Split button next to every tag value on Track details that holds a delimiter (never `TITLE`/`ALBUM`/`DATE`/`TRACKNUMBER`/`DISCNUMBER`); confirmation shows the parts and the library-wide track count
+- [x] Split: rewrite `track_tags` + fixed column in every track carrying the value, delete the unused value, refresh `key_values`/`people`; the tags on screen update by themselves
+- [x] Schema version 3 drops `split_rules` and `split_rule_tracks` (migration + test)
+- [x] Tests: split dedupe/order/trim, `AC/DC` left whole while `/` isn't a delimiter, the split button's ask/confirm/cancel
 
 ## Phase 8 — Settings
 
 - [x] Settings screen reached from the library top-bar overflow menu (a title bar with a ⋮ menu on the five library screens; Settings has Rescan, the Now Playing tags and the split rules)
 - [ ] Library folders: change scope with the chooser; confirm before narrowing (count of tracks and playlist entries removed) [§6, §9]
 - [x] Now Playing tag slots: set / clear / restore defaults (any `tag_keys` except `TITLE`, `ALBUM`, `DATE`)
-- [x] Split rules list (paged); delete re-reads affected files to undo the split
+- [x] Split delimiters section (see Phase 7)
 
 ## Phase 9 — Hardening & release
 

@@ -5,7 +5,7 @@ import androidx.room.withTransaction
 import io.github.libregeek.fernix.tags.TagSplitter
 import io.github.libregeek.fernix.tags.TagValues
 
-/** A (key, value) the preview offers to split, with what it would become. */
+/** A tag value the user is splitting, with what it becomes. */
 data class SplitCandidate(
     val keyId: Long,
     val key: String,
@@ -17,58 +17,37 @@ data class SplitCandidate(
 )
 
 /**
- * Manual tag splitting (spec/architecture.md §5 *Tag splitting*): preview over the tracks of a list,
- * and apply as split rules library-wide. Never touches the audio files.
+ * Manual tag splitting (spec/architecture.md §5 *Tag splitting*): the user splits one value of a track,
+ * which is applied to every track carrying it. Never touches the audio files.
  */
 class TagSplitService(private val db: FernixDatabase) {
 
     private val summaries = SummaryRefresher(db)
 
     /**
-     * Each distinct (key, value) of [keyIds] on [trackIds] that holds one of the [separators], sorted
-     * by key then value. The lookup runs in chunks, so the list may be as long as the library.
+     * What splitting [value] under [key] would do with the [delimiters]: the parts and how many tracks
+     * in the library carry it. Null when it can't be split: TITLE, ALBUM and DATE never are, an unknown
+     * key, or a value the delimiters leave as it is.
      */
-    suspend fun preview(trackIds: List<Long>, keyIds: List<Long>, separators: List<String>): List<SplitCandidate> {
-        if (trackIds.isEmpty() || keyIds.isEmpty() || separators.none { it.isNotEmpty() }) return emptyList()
-        val found = LinkedHashMap<Pair<Long, Long>, TagValueRef>()
-        for (chunk in trackIds.chunked(CHUNK)) {
-            for (ref in db.tagDao().valuesOnTracks(chunk, keyIds)) {
-                if (TagSplitter.contains(ref.value, separators)) found.putIfAbsent(ref.keyId to ref.valueId, ref)
-            }
-        }
-        return found.values
-            .map { ref ->
-                SplitCandidate(
-                    ref.keyId, ref.key, ref.valueId, ref.value,
-                    TagSplitter.split(ref.value, separators),
-                    db.tagDao().libraryTrackCount(ref.keyId, ref.valueId) ?: 0,
-                )
-            }
-            .sortedWith(compareBy({ it.key }, { it.value.lowercase() }))
+    suspend fun candidateFor(key: String, valueId: Long, value: String, delimiters: List<String>): SplitCandidate? {
+        if (key in TagSplitter.UNSPLITTABLE_KEYS) return null
+        val parts = TagSplitter.split(value, delimiters)
+        if (parts == listOf(value)) return null
+        val keyId = db.tagDao().keyId(key) ?: return null
+        return SplitCandidate(keyId, key, valueId, value, parts, db.tagDao().libraryTrackCount(keyId, valueId) ?: 0)
     }
 
     /**
-     * Creates one rule per candidate and applies it to every track carrying the value, one
-     * transaction per rule. [onProgress] gets (rules done, rules total) after each.
+     * Splits the candidate's value in every track that carries it (not just the one the user is looking
+     * at), in one transaction. Nothing is remembered: a track whose file changes and is read again by
+     * a scan shows what the file says.
      */
-    suspend fun apply(candidates: List<SplitCandidate>, onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }) {
-        candidates.forEachIndexed { index, candidate ->
-            db.withTransaction { applyOne(candidate) }
-            onProgress(index + 1, candidates.size)
-        }
+    suspend fun split(candidate: SplitCandidate) {
+        db.withTransaction { applyOne(candidate) }
     }
 
     private suspend fun applyOne(candidate: SplitCandidate) {
         val tags = db.tagDao()
-        val rules = db.splitRuleDao()
-        val ruleId = rules.find(candidate.keyId, candidate.value)?.id ?: rules.insert(
-            SplitRuleEntity(
-                keyId = candidate.keyId,
-                value = candidate.value,
-                parts = TagValues.join(candidate.parts),
-                createdAt = System.currentTimeMillis(),
-            ),
-        )
         val touched = LinkedHashSet<TagPair>()
         touched += TagPair(candidate.keyId, candidate.valueId)
         val partIds = HashMap<String, Long>()
@@ -77,8 +56,7 @@ class TagSplitService(private val db: FernixDatabase) {
             if (inserted > 0) inserted else tags.valueId(text)!!
         }
 
-        val trackIds = tags.tracksWithValue(candidate.keyId, candidate.valueId)
-        for (trackId in trackIds) {
+        for (trackId in tags.tracksWithValue(candidate.keyId, candidate.valueId)) {
             val before = tags.valuesOfTrackKey(trackId, candidate.keyId)
             val texts = TagSplitter.dedupe(
                 before.flatMap { if (it.valueId == candidate.valueId) candidate.parts else listOf(it.value) },
@@ -91,7 +69,6 @@ class TagSplitService(private val db: FernixDatabase) {
             texts.forEach { touched += TagPair(candidate.keyId, idOf(it)) }
             updateFixedColumn(trackId, candidate.key, texts)
         }
-        rules.insertRuleTracks(trackIds.map { SplitRuleTrackEntity(ruleId, it) })
         summaries.refresh(touched)
         tags.deleteValueIfUnused(candidate.valueId)
     }
@@ -108,10 +85,5 @@ class TagSplitService(private val db: FernixDatabase) {
             else -> return
         }
         tracks.update(updated)
-    }
-
-    private companion object {
-        /** Track ids per query; SQLite allows 999 variables on Android 10 and the key ids share them. */
-        const val CHUNK = 400
     }
 }

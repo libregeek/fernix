@@ -30,21 +30,14 @@ class Settings(context: Context) {
         prefs.edit().remove(KEY_NOW_PLAYING_SLOTS).apply()
     }
 
-    /** Separators chosen last time in the Split tags dialog. */
-    var splitSeparators: List<String>
-        get() = prefs.getString(KEY_SPLIT_SEPARATORS, null)?.let(TagValues::split)
-            ?: DEFAULT_SPLIT_SEPARATORS
+    /**
+     * The delimiters the user has set for splitting a tag value (spec/architecture.md §5), used as
+     * typed: ` feat. ` keeps its spaces. Empty means none, so no split is offered.
+     */
+    var splitDelimiters: List<String>
+        get() = prefs.getString(KEY_SPLIT_DELIMITERS, null)?.let(TagValues::split) ?: DEFAULT_SPLIT_DELIMITERS
         set(value) {
-            prefs.edit().putString(KEY_SPLIT_SEPARATORS, TagValues.join(value)).apply()
-        }
-
-    /** Tag keys chosen last time in the Split tags dialog; null means "use the defaults". */
-    var splitKeys: List<String>?
-        get() = prefs.getString(KEY_SPLIT_KEYS, null)?.let(TagValues::split)
-        set(value) {
-            prefs.edit().apply {
-                if (value == null) remove(KEY_SPLIT_KEYS) else putString(KEY_SPLIT_KEYS, TagValues.join(value))
-            }.apply()
+            prefs.edit().putString(KEY_SPLIT_DELIMITERS, TagValues.join(value)).apply()
         }
 
     /**
@@ -117,15 +110,14 @@ class Settings(context: Context) {
     companion object {
         const val SLOT_COUNT = 3
         val DEFAULT_NOW_PLAYING_SLOTS = listOf("COMPOSER", "LYRICIST", "ARTIST")
-        val DEFAULT_SPLIT_SEPARATORS = listOf(";", "/", ",")
+        val DEFAULT_SPLIT_DELIMITERS = listOf(";", "/", ",")
 
         /** Fixed fields that can't be Now Playing slots (and can't be split). */
         val FIXED_KEYS = setOf("TITLE", "ALBUM", "DATE")
 
         private const val FILE_NAME = "settings"
         private const val KEY_NOW_PLAYING_SLOTS = "now_playing_slots"
-        private const val KEY_SPLIT_SEPARATORS = "split_separators"
-        private const val KEY_SPLIT_KEYS = "split_keys"
+        private const val KEY_SPLIT_DELIMITERS = "split_delimiters"
         private const val KEY_STORAGE_ASKED = "storage_permission_asked"
         private const val KEY_EQ_ENABLED = "equalizer_enabled"
         private const val KEY_EQ_LEVELS = "equalizer_levels"

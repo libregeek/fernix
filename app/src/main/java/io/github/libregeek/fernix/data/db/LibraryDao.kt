@@ -117,17 +117,6 @@ interface TagDao {
     )
     suspend fun valuesOfKeys(trackId: Long, keys: List<String>): List<PlayingTag>
 
-    /**
-     * The distinct (key, value) pairs of [keyIds] on [trackIds]: what a split preview looks through.
-     * Keep [trackIds] and [keyIds] together under SQLite's variable limit (999 on Android 10).
-     */
-    @Query(
-        "SELECT DISTINCT tt.keyId AS keyId, k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
-            "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
-            "WHERE tt.trackId IN (:trackIds) AND tt.keyId IN (:keyIds)",
-    )
-    suspend fun valuesOnTracks(trackIds: List<Long>, keyIds: List<Long>): List<TagValueRef>
-
     /** How many tracks in the whole library carry the value under the key (from the summary table). */
     @Query("SELECT trackCount FROM key_values WHERE keyId = :keyId AND valueId = :valueId")
     suspend fun libraryTrackCount(keyId: Long, valueId: Long): Int?
@@ -211,43 +200,6 @@ interface TagDao {
         fun likePrefix(typed: String): String =
             typed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     }
-}
-
-@Dao
-interface SplitRuleDao {
-
-    @Insert
-    suspend fun insert(rule: SplitRuleEntity): Long
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertRuleTracks(rows: List<SplitRuleTrackEntity>)
-
-    @Query("SELECT * FROM split_rules WHERE keyId = :keyId AND value = :value")
-    suspend fun find(keyId: Long, value: String): SplitRuleEntity?
-
-    /** Rules by id with their key name, paged (Settings). Start with `afterId = 0`. */
-    @Query(
-        "SELECT r.id AS id, k.`key` AS `key`, r.value AS value, r.parts AS parts FROM split_rules r " +
-            "JOIN tag_keys k ON k.id = r.keyId WHERE r.id > :afterId ORDER BY r.id LIMIT :limit",
-    )
-    suspend fun pageWithKeys(afterId: Long, limit: Int): List<SplitRuleRow>
-
-    /** The tracks a rule was applied to, to read their files again when it is deleted. */
-    @Query("SELECT trackId FROM split_rule_tracks WHERE ruleId = :ruleId ORDER BY trackId")
-    suspend fun trackIds(ruleId: Long): List<Long>
-
-    @Query("SELECT COUNT(*) FROM split_rule_tracks WHERE ruleId = :ruleId")
-    suspend fun trackCount(ruleId: Long): Int
-
-    /** Every rule with its key name; loaded once per scan to split values as files are ingested. */
-    @Query("SELECT r.id AS id, k.`key` AS `key`, r.value AS value, r.parts AS parts FROM split_rules r JOIN tag_keys k ON k.id = r.keyId")
-    suspend fun allWithKeys(): List<SplitRuleRow>
-
-    @Query("SELECT * FROM split_rules WHERE id > :afterId ORDER BY id LIMIT :limit")
-    suspend fun page(afterId: Long, limit: Int): List<SplitRuleEntity>
-
-    @Query("DELETE FROM split_rules WHERE id = :id")
-    suspend fun delete(id: Long)
 }
 
 @Dao

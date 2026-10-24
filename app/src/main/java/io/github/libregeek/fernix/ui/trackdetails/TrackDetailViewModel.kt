@@ -6,7 +6,10 @@ import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.data.db.SplitCandidate
+import io.github.libregeek.fernix.data.db.TagSplitService
 import io.github.libregeek.fernix.data.db.PlayingTag
 import io.github.libregeek.fernix.data.db.TrackEntity
 import io.github.libregeek.fernix.data.scan.ScanScope
@@ -44,6 +47,11 @@ data class TrackDetailState(
     val audio: AudioProperties? = null,
     /** Every tag, each key with all its values in stored order. */
     val tags: List<TagLine> = emptyList(),
+    /** The delimiters from Settings; a value holding one gets a split button. */
+    val delimiters: List<String> = emptyList(),
+    /** A split waiting for the user's confirmation, or being applied. */
+    val pendingSplit: SplitCandidate? = null,
+    val splitting: Boolean = false,
 )
 
 /**
@@ -53,11 +61,38 @@ data class TrackDetailState(
 class TrackDetailViewModel(
     private val trackId: Long,
     private val db: FernixDatabase,
+    private val settings: Settings,
     private val openFile: (mediaStoreId: Long) -> ParcelFileDescriptor?,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(TrackDetailState())
+    private val splitService = TagSplitService(db)
+
+    private val _state = MutableStateFlow(TrackDetailState(delimiters = settings.splitDelimiters))
     val state: StateFlow<TrackDetailState> = _state
+
+    /** Settings may have changed the delimiters since this screen was last shown. */
+    fun reloadDelimiters() = _state.update { it.copy(delimiters = settings.splitDelimiters) }
+
+    /** The split button of a value: works out what the split would do and asks for confirmation. */
+    fun askSplit(key: String, value: TagValue) {
+        val delimiters = _state.value.delimiters
+        viewModelScope.launch {
+            val candidate = withContext(Dispatchers.IO) { splitService.candidateFor(key, value.valueId, value.text, delimiters) }
+            _state.update { it.copy(pendingSplit = candidate) }
+        }
+    }
+
+    fun cancelSplit() = _state.update { it.copy(pendingSplit = null) }
+
+    /** Splits the value in every track that carries it; the tags below update by themselves. */
+    fun confirmSplit() {
+        val candidate = _state.value.pendingSplit ?: return
+        _state.update { it.copy(splitting = true) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { splitService.split(candidate) }
+            _state.update { it.copy(pendingSplit = null, splitting = false) }
+        }
+    }
 
     init {
         viewModelScope.launch {

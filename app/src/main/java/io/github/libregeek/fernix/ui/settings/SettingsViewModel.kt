@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
-import io.github.libregeek.fernix.tags.TagSplitter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +17,8 @@ data class SettingsState(
     val slots: List<String> = emptyList(),
     /** Every tag key in the library that a slot can show (never TITLE, ALBUM or DATE). */
     val keyChoices: List<String> = emptyList(),
+    /** The split delimiters, in the order added. */
+    val delimiters: List<String> = emptyList(),
 )
 
 /** Settings (spec/architecture.md §9): the Now Playing tag slots here; rescan, folders and split rules have their own parts. */
@@ -26,14 +27,14 @@ class SettingsViewModel(
     private val settings: Settings,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SettingsState(slots = settings.nowPlayingSlots))
+    private val _state = MutableStateFlow(SettingsState(slots = settings.nowPlayingSlots, delimiters = settings.splitDelimiters))
     val state: StateFlow<SettingsState> = _state
 
     init {
         viewModelScope.launch {
             val keys = withContext(Dispatchers.IO) { db.tagDao().allKeys() }
                 .map { it.key }
-                .filter { it !in TagSplitter.UNSPLITTABLE_KEYS }
+                .filter { it !in Settings.FIXED_KEYS }
             _state.update { it.copy(keyChoices = keys) }
         }
     }
@@ -43,6 +44,21 @@ class SettingsViewModel(
         val slots = _state.value.slots.toMutableList().also { it[slot] = key }
         settings.nowPlayingSlots = slots
         _state.update { it.copy(slots = slots) }
+    }
+
+    /** Adds [text] as typed (spaces count: ` feat. `); ignores blank and repeated delimiters. */
+    fun addDelimiter(text: String) {
+        if (text.isBlank() || text in _state.value.delimiters) return
+        setDelimiters(_state.value.delimiters + text)
+    }
+
+    fun removeDelimiter(text: String) = setDelimiters(_state.value.delimiters - text)
+
+    fun restoreDelimiters() = setDelimiters(Settings.DEFAULT_SPLIT_DELIMITERS)
+
+    private fun setDelimiters(delimiters: List<String>) {
+        settings.splitDelimiters = delimiters
+        _state.update { it.copy(delimiters = delimiters) }
     }
 
     fun restoreDefaults() {

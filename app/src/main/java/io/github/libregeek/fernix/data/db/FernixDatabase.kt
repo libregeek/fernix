@@ -17,12 +17,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         TrackTagEntity::class,
         KeyValueEntity::class,
         PersonEntity::class,
-        SplitRuleEntity::class,
-        SplitRuleTrackEntity::class,
         PlaylistEntity::class,
         PlaylistEntryEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class FernixDatabase : RoomDatabase() {
@@ -30,7 +28,6 @@ abstract class FernixDatabase : RoomDatabase() {
     abstract fun albumDao(): AlbumDao
     abstract fun trackDao(): TrackDao
     abstract fun tagDao(): TagDao
-    abstract fun splitRuleDao(): SplitRuleDao
     abstract fun playlistDao(): PlaylistDao
     abstract fun maintenanceDao(): MaintenanceDao
 
@@ -65,6 +62,17 @@ abstract class FernixDatabase : RoomDatabase() {
                         "ON playlist_entries (playlistId, trackId)",
                 )
                 insertFavourites(db)
+            }
+        }
+
+        /**
+         * Version 3: splits are no longer stored as rules (a split just edits the tracks that carry the
+         * value), so the two rule tables go (spec/architecture.md §5 *Tag splitting*).
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS split_rule_tracks")
+                db.execSQL("DROP TABLE IF EXISTS split_rules")
             }
         }
 

@@ -49,7 +49,7 @@ class TagSplitterTest {
     }
 
     @Test
-    fun titleAlbumAndDateCanNotBeSplit() {
-        assertEquals(setOf("TITLE", "ALBUM", "DATE"), TagSplitter.UNSPLITTABLE_KEYS)
+    fun titleAlbumDateAndTheNumbersCanNotBeSplit() {
+        assertEquals(setOf("TITLE", "ALBUM", "DATE", "TRACKNUMBER", "DISCNUMBER"), TagSplitter.UNSPLITTABLE_KEYS)
     }
 }

@@ -175,44 +175,6 @@ data class PersonEntity(
     val trackCount: Int,
 )
 
-@Entity(
-    tableName = "split_rules",
-    indices = [Index(value = ["keyId", "value"], unique = true)],
-)
-data class SplitRuleEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val keyId: Long,
-    @ColumnInfo(collate = ColumnInfo.NOCASE) val value: String,
-    /** The parts, U+001F-joined. */
-    val parts: String,
-    val createdAt: Long,
-)
-
-/** The tracks a split rule was applied to, used to undo it. */
-@Entity(
-    tableName = "split_rule_tracks",
-    primaryKeys = ["ruleId", "trackId"],
-    foreignKeys = [
-        ForeignKey(
-            entity = SplitRuleEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["ruleId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-        ForeignKey(
-            entity = TrackEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["trackId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
-    indices = [Index(value = ["trackId"])],
-)
-data class SplitRuleTrackEntity(
-    val ruleId: Long,
-    val trackId: Long,
-)
-
 @Entity(tableName = "playlists")
 data class PlaylistEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
