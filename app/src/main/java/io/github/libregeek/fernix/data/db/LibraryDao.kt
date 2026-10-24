@@ -5,6 +5,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FolderDao {
@@ -177,6 +179,61 @@ interface PlaylistDao {
 
     @Query("DELETE FROM playlists WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM playlists WHERE id = :id")
+    suspend fun byId(id: Long): PlaylistEntity?
+
+    /** Playlists by name with their entry counts; re-emits when playlists or entries change. */
+    @Query(
+        "SELECT p.id AS id, p.name AS name, COUNT(e.position) AS trackCount FROM playlists p " +
+            "LEFT JOIN playlist_entries e ON e.playlistId = p.id " +
+            "GROUP BY p.id ORDER BY p.name COLLATE NOCASE, p.id",
+    )
+    fun summaries(): Flow<List<PlaylistRow>>
+
+    @Query("UPDATE playlists SET name = :name, updatedAt = :now WHERE id = :id")
+    suspend fun rename(id: Long, name: String, now: Long)
+
+    @Query("UPDATE playlists SET updatedAt = :now WHERE id = :id")
+    suspend fun touch(id: Long, now: Long)
+
+    /** Entries after [afterPosition] in playlist order. Start with `afterPosition = -1`. */
+    @Query(
+        "SELECT e.position AS position, t.id AS id, t.mediaStoreId AS mediaStoreId, t.title AS title, " +
+            "t.album AS album, t.artist AS artist, t.durationMs AS durationMs " +
+            "FROM playlist_entries e JOIN tracks t ON t.id = e.trackId " +
+            "WHERE e.playlistId = :playlistId AND e.position > :afterPosition " +
+            "ORDER BY e.position LIMIT :limit",
+    )
+    suspend fun entriesPage(playlistId: Long, afterPosition: Int, limit: Int): List<PlaylistEntryRow>
+
+    /** Every track of a playlist, in playlist order (the same track may repeat). */
+    @Query(
+        "SELECT t.id AS id, t.mediaStoreId AS mediaStoreId, t.title AS title, t.album AS album, " +
+            "t.artist AS artist, t.durationMs AS durationMs " +
+            "FROM playlist_entries e JOIN tracks t ON t.id = e.trackId " +
+            "WHERE e.playlistId = :playlistId ORDER BY e.position",
+    )
+    suspend fun tracks(playlistId: Long): List<TrackRow>
+
+    @Query("DELETE FROM playlist_entries WHERE playlistId = :playlistId AND position = :position")
+    suspend fun removeEntry(playlistId: Long, position: Int)
+
+    /** Adds the track at [position] unless the playlist already has it (a track is in a playlist once). */
+    @Query(
+        "INSERT INTO playlist_entries (playlistId, position, trackId) " +
+            "SELECT :playlistId, :position, :trackId WHERE NOT EXISTS " +
+            "(SELECT 1 FROM playlist_entries WHERE playlistId = :playlistId AND trackId = :trackId)",
+    )
+    suspend fun insertEntryIfAbsent(playlistId: Long, position: Int, trackId: Long)
+
+    /** Appends [trackIds] in order, skipping tracks already in the playlist (and repeats in the list). */
+    @Transaction
+    suspend fun append(playlistId: Long, trackIds: List<Long>, now: Long) {
+        var position = nextPosition(playlistId)
+        for (id in trackIds) insertEntryIfAbsent(playlistId, position++, id)
+        touch(playlistId, now)
+    }
 }
 
 /** Post-scan cleanup (spec/architecture.md §6.5). */

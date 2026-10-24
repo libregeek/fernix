@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui.search
 
+import io.github.libregeek.fernix.data.db.TrackRow
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import io.github.libregeek.fernix.ui.common.AddToPlaylistDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +65,7 @@ fun SearchScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     LaunchedEffect(listState, state.results.size) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
@@ -113,7 +119,12 @@ fun SearchScreen(
             }
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 items(state.results, key = { it.track.id }) { result ->
-                    ResultRow(result, onPlay = { vm.playFrom(result.track) }, onEnqueue = { vm.enqueueTrack(result.track) })
+                    ResultRow(
+                        result,
+                        onPlay = { vm.playFrom(result.track) },
+                        onEnqueue = { vm.enqueueTrack(result.track) },
+                        onAddToPlaylist = { addTracks = { listOf(result.track) } },
+                    )
                 }
             }
         }
@@ -171,10 +182,11 @@ fun SearchScreen(
             dismissButton = { TextButton(onClick = vm::dismissPickers) { Text(stringResource(R.string.cancel)) } },
         )
     }
+    addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
 }
 
 @Composable
-private fun ResultRow(result: TrackResult, onPlay: () -> Unit, onEnqueue: () -> Unit) {
+private fun ResultRow(result: TrackResult, onPlay: () -> Unit, onEnqueue: () -> Unit, onAddToPlaylist: () -> Unit) {
     val track = result.track
     // With a person filter the roles on the track lead; otherwise artist · album.
     val subtitle = if (result.roles.isNotEmpty()) {
@@ -186,7 +198,7 @@ private fun ResultRow(result: TrackResult, onPlay: () -> Unit, onEnqueue: () -> 
         modifier = Modifier.clickable(onClick = onPlay),
         headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = subtitle.ifEmpty { null }?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-        trailingContent = { RowMenu(onPlay = onPlay, onEnqueue = onEnqueue) },
+        trailingContent = { RowMenu(onPlay = onPlay, onEnqueue = onEnqueue, onAddToPlaylist = onAddToPlaylist) },
     )
 }
 

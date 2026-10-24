@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui.folders
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import io.github.libregeek.fernix.ui.common.AddToPlaylistDialog
 import android.provider.MediaStore
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -45,6 +49,7 @@ fun FoldersScreen(db: FernixDatabase, playback: PlaybackController, modifier: Mo
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     BackHandler(enabled = state.canGoUp) { vm.up() }
 
@@ -97,6 +102,7 @@ fun FoldersScreen(db: FernixDatabase, playback: PlaybackController, modifier: Mo
                         RowMenu(
                             onPlay = { vm.playFolder(folder) },
                             onEnqueue = { vm.enqueueFolder(folder) },
+                            onAddToPlaylist = { addTracks = { vm.subtree(folder) } },
                         )
                     },
                 )
@@ -107,12 +113,17 @@ fun FoldersScreen(db: FernixDatabase, playback: PlaybackController, modifier: Mo
                     headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     supportingContent = track.subtitle()?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                     trailingContent = {
-                        RowMenu(onPlay = { vm.playTrack(track) }, onEnqueue = { vm.enqueueTrack(track) })
+                        RowMenu(
+                            onPlay = { vm.playTrack(track) },
+                            onEnqueue = { vm.enqueueTrack(track) },
+                            onAddToPlaylist = { addTracks = { listOf(track) } },
+                        )
                     },
                 )
             }
         }
     }
+    addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
 }
 
 @Composable

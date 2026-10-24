@@ -45,6 +45,18 @@
         <item quantity="one">%d track</item>
         <item quantity="other">%d tracks</item>
     </plurals>
+    <string name="playlists_empty">No playlists yet</string>
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_name">Playlist name</string>
+    <string name="playlist_create">Create</string>
+    <string name="playlist_rename">Rename</string>
+    <string name="playlist_delete">Delete</string>
+    <string name="playlist_delete_confirm">Delete \u201c%1$s\u201d? The tracks stay in your library.</string>
+    <string name="playlist_empty">This playlist is empty</string>
+    <string name="playlist_shuffle">Shuffle</string>
+    <string name="playlist_remove_entry">Remove from playlist</string>
+    <string name="add_to_playlist">Add to playlist</string>
+    <string name="save">Save</string>
     <string name="folders_empty">No music in this folder</string>
     <string name="volume_internal">Internal storage</string>
     <string name="rescan">Rescan</string>

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.data.db
 
+import androidx.room.Embedded
+
 /** Rows per page of every list (spec/architecture.md §5). */
 const val PAGE_SIZE = 200
 
@@ -33,3 +35,11 @@ data class RoleRow(val trackId: Long, val key: String)
 
 /** A people tag key and the number of tracks a person has under it. */
 data class RoleCount(val key: String, val trackCount: Int)
+
+data class PlaylistRow(val id: Long, val name: String, val trackCount: Int)
+
+/** A playlist entry: its [position] (the key for removing it) and the track. */
+data class PlaylistEntryRow(
+    val position: Int,
+    @Embedded val track: TrackRow,
+)

@@ -16,9 +16,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import io.github.libregeek.fernix.R
 
-/** The overflow menu on a list row: Play and Add to queue. */
+/** The overflow menu on a list row: Play, Add to queue and, where given, Add to playlist. */
 @Composable
-fun RowMenu(onPlay: () -> Unit, onEnqueue: () -> Unit) {
+fun RowMenu(onPlay: () -> Unit, onEnqueue: () -> Unit, onAddToPlaylist: (() -> Unit)? = null) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
@@ -27,6 +27,12 @@ fun RowMenu(onPlay: () -> Unit, onEnqueue: () -> Unit) {
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.play)) }, onClick = { open = false; onPlay() })
             DropdownMenuItem(text = { Text(stringResource(R.string.add_to_queue)) }, onClick = { open = false; onEnqueue() })
+            if (onAddToPlaylist != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.add_to_playlist)) },
+                    onClick = { open = false; onAddToPlaylist() },
+                )
+            }
         }
     }
 }

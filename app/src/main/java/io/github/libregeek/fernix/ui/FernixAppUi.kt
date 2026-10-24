@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui
 
+import io.github.libregeek.fernix.ui.playlists.PlaylistDetailScreen
+import io.github.libregeek.fernix.ui.playlists.PlaylistsScreen
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -60,6 +62,7 @@ private val Screen.label: Int
         Screen.NowPlaying -> R.string.now_playing
         Screen.AlbumDetail -> R.string.tab_albums
         Screen.PersonDetail -> R.string.tab_people
+        Screen.PlaylistDetail -> R.string.tab_playlists
     }
 
 @get:DrawableRes
@@ -73,6 +76,7 @@ private val Screen.icon: Int
         Screen.NowPlaying -> R.drawable.ic_play
         Screen.AlbumDetail -> R.drawable.ic_album
         Screen.PersonDetail -> R.drawable.ic_people
+        Screen.PlaylistDetail -> R.drawable.ic_playlist
     }
 
 /** App shell: bottom navigation for the five library screens plus the back stack. */
@@ -129,6 +133,25 @@ fun FernixAppUi(
                 container.trackSearch,
                 container.playback,
                 personId = backStack.currentArg,
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.Playlists) {
+            PlaylistsScreen(
+                container.database,
+                container.playback,
+                onOpenPlaylist = { backStack.push(Screen.PlaylistDetail, it) },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.PlaylistDetail) {
+            PlaylistDetailScreen(
+                backStack.currentArg,
+                container.database,
+                container.playback,
+                onBack = { backStack.pop() },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold

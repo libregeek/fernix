@@ -16,6 +16,8 @@ enum class Screen(val isTab: Boolean) {
     AlbumDetail(false),
     /** Takes the person's `tag_values.id` as its argument. */
     PersonDetail(false),
+    /** Takes the playlist id as its argument. */
+    PlaylistDetail(false),
 }
 
 /**

@@ -55,13 +55,13 @@ class AlbumsViewModel(
     }
 
     fun play(album: AlbumEntity) {
-        viewModelScope.launch { tracks(album).let { if (it.isNotEmpty()) playback.play(it) } }
+        viewModelScope.launch { tracksOf(album).let { if (it.isNotEmpty()) playback.play(it) } }
     }
 
     fun enqueue(album: AlbumEntity) {
-        viewModelScope.launch { playback.enqueue(tracks(album)) }
+        viewModelScope.launch { playback.enqueue(tracksOf(album)) }
     }
 
-    private suspend fun tracks(album: AlbumEntity): List<TrackRow> =
+    suspend fun tracksOf(album: AlbumEntity): List<TrackRow> =
         withContext(Dispatchers.IO) { db.trackDao().albumTracks(album.id) }
 }

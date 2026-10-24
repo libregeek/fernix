@@ -162,6 +162,8 @@ One constant in code: `ARTIST`, `ALBUMARTIST`, `AUTHOR`, `COMPOSER`, `LYRICIST`,
 | `folderId` | FK → `folders.id`; index |
 | `displayName` | File name |
 | `durationMs`, `dateModified`, `sizeBytes` | From MediaStore; used for change detection |
+| `dateAdded` | INTEGER, epoch seconds, from MediaStore `DATE_ADDED`; index. Orders *Recently Added* (§5 *Default playlists*). Refreshed with the other MediaStore columns, never used for change detection. |
+| `playCount`, `lastPlayedAt` | INTEGER `NOT NULL DEFAULT 0`; and epoch milliseconds, nullable (`NULL` = never played). Written by the playback service (§8), never by a scan or a tag re-parse. Indexes on `playCount` and `lastPlayedAt` serve *Most Played* and *Never Played*. |
 | `title`, `album`, `date`, `artist`, `composer`, `lyricist` | Fixed multi-value fields (`U+001F`-joined). `title` is `COLLATE NOCASE` with an index, used to sort search results. |
 | `trackNumber`, `discNumber` | Parsed from `TRACKNUMBER` / `DISCNUMBER` |
 | `year` | INTEGER, nullable; parsed from the first `DATE` value |
@@ -203,12 +205,28 @@ One constant in code: `ARTIST`, `ALBUMARTIST`, `AUTHOR`, `COMPOSER`, `LYRICIST`,
 
 **`split_rule_tracks`** — `(ruleId, trackId)`, PK `(ruleId, trackId)`; index `(trackId)`; cascading deletes from both `split_rules` and `tracks`. The tracks a rule was applied to, used to undo it.
 
-**`playlists`** — `(id, name, createdAt, updatedAt)`
+**`playlists`** — `(id, name, kind, createdAt, updatedAt)`; `kind` is `user` (created by the user) or `favourites` (the one built-in editable playlist, see *Default playlists*).
 
-**`playlist_entries`** — `(playlistId, position, trackId)`, PK `(playlistId, position)`; index `(trackId)`; cascading deletes from both `playlists` and `tracks`.
+**`playlist_entries`** — `(playlistId, position, trackId)`, PK `(playlistId, position)`; **unique index `(playlistId, trackId)`** (a track is in a playlist at most once); index `(trackId)` for the cascade; cascading deletes from both `playlists` and `tracks`.
 
 - No reordering. Adding appends at `MAX(position) + 1`; removing deletes the row. Gaps in `position` are fine — entries are read `ORDER BY position`.
-- Duplicates are allowed (the same track twice in a playlist).
+- **No duplicates:** a track is in a playlist at most once (the unique index above), in Favourites and in every user-created playlist. Adding a track that is already there is a silent no-op (the insert is `INSERT … WHERE NOT EXISTS`), also when a whole folder, album or list is added.
+
+#### Default playlists
+
+Five playlists are always present, in this order, above the user's own playlists. Of these, only **Favourites** can be changed by the user; the other four are read-only and maintained by the app. They cannot be renamed, deleted, added to or removed from, and they are not offered by *Add to playlist*. The user's own playlists (below them) stay fully editable: create, rename, delete, add and remove tracks.
+
+| Playlist | Stored? | Contents and order |
+|---|---|---|
+| **Favourites** | Yes: one `playlists` row with `kind = 'favourites'`, created with the database, plus `playlist_entries` | The tracks the user added, in the order added (append at `MAX(position) + 1`). A track appears once. The user adds and removes tracks (Now Playing shortcut, *Add to playlist*, *Remove from playlist*). Cannot be renamed or deleted. |
+| **Recently Added** | No: a query | The **50** tracks with the latest `dateAdded`: `ORDER BY dateAdded DESC, id DESC LIMIT 50`. |
+| **All Songs** | No: a query | Every track, by `title, id`: the keyset-paged list of §5 *Filtering* with an empty filter. |
+| **Never Played** | No: a query | Tracks with `lastPlayedAt IS NULL`, by `title, id`, keyset-paged. |
+| **Most Played** | No: a query | The **50** tracks with `playCount > 0`, `ORDER BY playCount DESC, lastPlayedAt DESC, id`. |
+
+The four read-only playlists have no rows of their own, so they are always current and cost no storage. Their detail screen is the same as any playlist's (Play, Shuffle, track list) without the remove action. A scan or tag re-parse keeps `playCount` and `lastPlayedAt`; deleting a track removes it from Favourites through the cascade, like any playlist.
+
+**What counts as a play:** a track counts as played when it **plays through to its end** (ExoPlayer moves on to the next item, or the queue ends, on its own). Skipping, removing it from the queue or stopping before the end does not count, and nor does pausing. When it counts, the playback service sets `lastPlayedAt` to the current time and adds 1 to `playCount` (§8).
 
 `key_values` and `people` are recomputed for the (key, value) pairs a scan batch or a split touched. Unused `tag_values` are deleted after each scan and each split.
 
@@ -252,10 +270,10 @@ The scope is stored in `SharedPreferences`: `scan_scope` (`all` or `selected`) a
 - **Unmounted volumes:** a volume that is not mounted (e.g. a removed SD card) is skipped. Its tracks stay in the database, and so do their playlist entries; they are shown as unavailable and cannot be played until the volume is back. A track is deleted only when its volume is mounted and the file is gone or out of scope.
 - **Changing the scope:** widening it only adds tracks on the next scan. Narrowing it deletes the tracks that fall outside, like vanished files, and since playlist entries cascade (§5) it removes them from playlists too. Settings therefore shows how many tracks would be removed and asks for confirmation before saving.
 
-1. **Discovery** — query `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI` (which spans all external volumes) for `_ID`, `SIZE`, `DATE_MODIFIED`, `DURATION`, `VOLUME_NAME`, `RELATIVE_PATH`, `DISPLAY_NAME`, ordered by `_ID`, restricted to the mounted volumes and the scan scope above.
+1. **Discovery** — query `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI` (which spans all external volumes) for `_ID`, `SIZE`, `DATE_MODIFIED`, `DATE_ADDED`, `DURATION`, `VOLUME_NAME`, `RELATIVE_PATH`, `DISPLAY_NAME`, ordered by `_ID`, restricted to the mounted volumes and the scan scope above.
 2. **Diff** — merge-walk the MediaStore cursor and a `tracks` cursor (joined to `folders`), both ordered by `mediaStoreId`, in constant memory (no map of the whole library). New or changed files (size, date, folder or name) are queued for parsing; vanished or out-of-scope ones are deleted (except tracks on unmounted volumes).
 3. **Tag ingestion** — `ContentResolver.openFileDescriptor(uri, "r")` → fd passed to native code → TagLib reads through a file-descriptor stream (`TagLib::FileStream(fd, true)` or a custom `IOStream`) → returns the `PropertyMap` as `Map<String, List<String>>`.
-4. **Persist** — values are normalised and existing split rules applied (§5), then each batch of ~500 tracks is written in one Room transaction (`folders`, `albums`, `tracks`, `tag_keys`, `tag_values`, `track_tags`, `split_rule_tracks`, `key_values`, `people`). A re-parsed track has its `track_tags` rows replaced. Key and value ids and the split rules are cached in memory for the duration of the scan.
+4. **Persist** — values are normalised and existing split rules applied (§5), then each batch of ~500 tracks is written in one Room transaction (`folders`, `albums`, `tracks`, `tag_keys`, `tag_values`, `track_tags`, `split_rule_tracks`, `key_values`, `people`). A re-parsed track has its `track_tags` rows replaced and keeps its `playCount` and `lastPlayedAt`. Key and value ids and the split rules are cached in memory for the duration of the scan.
 5. **Clean up** — after the scan, unused folders, albums and tag values are deleted.
 
 Each committed batch is final, so an interrupted scan resumes where it stopped on the next run (the diff skips what is already stored). The library is usable while a scan runs, and the UI shows progress. Scanning runs on `Dispatchers.IO` and never blocks the UI.
@@ -304,6 +322,7 @@ A person's image is an embedded picture whose type is a role: Lead artist (7), A
   - The equalizer is off by default and, when off, adds nothing to the signal path; its settings are restored only if the user had enabled it.
   - Optimisation targets the library, scanning, UI and memory (§5, §6, §9), never the decode and output path. A change that touches the audio path is checked by ear and against the source, not only by benchmark.
 - Equalizer: `android.media.audiofx.Equalizer` on ExoPlayer's audio session id.
+- **Play history:** the service itself records plays (the UI may not be running). When an item finishes on its own (a `Player.Listener` transition with reason `AUTO`, or `STATE_ENDED` on the last item) it writes `lastPlayedAt` and `playCount + 1` for that `tracks.id` on `Dispatchers.IO` (§5 *Default playlists*). It only listens to player events and does not touch the audio path.
 - The play queue is not capped: "Play" on any list queues all of its tracks. Queue items carry only the track id, content URI and the title/artist/album shown in the notification; anything else is loaded from the database when needed.
 
 ---
@@ -322,11 +341,12 @@ Every track list (Search results, album detail, folder, playlist detail) has **S
    - All details come from the database, never from the file: the playing `MediaItem.mediaId` is `tracks.id`; title, album and date come from the `tracks` row, and the tags from the "tags on the playing track" query (§5), which reads only that track's rows via the `track_tags` PK. Both are observed as Room `Flow`s, so a split applied while the track plays updates the screen immediately.
    - Every value is tappable and opens **Search** pushed onto the back stack (Back returns to Now Playing). A value of a people tag key opens a person filter (§5), listing every track the person contributed to in any role; any other tag (e.g. `GENRE`, `BPM`) opens a tag filter for that key and value.
    - An equalizer icon in the top app bar opens the equalizer in a bottom sheet (not a separate screen).
+   - **Favourite button:** a heart next to the title that adds the playing track to Favourites (§5) with a **single tap**, and removes it with another tap. It is filled while the track is in Favourites, observed as a Room `Flow` so it also follows changes made elsewhere. No dialog and no confirmation.
 2. **Folders** — browse the `folders` tree (built from the DB, not the filesystem); play/enqueue a folder or a track.
 3. **Search** — free-text search (FTS) over title, album, artist, composer and lyricist, plus arbitrary tag filters (pick any tag key present in the library, then one or more values) and an optional person filter, shown as a removable chip with the person's name. All filters combine with AND. Results are sorted by title. With a person filter, each result shows the person's roles on that track. Results can be played or enqueued. If a person filter refers to a person deleted by a rescan or a split, the chip is dropped.
 4. **Queue** — current play queue from the `MediaController`; drag to reorder, remove, jump to item.
 5. **Albums** — albums (name + year), sorted by album then year; album detail lists tracks by disc/track number.
-6. **Playlists** — create, rename, delete; add tracks from any track list; remove entries (no reordering). Playlist detail has **Play** (in playlist order) and **Shuffle** (same queue with ExoPlayer shuffle mode on).
+6. **Playlists** — the five **default playlists** first (Favourites, Recently Added, All Songs, Never Played, Most Played; §5), then the user's own playlists. Only Favourites is editable among the defaults; the other four are read-only and show no remove, rename or delete action. For the user's own playlists: create, rename, delete; add tracks from any track list (the picker offers Favourites and the user's playlists, never the read-only ones); remove entries (no reordering). Playlist detail has **Play** (in playlist order) and **Shuffle** (same queue with ExoPlayer shuffle mode on).
 7. **People** — every person once (no grouping by role), sorted by name, with their track count. Tapping a person opens the **person details** screen (below).
    - **Person details:** image (from a role-typed embedded picture, §7 *Person images*, else initials), name, roles (each people tag key the person appears under, with the track count per role, from `track_tags`) and the paged list of all their tracks (the person filter of §5, sorted by title, each row showing the roles on that track). Play/enqueue the list; **Show in Search** opens Search with the person filter. The screen is also reached by tapping a people value in Now Playing and track details.
 9. **Album details** — opened by tapping an album name anywhere (track rows, Now Playing, track details, Albums list): album art, name, year (hidden when 0) and the tracks by disc/track number; Play/enqueue the album. Art is the front-cover picture (type 3, else the first picture) of the first track that has one.

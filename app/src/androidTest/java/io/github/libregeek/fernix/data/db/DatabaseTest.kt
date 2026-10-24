@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteConstraintException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.libregeek.fernix.tags.PeopleTags
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -341,6 +342,35 @@ class DatabaseTest {
         val roles = db.tagDao().roleCounts(lib.valueId("Johnson"), keys)
         assertEquals(listOf("COMPOSER" to 2, "LYRICIST" to 1), roles.map { it.key to it.trackCount })
         assertEquals("Johnson", db.tagDao().valueText(lib.valueId("Johnson")))
+    }
+
+    @Test
+    fun playlist_appendKeepsOrderAndSkipsDuplicates_removeLeavesGaps_countsFollow() = runBlocking {
+        val f = lib.folder()
+        val a = lib.track("A", f)
+        val b = lib.track("B", f)
+        val c = lib.track("C", f)
+        val dao = db.playlistDao()
+        val p = dao.insert(PlaylistEntity(name = "Mix", createdAt = 1, updatedAt = 1))
+        dao.append(p, listOf(a, b, a), now = 5)
+        dao.append(p, listOf(b, c), now = 6)
+        assertEquals(listOf("A", "B", "C"), dao.tracks(p).map { it.title })
+        assertEquals(6L, dao.byId(p)!!.updatedAt)
+        assertEquals(3, dao.summaries().first().single().trackCount)
+
+        assertEquals(listOf("A", "B", "C"), dao.entriesPage(p, -1, PAGE_SIZE).map { it.track.title })
+        val bPosition = dao.entriesPage(p, -1, PAGE_SIZE).first { it.track.title == "B" }.position
+        dao.removeEntry(p, bPosition)
+        assertEquals(listOf("A", "C"), dao.entriesPage(p, -1, PAGE_SIZE).map { it.track.title })
+        assertEquals(listOf("C"), dao.entriesPage(p, dao.entriesPage(p, -1, PAGE_SIZE).first().position, PAGE_SIZE).map { it.track.title })
+        // A removed track can be added again, after the highest position.
+        dao.append(p, listOf(b), now = 7)
+        assertEquals(listOf("A", "C", "B"), dao.tracks(p).map { it.title })
+
+        dao.rename(p, "Road", now = 8)
+        assertEquals("Road", dao.summaries().first().single().name)
+        dao.delete(p)
+        assertEquals(emptyList<PlaylistRow>(), dao.summaries().first())
     }
 
     @Test

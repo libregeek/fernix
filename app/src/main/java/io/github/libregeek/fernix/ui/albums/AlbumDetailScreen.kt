@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui.albums
 
+import io.github.libregeek.fernix.data.db.TrackRow
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import io.github.libregeek.fernix.ui.common.AddToPlaylistDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +58,7 @@ fun AlbumDetailScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     LaunchedEffect(listState, state.tracks.size) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
@@ -93,13 +99,18 @@ fun AlbumDetailScreen(
                             { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         },
                         trailingContent = {
-                            RowMenu(onPlay = { vm.playFrom(track) }, onEnqueue = { vm.enqueueTrack(track) })
+                            RowMenu(
+                                onPlay = { vm.playFrom(track) },
+                                onEnqueue = { vm.enqueueTrack(track) },
+                                onAddToPlaylist = { addTracks = { listOf(track) } },
+                            )
                         },
                     )
                 }
             }
         }
     }
+    addTracks?.let { AddToPlaylistDialog(db, it) { addTracks = null } }
 }
 
 private const val LOAD_AHEAD = 20

@@ -42,6 +42,13 @@ Phases are ordered so each one ends in something runnable and testable.
 - [x] Instrumented tests: schema, cascades, album `year = 0` uniqueness, FTS diacritics, paging, filter combos
 - [x] Scale check: synthetic 1M-track DB; confirm queries use indexes (`EXPLAIN QUERY PLAN`) and stay responsive
 
+### Default playlists and play history (added 2026-10-24) [§5]
+
+- [ ] Schema: `tracks.dateAdded`, `tracks.playCount`, `tracks.lastPlayedAt` (+ indexes), `playlists.kind`; unique index `(playlistId, trackId)` on `playlist_entries` (the migration removes any existing duplicate entries first); Room version bump with a migration (backfill `dateAdded` from MediaStore on the next scan); update schema export and DAO/entity tests
+- [ ] Create the Favourites row (`kind = 'favourites'`) with the database; toggle adds or removes a track
+- [ ] Scan: read `DATE_ADDED`; a re-parse keeps `playCount` and `lastPlayedAt`
+- [ ] Queries (keyset-paged where unbounded) + tests: Recently Added (50, `dateAdded DESC`), All Songs, Never Played, Most Played (50, `playCount > 0`), Favourites membership as a `Flow`
+
 ## Phase 3 — Storage permission & scanning
 
 - [x] Approved permissions in the manifest: `READ_MEDIA_AUDIO`, `READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) [§3]
@@ -72,6 +79,7 @@ Phases are ordered so each one ends in something runnable and testable.
 - [x] `POST_NOTIFICATIONS` runtime request (API 33+)
 - [x] Play / enqueue helpers: play all of a list, uncapped queue
 - [x] Equalizer on ExoPlayer audio session id [§8] — engine, controller commands and persistence done; the bottom sheet is Phase 6
+- [ ] Record plays in the service: when a track plays through to its end (auto-transition or end of queue), set `lastPlayedAt` and `playCount + 1` on `Dispatchers.IO`; skipping or stopping early doesn't count [§5, §8] (added 2026-10-24)
 - [ ] Verify: background playback, gapless between tracks, resume after process death
 
 ## Phase 5 — Library screens
@@ -83,19 +91,23 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [x] Albums: list (name + year, year hidden when 0) and album detail by disc/track (art waits for Coil)
 - [x] Search: FTS box, tag-key picker → value picker (paged, prefix-narrowed), person-filter chip, AND-combination, title-sorted results with roles when person-filtered; drop stale person chip
 - [x] People: paged list with track counts; tap → person details (see below), with a "show in Search" action for the person filter
-- [ ] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
+- [x] Playlists: create / rename / delete; add from any track list; remove entries; detail with Play and Shuffle
+- [x] No duplicate tracks in a playlist: adding one already present is a no-op (DAO); the unique index comes with the schema migration above (added 2026-10-24)
+- [ ] Default playlists on the Playlists tab, above the user's own: Favourites (editable), Recently Added, All Songs, Never Played, Most Played (read-only: no remove/rename/delete, not offered by *Add to playlist*); detail screen reused with Play and Shuffle [§5, §9] (added 2026-10-24)
+- [ ] *Add to playlist* picker offers Favourites and user playlists only (added 2026-10-24)
 - [ ] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row
 - [ ] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
 - [ ] Album details via album name: tapping an album name anywhere (track rows, Now Playing, track details) opens album art, name, year (hidden when 0) and the track list by disc/track
 - [ ] JNI additions: `AudioProperties` call and `PICTURE` complex-properties call (picture type, description, MIME, bytes) in `tag_reader.cpp` / `TagReader.kt`, with instrumented tests on MP3, FLAC, Ogg incl. role-typed pictures [§7]
 - [ ] Coil (`coil-compose`) album art from embedded/local art via content URI [§2]
-- [ ] Vector icons copied in as drawables (no `material-icons-extended`)
+- [ ] Vector icons copied in as drawables (no `material-icons-extended`), including heart (filled and outline) for Favourites
 - [ ] Scan progress indicator
 
 ## Phase 6 — Now Playing & Queue
 
 - [ ] Now Playing: art, title, album, date, seek bar, transport, shuffle/repeat [§9.1]
 - [ ] "Tags on the playing track" query as Room `Flow`; 3 configurable slots (defaults `COMPOSER`, `LYRICIST`, `ARTIST`); `PERFORMER` slot shows instrument label; hide missing tags
+- [ ] Favourite heart on Now Playing: one tap adds the playing track to Favourites, another removes it; filled state from a Room `Flow` [§9.1] (added 2026-10-24)
 - [ ] Tappable values → Search pushed on back stack (person filter for people keys, tag filter otherwise)
 - [ ] Equalizer bottom sheet from top app bar
 - [ ] Queue screen: drag-reorder, remove, jump to item
@@ -128,5 +140,5 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [ ] Merged-manifest check: no `INTERNET`; dependency tree has no Google/proprietary artifacts [CLAUDE.md rules 3–4]
 - [ ] R8 release build checked (JNI classes kept in `proguard-rules.pro`)
 - [ ] Confirm APK size is reasonable; drop anything unused
-- [ ] README updated for user-visible features, permissions, formats
+- [ ] README updated for user-visible features, permissions, formats (include the default playlists and that play history stays on the device)
 - [ ] F-Droid metadata (fastlane / metadata yml), changelog, app icon polish, tag `v0.1.0`

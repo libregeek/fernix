@@ -151,7 +151,8 @@ class FoldersViewModel(
         viewModelScope.launch { playback.enqueue(subtree(folder)) }
     }
 
-    private suspend fun subtree(folder: FolderEntity): List<TrackRow> = withContext(Dispatchers.IO) {
+    /** Every track in [folder] and below, folder by folder. */
+    suspend fun subtree(folder: FolderEntity): List<TrackRow> = withContext(Dispatchers.IO) {
         val (low, high) = FolderPaths.subtreeRange(folder.path)
         db.trackDao().subtreeTracks(folder.path, low, high)
     }
