@@ -30,11 +30,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +54,7 @@ import io.github.libregeek.fernix.ui.albums.AlbumsScreen
 import io.github.libregeek.fernix.ui.folders.FoldersScreen
 import io.github.libregeek.fernix.ui.nowplaying.NowPlayingScreen
 import io.github.libregeek.fernix.ui.queue.QueueScreen
+import io.github.libregeek.fernix.ui.scan.LibraryFoldersScreen
 import io.github.libregeek.fernix.ui.settings.SettingsScreen
 import io.github.libregeek.fernix.ui.trackdetails.TrackDetailScreen
 import io.github.libregeek.fernix.ui.people.PeopleScreen
@@ -79,6 +77,7 @@ private val Screen.label: Int
         Screen.Queue -> R.string.queue
         Screen.TrackDetail -> R.string.track_details
         Screen.Settings -> R.string.settings
+        Screen.LibraryFolders -> R.string.settings_library_folders
         Screen.AlbumDetail -> R.string.tab_albums
         Screen.PersonDetail -> R.string.tab_people
         Screen.PlaylistDetail -> R.string.tab_playlists
@@ -95,7 +94,8 @@ private val Screen.icon: Int
         Screen.NowPlaying -> R.drawable.ic_play
         Screen.Queue -> R.drawable.ic_queue_music
         Screen.TrackDetail -> R.drawable.ic_info
-        Screen.Settings -> R.drawable.ic_more_vert
+        Screen.Settings -> R.drawable.ic_settings
+        Screen.LibraryFolders -> R.drawable.ic_folder
         Screen.AlbumDetail -> R.drawable.ic_album
         Screen.PersonDetail -> R.drawable.ic_people
         Screen.PlaylistDetail -> R.drawable.ic_playlist
@@ -173,7 +173,19 @@ fun FernixAppUi(
                 container.settings,
                 scanning = scanState is ScanState.Running,
                 onRescan = onRescan,
+                onChangeFolders = { backStack.push(Screen.LibraryFolders) },
                 onBack = { backStack.pop() },
+                modifier = Modifier.padding(padding),
+            )
+            return@Scaffold
+        }
+        if (current == Screen.LibraryFolders) {
+            LibraryFoldersScreen(
+                container.database,
+                container.mediaSource,
+                container.settings,
+                onApply = container::changeScope,
+                onDone = { backStack.pop() },
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -207,6 +219,7 @@ fun FernixAppUi(
                 container.playback,
                 personId = backStack.currentArg,
                 tagKeyId = backStack.currentArg2,
+                scanState = scanState,
                 onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )
@@ -251,7 +264,6 @@ fun FernixAppUi(
                 container.trackSearch,
                 container.playback,
                 onBack = { backStack.pop() },
-                onShowInTracks = { backStack.push(Screen.Tracks, personId) },
                 onOpenTrack = openTrack,
                 modifier = Modifier.padding(padding),
             )
@@ -281,23 +293,17 @@ fun FernixAppUi(
     }
 }
 
-/** Title and overflow menu of the five library screens; the overflow menu leads to Settings (spec §9). */
+/** Title and settings gear of the five library screens; the gear opens Settings directly (spec §9). */
 @Composable
 private fun LibraryTopBar(title: String, onSettings: () -> Unit) {
-    var open by rememberSaveable { mutableStateOf(false) }
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(
             Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).height(48.dp).padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            Box {
-                IconButton(onClick = { open = true }) {
-                    Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_options))
-                }
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.settings)) }, onClick = { open = false; onSettings() })
-                }
+            IconButton(onClick = onSettings) {
+                Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings))
             }
         }
     }

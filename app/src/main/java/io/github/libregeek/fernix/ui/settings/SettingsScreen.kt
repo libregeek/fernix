@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +41,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.data.scan.ScanScope
 
 @Composable
 fun SettingsScreen(
@@ -47,6 +49,7 @@ fun SettingsScreen(
     settings: Settings,
     scanning: Boolean,
     onRescan: () -> Unit,
+    onChangeFolders: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -63,6 +66,18 @@ fun SettingsScreen(
         }
 
         Section(stringResource(R.string.settings_library)) {
+            val scope = settings.scanScope
+            Text(
+                when (scope) {
+                    is ScanScope.Selected -> pluralStringResource(R.plurals.settings_scope_folders, scope.folders.size, scope.folders.size)
+                    else -> stringResource(R.string.scope_all)
+                },
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            (scope as? ScanScope.Selected)?.folders?.sorted()?.forEach { path ->
+                Text(path, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            OutlinedButton(onClick = onChangeFolders, enabled = !scanning) { Text(stringResource(R.string.settings_change_folders)) }
             Text(stringResource(R.string.settings_rescan_detail), style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onRescan, enabled = !scanning) { Text(stringResource(R.string.rescan)) }
         }

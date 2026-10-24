@@ -102,6 +102,9 @@ class TracksViewModel(
         }
     }
 
+    /** Lists again from the first page with the same text and filters, e.g. after a scan changed the library. */
+    fun refresh() = rerun(debounce = false)
+
     fun setText(text: String) {
         _state.update { it.copy(text = text) }
         rerun(debounce = true)

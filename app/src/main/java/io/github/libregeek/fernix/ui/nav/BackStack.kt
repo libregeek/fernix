@@ -4,11 +4,14 @@ package io.github.libregeek.fernix.ui.nav
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.saveable.listSaver
 
-/** Screens of the app. Detail screens are added together with the features that need them. */
+/**
+ * Screens of the app. The tabs come first, in the order of the bottom bar (the first is where the app
+ * starts); detail screens are added together with the features that need them.
+ */
 enum class Screen(val isTab: Boolean) {
-    Folders(true),
     Tracks(true),
     Albums(true),
+    Folders(true),
     Playlists(true),
     People(true),
     NowPlaying(false),
@@ -16,6 +19,7 @@ enum class Screen(val isTab: Boolean) {
     /** Takes `tracks.id` as its argument. */
     TrackDetail(false),
     Settings(false),
+    LibraryFolders(false),
     /** Takes the album id as its argument. */
     AlbumDetail(false),
     /** Takes the person's `tag_values.id` as its argument. */
@@ -34,7 +38,7 @@ data class BackEntry(val screen: Screen, val arg: Long = 0, val arg2: Long = 0)
  * The hand-rolled back stack (spec/architecture.md §2). Switching tab clears the stack so the
  * tab becomes its root; [push] adds a screen on top (e.g. Tracks opened from Now Playing).
  */
-class BackStack(initial: List<BackEntry> = listOf(BackEntry(Screen.Folders))) {
+class BackStack(initial: List<BackEntry> = listOf(BackEntry(Screen.Tracks))) {
 
     private val entries = mutableStateListOf<BackEntry>().apply { addAll(initial) }
 

@@ -40,6 +40,9 @@ data class KeyValueRow(val valueId: Long, val value: String, val trackCount: Int
 /** One value of a track under one key, with its stored text. */
 data class TrackKeyValue(val valueId: Long, val value: String)
 
+/** How many rows sit in the folder with this `folders.path`. */
+data class FolderCount(val path: String, val n: Int)
+
 /** A track's id and the MediaStore id of its file. */
 data class TrackFile(val id: Long, val mediaStoreId: Long)
 

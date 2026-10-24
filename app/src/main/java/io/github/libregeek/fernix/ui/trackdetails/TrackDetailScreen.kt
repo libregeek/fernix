@@ -7,13 +7,11 @@ import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.width
 import io.github.libregeek.fernix.tags.TagValues
 import io.github.libregeek.fernix.playback.MediaItems
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.AssistChip
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Box
@@ -99,10 +97,10 @@ fun TrackDetailScreen(
 
         Box(
             Modifier
-                .padding(horizontal = 32.dp)
+                .padding(horizontal = 80.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
@@ -120,13 +118,21 @@ fun TrackDetailScreen(
             )
         }
 
-        Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(track.title.ifEmpty { track.displayName }, style = MaterialTheme.typography.titleLarge)
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                track.title.ifEmpty { track.displayName },
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center,
+            )
             AlbumLine(track.album, track.date, onClick = track.albumId?.let { id -> { onOpenAlbum(id) } })
         }
 
-        // Composer, Lyricist and Artists lead; everything else follows under Other tags. Every value
-        // is a pill: a person's opens their details, any other value opens Tracks filtered by it.
+        // Composer, Lyricist and Artists lead; everything else follows under Other tags. A value is plain
+        // text in the accent colour: a person's opens their details, any other value opens Tracks filtered by it.
         val byKey = state.tags.associateBy { it.label }
         val people = listOf(
             "COMPOSER" to R.string.details_composer,
@@ -135,17 +141,18 @@ fun TrackDetailScreen(
         )
         val shown = setOf("TITLE", "ALBUM", "DATE") + people.map { it.first }
         val splitter = { line: TagLine, value: TagValue -> vm.askSplit(line.label, value) }
-        for ((key, label) in people) {
-            val line = byKey[key] ?: continue
-            Section(stringResource(label)) { PillGroup(line, state.delimiters, onOpenPerson, onOpenTag, splitter) }
+        val lead = people.mapNotNull { (key, label) -> byKey[key]?.let { it to label } }
+        if (lead.isNotEmpty()) {
+            Section(null) {
+                lead.forEach { (line, label) ->
+                    TagRow(stringResource(label), line, state.delimiters, onOpenPerson, onOpenTag, splitter)
+                }
+            }
         }
         val other = state.tags.filter { it.label !in shown }
         if (other.isNotEmpty()) {
             Section(stringResource(R.string.details_other_tags)) {
-                other.forEach { line ->
-                    Text(line.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    PillGroup(line, state.delimiters, onOpenPerson, onOpenTag, splitter)
-                }
+                other.forEach { line -> TagRow(line.label, line, state.delimiters, onOpenPerson, onOpenTag, splitter) }
             }
         }
 
@@ -203,9 +210,9 @@ private fun volumeName(volume: String): String =
     if (volume == MediaStore.VOLUME_EXTERNAL_PRIMARY) stringResource(R.string.volume_internal) else volume
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+private fun Section(title: String?, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        title?.let { Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
         content()
     }
 }
@@ -216,13 +223,14 @@ private fun AlbumLine(album: String, date: String, onClick: (() -> Unit)?) {
     val name = MediaItems.display(album)
     val first = TagValues.split(date).firstOrNull()
     if (name == null && first == null) return
-    Row {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         if (name != null) {
             Text(
                 name,
                 modifier = if (onClick != null) Modifier.clickable(onClick = onClick).weight(1f, fill = false) else Modifier.weight(1f, fill = false),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
                 color = if (onClick != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -239,40 +247,45 @@ private fun AlbumLine(album: String, date: String, onClick: (() -> Unit)?) {
 }
 
 /**
- * The values of one tag as pills. A person's pill (tinted) opens their details; any other value's pill
- * opens Tracks with that value as a filter. A value holding one of the Settings delimiters also has a
- * small split button after it (TITLE, ALBUM and DATE never do).
+ * One tag as a compact row: its name, then its values side by side (they wrap). A value is accent-coloured
+ * text: a person's opens their details, any other value opens Tracks with it as a filter. A value holding
+ * one of the Settings delimiters has a small split button after it (TITLE, ALBUM and DATE never do).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PillGroup(
+private fun TagRow(
+    label: String,
     line: TagLine,
     delimiters: List<String>,
     onOpenPerson: (Long) -> Unit,
     onOpenTag: (keyId: Long, valueId: Long) -> Unit,
     onSplit: (TagLine, TagValue) -> Unit,
 ) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        line.values.forEach { value ->
-            val splittable = line.label !in TagSplitter.UNSPLITTABLE_KEYS && TagSplitter.contains(value.text, delimiters)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AssistChip(
-                    onClick = { if (value.isPerson) onOpenPerson(value.valueId) else onOpenTag(value.keyId, value.valueId) },
-                    label = { Text(value.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    modifier = Modifier.widthIn(max = 280.dp),
-                    shape = CircleShape,
-                    colors = if (value.isPerson) {
-                        AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    } else {
-                        AssistChipDefaults.assistChipColors()
-                    },
-                )
-                if (splittable) {
-                    IconButton(onClick = { onSplit(line, value) }, modifier = Modifier.size(36.dp)) {
-                        Icon(painterResource(R.drawable.ic_call_split), stringResource(R.string.split_value), Modifier.size(20.dp))
+    Row(Modifier.fillMaxWidth()) {
+        Text(
+            label,
+            modifier = Modifier.width(92.dp).padding(top = 2.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            line.values.forEach { value ->
+                val splittable = line.label !in TagSplitter.UNSPLITTABLE_KEYS && TagSplitter.contains(value.text, delimiters)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        value.text,
+                        modifier = Modifier.clickable {
+                            if (value.isPerson) onOpenPerson(value.valueId) else onOpenTag(value.keyId, value.valueId)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    if (splittable) {
+                        IconButton(onClick = { onSplit(line, value) }, modifier = Modifier.size(28.dp)) {
+                            Icon(painterResource(R.drawable.ic_call_split), stringResource(R.string.split_value), Modifier.size(18.dp))
+                        }
                     }
                 }
             }
@@ -302,9 +315,15 @@ private fun Technical(audio: AudioProperties, format: String?) {
 
 @Composable
 private fun Fact(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(label, modifier = Modifier.weight(0.35f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, modifier = Modifier.weight(0.65f), style = MaterialTheme.typography.bodyMedium, maxLines = 4, overflow = TextOverflow.Ellipsis)
+    // Laid out like a tag row, so the whole page reads as one compact list.
+    Row(Modifier.fillMaxWidth()) {
+        Text(
+            label,
+            modifier = Modifier.width(92.dp).padding(top = 2.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(value, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 4, overflow = TextOverflow.Ellipsis)
     }
 }
 

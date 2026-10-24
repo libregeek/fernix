@@ -8,8 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,12 +22,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,8 +49,12 @@ import io.github.libregeek.fernix.ui.art.PersonArt
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.PlaybackController
+import io.github.libregeek.fernix.ui.common.ListActions
+import io.github.libregeek.fernix.ui.common.RolePill
 import io.github.libregeek.fernix.ui.common.RowMenu
+import io.github.libregeek.fernix.ui.tracks.trackAlbumLine
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PersonDetailScreen(
     personId: Long,
@@ -59,7 +62,6 @@ fun PersonDetailScreen(
     search: TrackSearch,
     playback: PlaybackController,
     onBack: () -> Unit,
-    onShowInTracks: () -> Unit,
     onOpenTrack: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -94,21 +96,16 @@ fun PersonDetailScreen(
         }
         if (state.name != null) {
             if (state.roles.isNotEmpty()) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.person_roles), style = MaterialTheme.typography.labelMedium)
-                    state.roles.forEach { role ->
-                        Text(
-                            "${role.key} · " + pluralStringResource(R.plurals.track_count, role.trackCount, role.trackCount),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                    // Each role as a very small outlined pill, with the number of tracks in it.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        state.roles.forEach { role -> RolePill("${role.key} · ${role.trackCount}") }
                     }
                 }
             }
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = vm::playAll) { Text(stringResource(R.string.play)) }
-                OutlinedButton(onClick = vm::enqueueAll) { Text(stringResource(R.string.add_to_queue)) }
-                OutlinedButton(onClick = onShowInTracks) { Text(stringResource(R.string.person_show_in_tracks)) }
-            }
+            // Every track of the person, not only the loaded rows: the same three icons as on Tracks.
+            ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
         }
         Box(Modifier.fillMaxSize()) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -117,8 +114,24 @@ fun PersonDetailScreen(
                     ListItem(
                         modifier = Modifier.clickable { vm.playFrom(track) },
                         headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = result.roles.joinToString(", ").ifEmpty { null }?.let {
-                            { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        supportingContent = {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                // The album with its date in brackets, as on Tracks, then the person's roles on the track.
+                                trackAlbumLine(track.album, track.date)?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                if (result.roles.isNotEmpty()) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        result.roles.forEach { RolePill(it) }
+                                    }
+                                }
+                            }
                         },
                         trailingContent = {
                             RowMenu(

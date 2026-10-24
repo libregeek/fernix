@@ -15,6 +15,7 @@ import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.data.scan.LibraryScanner
 import io.github.libregeek.fernix.data.scan.MediaStoreSource
 import io.github.libregeek.fernix.data.scan.MediaStoreTagSource
+import io.github.libregeek.fernix.data.scan.ScanScope
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackController
 import kotlinx.coroutines.CoroutineScope
@@ -63,8 +64,21 @@ class AppContainer(context: Context) {
     /** Reads a file's tags by MediaStore id: for scans and for undoing a split rule. */
     val tagSource: MediaStoreTagSource by lazy { MediaStoreTagSource(appContext) }
 
+    /** Where the scanner and the folder chooser look for audio. */
+    val mediaSource: MediaStoreSource by lazy { MediaStoreSource(appContext) }
+
     val scanner: LibraryScanner by lazy {
-        LibraryScanner(database, MediaStoreSource(appContext), tagSource)
+        LibraryScanner(database, mediaSource, tagSource)
+    }
+
+    /**
+     * Saves a new scan scope and scans with it (spec/architecture.md §6): a wider one adds tracks, a
+     * narrower one deletes the tracks outside it and, through the playlists' cascade, their entries.
+     * The caller has already shown [ScopeImpact] and had it confirmed.
+     */
+    fun changeScope(scope: ScanScope) {
+        settings.scanScope = scope
+        startScan()
     }
 
     /**

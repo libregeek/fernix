@@ -143,6 +143,24 @@ class LibraryScannerTest {
     }
 
     @Test
+    fun theImpactShownBeforeNarrowing_isWhatTheScanThenRemoves() = runBlocking {
+        add(1, "external_primary/Music/Rock", t = arrayOf("TITLE" to listOf("A")))
+        add(2, "external_primary/Music/Rock", t = arrayOf("TITLE" to listOf("B")))
+        add(3, "external_primary/Music/Jazz", t = arrayOf("TITLE" to listOf("C")))
+        scanner().scan(ScanScope.All)
+        val playlist = db.playlistDao().insert(io.github.libregeek.fernix.data.db.PlaylistEntity(name = "p", createdAt = 0, updatedAt = 0))
+        db.playlistDao().append(playlist, listOf(1L, 2L, 3L).map { db.trackDao().idByMediaStoreId(it)!! }, now = 1)
+        val narrower = ScanScope.Selected(setOf("external_primary/Music/Jazz"))
+
+        val impact = ScopeImpact.compute(db, narrower, media.mountedVolumes())
+        assertEquals(ScopeImpact(tracks = 2, playlistEntries = 2), impact)
+
+        scanner().scan(narrower)
+        assertEquals(3L - impact.tracks, count("tracks"))
+        assertEquals(3L - impact.playlistEntries, count("playlist_entries"))
+    }
+
+    @Test
     fun narrowingTheScope_removesTracksOutsideIt() = runBlocking {
         add(1, "external_primary/Music/Rock")
         add(2, "external_primary/Music/Jazz")

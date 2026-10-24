@@ -57,6 +57,17 @@ interface TrackDao {
     @Query("UPDATE tracks SET dateAdded = :dateAdded WHERE mediaStoreId = :mediaStoreId")
     suspend fun setDateAdded(mediaStoreId: Long, dateAdded: Long)
 
+    /** Tracks per folder, for counting what a narrower scan scope would remove (a handful of rows per folder, not per track). */
+    @Query("SELECT f.path AS path, COUNT(*) AS n FROM tracks t JOIN folders f ON f.id = t.folderId GROUP BY f.id")
+    suspend fun trackCountsByFolder(): List<FolderCount>
+
+    /** Playlist entries per folder of their track. */
+    @Query(
+        "SELECT f.path AS path, COUNT(*) AS n FROM playlist_entries e JOIN tracks t ON t.id = e.trackId " +
+            "JOIN folders f ON f.id = t.folderId GROUP BY f.id",
+    )
+    suspend fun playlistEntryCountsByFolder(): List<FolderCount>
+
     @Query("SELECT COUNT(*) FROM tracks")
     suspend fun count(): Int
 

@@ -161,4 +161,25 @@ class TracksViewModelTest {
         instrumentation.runOnMainSync { vm.clearAll() }
         waitFor("everything again") { vm.state.value.results.size == 3 }
     }
+
+    @Test
+    fun refresh_picksUpTracksAddedAfterTheListWasLoaded_keepingTheSearchText() = runBlocking {
+        val f = lib.folder()
+        lib.track("Alpha one", f)
+        val vm = newViewModel()
+        waitFor("the first list") { vm.state.value.results.size == 1 }
+
+        // A scan adds tracks while the screen is open.
+        lib.track("Alpha two", f)
+        lib.track("Bravo", f)
+        instrumentation.runOnMainSync { vm.refresh() }
+        waitFor("all three") { vm.state.value.results.size == 3 && !vm.state.value.loading }
+
+        instrumentation.runOnMainSync { vm.setText("alpha") }
+        waitFor("narrowed") { vm.state.value.results.size == 2 && !vm.state.value.loading }
+        lib.track("Alpha three", f)
+        instrumentation.runOnMainSync { vm.refresh() }
+        waitFor("narrowed, with the new one") { vm.state.value.results.size == 3 && !vm.state.value.loading }
+        assertEquals("alpha", vm.state.value.text)
+    }
 }

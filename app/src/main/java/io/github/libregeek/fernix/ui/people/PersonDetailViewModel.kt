@@ -85,5 +85,6 @@ class PersonDetailViewModel(
 
     fun enqueueTrack(track: TrackRow) = playback.enqueue(listOf(track))
 
-    private suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter) }
+    /** Every track of the person, all pages: to play, queue or add to a playlist. */
+    suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter) }
 }

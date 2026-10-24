@@ -9,32 +9,32 @@ import org.junit.Test
 class BackStackTest {
 
     @Test
-    fun startsOnFolders() {
+    fun startsOnTracks_thefirstTab() {
         val back = BackStack()
-        assertEquals(Screen.Folders, back.current)
+        assertEquals(Screen.Tracks, back.current)
         assertFalse(back.canPop)
     }
 
     @Test
     fun pushThenPop_returnsToPreviousScreen() {
         val back = BackStack()
-        back.push(Screen.Tracks)
-        assertEquals(Screen.Tracks, back.current)
-        assertTrue(back.pop())
+        back.push(Screen.Folders)
         assertEquals(Screen.Folders, back.current)
+        assertTrue(back.pop())
+        assertEquals(Screen.Tracks, back.current)
     }
 
     @Test
     fun pop_onRoot_doesNothing() {
         val back = BackStack()
         assertFalse(back.pop())
-        assertEquals(listOf(Screen.Folders), back.stack)
+        assertEquals(listOf(Screen.Tracks), back.stack)
     }
 
     @Test
     fun switchTab_clearsStack() {
         val back = BackStack()
-        back.push(Screen.Tracks)
+        back.push(Screen.Folders)
         back.push(Screen.People)
         back.switchTab(Screen.Albums)
         assertEquals(listOf(Screen.Albums), back.stack)
@@ -65,5 +65,13 @@ class BackStackTest {
         back.pop()
         back.pop()
         assertEquals(0L, back.currentArg)
+    }
+
+    @Test
+    fun theBottomBarOrder_isTracksAlbumsFoldersPlaylistsPeople() {
+        assertEquals(
+            listOf(Screen.Tracks, Screen.Albums, Screen.Folders, Screen.Playlists, Screen.People),
+            Screen.entries.filter { it.isTab },
+        )
     }
 }

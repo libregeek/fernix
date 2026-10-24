@@ -2,6 +2,7 @@
 package io.github.libregeek.fernix.ui.tracks
 
 import io.github.libregeek.fernix.data.db.TrackRow
+import io.github.libregeek.fernix.data.scan.ScanState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -9,8 +10,7 @@ import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import io.github.libregeek.fernix.ui.common.CompactSearchField
-import androidx.compose.material3.Surface
-import androidx.compose.foundation.shape.CircleShape
+import io.github.libregeek.fernix.ui.common.ListActions
 import io.github.libregeek.fernix.tags.TagValues
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.FilledIconButton
@@ -70,6 +70,7 @@ fun TracksScreen(
     playback: PlaybackController,
     personId: Long = 0,
     tagKeyId: Long = 0,
+    scanState: ScanState = ScanState.Idle,
     onOpenTrack: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,6 +80,11 @@ fun TracksScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    // The library changes under a running scan: show new tracks while it runs (only while there is nothing
+    // to show, so the list doesn't jump) and again when it has finished, so the first launch ends on a full list.
+    LaunchedEffect(scanState) {
+        if (scanState is ScanState.Finished || (scanState is ScanState.Running && state.results.isEmpty())) vm.refresh()
+    }
     var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     LaunchedEffect(listState, state.results.size) {
@@ -121,25 +127,9 @@ fun TracksScreen(
             }
         }
         if (state.results.isNotEmpty()) {
-            // One capsule of actions on every track matching the search and filters (not only the loaded rows).
-            Surface(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = vm::playAll) {
-                        Icon(painterResource(R.drawable.ic_play), stringResource(R.string.play))
-                    }
-                    IconButton(onClick = vm::enqueueAll) {
-                        Icon(painterResource(R.drawable.ic_queue_add), stringResource(R.string.add_to_queue))
-                    }
-                    // To one of your playlists, Favourites, or a new playlist made from the results.
-                    IconButton(onClick = { addTracks = vm::allTracks }) {
-                        Icon(painterResource(R.drawable.ic_playlist_add), stringResource(R.string.add_to_playlist))
-                    }
-                }
-            }
+            // Acts on every track matching the search and filters (not only the loaded rows); Add to playlist
+            // offers your playlists, Favourites, or a new playlist made from them.
+            ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
         }
         Box(Modifier.fillMaxSize()) {
             if (state.noResults) {

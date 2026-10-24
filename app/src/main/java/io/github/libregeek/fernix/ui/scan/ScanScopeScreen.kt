@@ -11,6 +11,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,13 +33,19 @@ import io.github.libregeek.fernix.data.scan.ScanScope
  * preselected; "Choose folders" continues to the in-app [FolderChooserScreen].
  */
 @Composable
-fun ScanScopeScreen(onChosen: (ScanScope) -> Unit) {
-    var chooseFolders by rememberSaveable { mutableStateOf(false) }
+fun ScanScopeScreen(
+    onChosen: (ScanScope) -> Unit,
+    /** The scope in force, when changing it from Settings; the choice starts from it. */
+    initial: ScanScope? = null,
+    /** Shown as a Cancel button when changing the scope from Settings. */
+    onCancel: (() -> Unit)? = null,
+) {
+    var chooseFolders by rememberSaveable { mutableStateOf(initial is ScanScope.Selected) }
     var choosing by rememberSaveable { mutableStateOf(false) }
 
     if (choosing) {
         FolderChooserScreen(
-            initialSelection = emptySet(),
+            initialSelection = (initial as? ScanScope.Selected)?.folders.orEmpty(),
             onDone = { onChosen(ScanScope.Selected(it)) },
             onCancel = { choosing = false },
         )
@@ -67,6 +74,9 @@ fun ScanScopeScreen(onChosen: (ScanScope) -> Unit) {
             }
             Button(onClick = { if (chooseFolders) choosing = true else onChosen(ScanScope.All) }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.scope_continue))
+            }
+            if (onCancel != null) {
+                OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cancel)) }
             }
         }
     }
