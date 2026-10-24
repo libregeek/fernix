@@ -1,0 +1,1 @@
+First release: offline music player with tag-based browsing, playlists, queue, equalizer and gapless playback.

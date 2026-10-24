@@ -1,0 +1,22 @@
+Fernix plays the music stored on your phone. It never connects to the internet, needs no account, and works without Google Play Services.
+
+<b>Features</b>
+<ul>
+<li>Plays MP3, Ogg Vorbis, Opus, FLAC, WAV and AAC (M4A), with gapless playback, and sends the audio on unchanged: no resampling or downmixing.</li>
+<li>Reads your tags properly: ID3v2.4 and Vorbis comments, including tags with several values, such as a track with two artists.</li>
+<li>Filter by any tag in your files: artist, album, genre, BPM, label, MusicBrainz IDs, your own custom tags.</li>
+<li>Splits combined values like "Simon; Garfunkel" only when you ask, and never changes your files.</li>
+<li>You choose what is scanned: all external storage or only the folders you pick.</li>
+<li>Built to stay fast with hundreds of thousands of tracks.</li>
+<li>Favourites, Recently Added, Never Played and Most Played playlists, plus your own.</li>
+<li>Queue editing, built-in equalizer, notification and lock-screen controls.</li>
+<li>Lists the files it could not read or play in Settings, on your device only.</li>
+<li>Fernix theme, Dark theme, or Android's own Material colours.</li>
+</ul>
+
+<b>Privacy</b>
+<ul>
+<li>No internet permission, so Android itself blocks it from going online.</li>
+<li>No ads, tracking, analytics or crash reporting.</li>
+<li>No Google services: works the same on LineageOS, GrapheneOS and CalyxOS.</li>
+</ul>

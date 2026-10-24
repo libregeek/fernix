@@ -150,7 +150,7 @@ fun NowPlayingScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                     // One tap adds the track to Favourites, another removes it (spec §9.1).
-                    IconButton(onClick = vm::toggleFavourite, modifier = Modifier.size(40.dp)) {
+                    IconButton(onClick = vm::toggleFavourite, modifier = Modifier.size(48.dp)) {
                         Icon(
                             painterResource(if (state.favourite) R.drawable.ic_favorite else R.drawable.ic_favorite_border),
                             contentDescription = stringResource(
@@ -199,17 +199,17 @@ fun NowPlayingScreen(
 @Composable
 private fun NowPlayingHeader(onBack: () -> Unit, onEqualizer: () -> Unit, onDetails: () -> Unit, onQueue: () -> Unit, detailsEnabled: Boolean) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
             Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
         }
         Row {
-            IconButton(onClick = onEqualizer, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onEqualizer, modifier = Modifier.size(48.dp)) {
                 Icon(painterResource(R.drawable.ic_equalizer), stringResource(R.string.equalizer))
             }
-            IconButton(onClick = onDetails, enabled = detailsEnabled, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onDetails, enabled = detailsEnabled, modifier = Modifier.size(48.dp)) {
                 Icon(painterResource(R.drawable.ic_info), stringResource(R.string.track_details))
             }
-            IconButton(onClick = onQueue, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onQueue, modifier = Modifier.size(48.dp)) {
                 Icon(painterResource(R.drawable.ic_queue_music), stringResource(R.string.queue))
             }
         }
@@ -224,7 +224,7 @@ private fun PlaybackControls(playback: PlaybackController, player: PlaybackUiSta
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = { playback.setShuffle(!player.shuffle) }, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = { playback.setShuffle(!player.shuffle) }, modifier = Modifier.size(48.dp)) {
             Icon(
                 painterResource(R.drawable.ic_shuffle),
                 stringResource(R.string.shuffle),
@@ -232,7 +232,7 @@ private fun PlaybackControls(playback: PlaybackController, player: PlaybackUiSta
                 tint = if (player.shuffle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(onClick = playback::previous, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = playback::previous, modifier = Modifier.size(48.dp)) {
             Icon(painterResource(R.drawable.ic_skip_previous), stringResource(R.string.previous), Modifier.size(24.dp))
         }
         FilledIconButton(onClick = playback::playPause, modifier = Modifier.size(52.dp)) {
@@ -242,10 +242,10 @@ private fun PlaybackControls(playback: PlaybackController, player: PlaybackUiSta
                 modifier = Modifier.size(28.dp),
             )
         }
-        IconButton(onClick = playback::next, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = playback::next, modifier = Modifier.size(48.dp)) {
             Icon(painterResource(R.drawable.ic_skip_next), stringResource(R.string.next), Modifier.size(24.dp))
         }
-        IconButton(onClick = { playback.setRepeatMode(nextRepeatMode(player.repeatMode)) }, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = { playback.setRepeatMode(nextRepeatMode(player.repeatMode)) }, modifier = Modifier.size(48.dp)) {
             Icon(
                 painterResource(if (player.repeatMode == Player.REPEAT_MODE_ONE) R.drawable.ic_repeat_one else R.drawable.ic_repeat),
                 stringResource(

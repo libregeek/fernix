@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import io.github.libregeek.fernix.tags.TagValues
 import io.github.libregeek.fernix.playback.MediaItems
 import androidx.compose.ui.text.font.FontWeight
@@ -97,7 +98,9 @@ fun TrackDetailScreen(
 
         Box(
             Modifier
+                .align(Alignment.CenterHorizontally)
                 .padding(horizontal = 80.dp)
+                .widthIn(max = 240.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(12.dp))
@@ -283,7 +286,7 @@ private fun TagRow(
                         color = MaterialTheme.colorScheme.tertiary,
                     )
                     if (splittable) {
-                        IconButton(onClick = { onSplit(line, value) }, modifier = Modifier.size(28.dp)) {
+                        IconButton(onClick = { onSplit(line, value) }, modifier = Modifier.size(48.dp)) {
                             Icon(painterResource(R.drawable.ic_call_split), stringResource(R.string.split_value), Modifier.size(18.dp))
                         }
                     }

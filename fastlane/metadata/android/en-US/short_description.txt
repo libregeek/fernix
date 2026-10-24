@@ -1,0 +1,1 @@
+A lightweight, fully offline music player. No internet, no tracking.
