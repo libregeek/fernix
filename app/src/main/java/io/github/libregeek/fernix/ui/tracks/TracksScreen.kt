@@ -9,6 +9,13 @@ import androidx.compose.runtime.mutableStateOf
 import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import io.github.libregeek.fernix.ui.common.CompactSearchField
 import io.github.libregeek.fernix.ui.common.ListActions
 import io.github.libregeek.fernix.tags.TagValues
@@ -56,6 +63,7 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.LibraryTopBar
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TrackResult
 import io.github.libregeek.fernix.data.db.TrackSearch
@@ -65,7 +73,7 @@ import io.github.libregeek.fernix.ui.common.RowMenu
 import io.github.libregeek.fernix.ui.common.Thumbnail
 import io.github.libregeek.fernix.ui.common.trackThumbnail
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TracksScreen(
     db: FernixDatabase,
@@ -75,6 +83,7 @@ fun TracksScreen(
     modifier: Modifier = Modifier,
     personId: Long = 0,
     tagKeyId: Long = 0,
+    onSettings: () -> Unit = {},
     scanState: ScanState = ScanState.Idle,
 ) {
     val vm: TracksViewModel = viewModel(
@@ -96,39 +105,37 @@ fun TracksScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        // One list for everything, so in landscape (where the header alone would fill the screen) the search
-        // box, the actions and the results scroll together.
+        LibraryTopBar(
+            stringResource(R.string.tab_tracks),
+            onSettings,
+            query = state.text,
+            onQuery = vm::setText,
+            hint = stringResource(R.string.search_hint),
+            actions = {
+                IconButton(onClick = vm::openKeyPicker) {
+                    Icon(painterResource(R.drawable.ic_filter), stringResource(R.string.search_add_filter))
+                }
+            },
+        )
+        // One list for everything, so in landscape the filters, the actions and the results scroll together.
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            item(key = "search") {
-                OutlinedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        CompactSearchField(state.text, vm::setText, stringResource(R.string.search_hint))
-                        // The chips wrap onto more lines instead of scrolling away.
-                        if (state.person != null || state.chips.isNotEmpty()) {
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                                itemVerticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                state.person?.let { person ->
-                                    FilterChipItem(person.name) { vm.setPerson(null) }
-                                }
-                                state.chips.forEach { chip ->
-                                    FilterChipItem("${chip.key}: ${chip.value}") { vm.removeChip(chip) }
-                                }
-                            }
+            if (state.person != null || state.chips.isNotEmpty()) {
+                item(key = "filters") {
+                    // The filters wrap onto more lines instead of scrolling away; reset clears them and the text.
+                    FlowRow(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        state.person?.let { person ->
+                            FilterChipItem(person.name) { vm.setPerson(null) }
                         }
-                        // The bottom of the container: add a filter on the left, reset everything on the right.
-                        // Neither moves with the chips above, so both are always in view.
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            IconButton(onClick = vm::openKeyPicker) {
-                                Icon(painterResource(R.drawable.ic_add), stringResource(R.string.search_add_filter))
-                            }
-                            if (state.hasFilter) {
-                                IconButton(onClick = vm::clearAll) {
-                                    Icon(painterResource(R.drawable.ic_clear_all), stringResource(R.string.search_reset))
-                                }
-                            }
+                        state.chips.forEach { chip ->
+                            FilterChipItem("${chip.key}: ${chip.value}") { vm.removeChip(chip) }
+                        }
+                        IconButton(onClick = vm::clearAll) {
+                            Icon(painterResource(R.drawable.ic_clear_all), stringResource(R.string.search_reset))
                         }
                     }
                 }
@@ -162,58 +169,62 @@ fun TracksScreen(
         }
     }
 
-    state.keyChoices?.let { keys ->
-        AlertDialog(
-            onDismissRequest = vm::dismissPickers,
-            title = { Text(stringResource(R.string.search_pick_key)) },
-            text = {
-                LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(keys, key = { it.id }) { key ->
-                        ListItem(modifier = Modifier.clickable { vm.pickKey(key) }, headlineContent = { Text(key.key) })
+    // Adding a filter: one bottom sheet, first the tag, then its value (the arrow goes back to the tags).
+    if (state.keyChoices != null || state.valuePicker != null) {
+        ModalBottomSheet(onDismissRequest = vm::dismissPickers, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            Column(Modifier.navigationBarsPadding().fillMaxHeight(0.7f)) {
+                val picker = state.valuePicker
+                if (picker == null) {
+                    Text(
+                        stringResource(R.string.search_pick_key),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(state.keyChoices.orEmpty(), key = { it.id }) { key ->
+                            ListItem(
+                                modifier = Modifier.clickable { vm.pickKey(key) },
+                                headlineContent = { Text(key.key) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
                     }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = vm::dismissPickers) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
-
-    state.valuePicker?.let { picker ->
-        val pickerState = rememberLazyListState()
-        LaunchedEffect(pickerState, picker.values.size) {
-            snapshotFlow { pickerState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-                .collect { last -> if (last >= picker.values.size - LOAD_AHEAD) vm.loadMoreValues() }
-        }
-        AlertDialog(
-            onDismissRequest = vm::dismissPickers,
-            title = { Text(stringResource(R.string.search_pick_value, picker.key.key)) },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = picker.prefix,
-                        onValueChange = vm::setValuePrefix,
-                        placeholder = { Text(stringResource(R.string.search_value_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                } else {
+                    val pickerState = rememberLazyListState()
+                    LaunchedEffect(pickerState, picker.values.size) {
+                        snapshotFlow { pickerState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+                            .collect { last -> if (last >= picker.values.size - LOAD_AHEAD) vm.loadMoreValues() }
+                    }
+                    Row(Modifier.padding(start = 8.dp, end = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = vm::openKeyPicker) {
+                            Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
+                        }
+                        Text(picker.key.key, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    CompactSearchField(
+                        picker.prefix,
+                        vm::setValuePrefix,
+                        stringResource(R.string.search_value_hint),
+                        Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
                     )
                     if (!picker.loading && picker.values.isEmpty()) {
-                        Text(stringResource(R.string.search_no_values), modifier = Modifier.padding(top = 12.dp))
+                        Text(stringResource(R.string.search_no_values), modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
                     }
-                    LazyColumn(state = pickerState, modifier = Modifier.heightIn(max = 300.dp)) {
+                    LazyColumn(state = pickerState, modifier = Modifier.weight(1f)) {
                         items(picker.values, key = { it.valueId }) { value ->
                             ListItem(
                                 modifier = Modifier.clickable { vm.pickValue(value) },
                                 headlineContent = { Text(value.value, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 trailingContent = { Text(value.trackCount.toString()) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = vm::dismissPickers) { Text(stringResource(R.string.cancel)) } },
-        )
+            }
+        }
     }
+
     addTracks?.let { AddToPlaylistSheet(db, it) { addTracks = null } }
 }
 

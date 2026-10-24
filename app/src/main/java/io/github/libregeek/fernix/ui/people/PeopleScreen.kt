@@ -3,6 +3,7 @@ package io.github.libregeek.fernix.ui.people
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,15 +24,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.LibraryTopBar
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.scan.ScanState
 
 @Composable
-fun PeopleScreen(db: FernixDatabase, onOpenPerson: (Long) -> Unit, scanState: ScanState, modifier: Modifier = Modifier) {
-    val vm: PeopleViewModel = viewModel(factory = viewModelFactory { initializer { PeopleViewModel(db) } })
+fun PeopleScreen(
+    db: FernixDatabase,
+    onOpenPerson: (Long) -> Unit,
+    onSettings: () -> Unit,
+    scanState: ScanState,
+    modifier: Modifier = Modifier,
+) {
+    val vm: PeopleViewModel = viewModel(factory = viewModelFactory { initializer { PeopleViewModel(db, createSavedStateHandle()) } })
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     LaunchedEffect(scanState) {
@@ -43,24 +52,34 @@ fun PeopleScreen(db: FernixDatabase, onOpenPerson: (Long) -> Unit, scanState: Sc
             .collect { last -> if (last >= state.people.size - LOAD_AHEAD) vm.loadMore() }
     }
 
-    Box(modifier.fillMaxSize()) {
-        if (state.empty) {
-            Text(
-                stringResource(R.string.people_empty),
-                modifier = Modifier.align(Alignment.Center).padding(16.dp),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            items(state.people, key = { it.valueId }) { person ->
-                ListItem(
-                    modifier = Modifier.clickable { onOpenPerson(person.valueId) },
-                    headlineContent = { Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    supportingContent = {
-                        Text(pluralStringResource(R.plurals.track_count, person.trackCount, person.trackCount))
-                    },
+    Column(modifier.fillMaxSize()) {
+        LibraryTopBar(
+            stringResource(R.string.tab_people),
+            onSettings,
+            query = state.query,
+            onQuery = vm::setQuery,
+            hint = stringResource(R.string.search_people_hint),
+        )
+        Box(Modifier.fillMaxSize()) {
+            if (state.empty) {
+                Text(
+                    stringResource(if (state.query.isEmpty()) R.string.people_empty else R.string.people_no_match),
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                items(state.people, key = { it.valueId }) { person ->
+                    ListItem(
+                        modifier = Modifier.clickable { onOpenPerson(person.valueId) },
+                        headlineContent = { Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = {
+                            Text(pluralStringResource(R.plurals.track_count, person.trackCount, person.trackCount))
+                        },
+                    )
+                }
+            }
+    
         }
     }
 }

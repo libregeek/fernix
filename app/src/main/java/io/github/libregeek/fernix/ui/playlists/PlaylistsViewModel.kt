@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui.playlists
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.libregeek.fernix.data.db.FernixDatabase
@@ -27,6 +28,7 @@ class PlaylistsViewModel(
     private val db: FernixDatabase,
     search: TrackSearch,
     private val playback: PlaybackController,
+    private val saved: SavedStateHandle,
 ) : ViewModel() {
 
     private val tracks = PlaylistTracks(db, search)
@@ -37,6 +39,13 @@ class PlaylistsViewModel(
     ) { favourites, playlists -> PlaylistsState(favourites, playlists) }
         .map<PlaylistsState, PlaylistsState?> { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** What is typed in the search; the lists are narrowed to the playlists whose name contains it. */
+    val query: StateFlow<String> = saved.getStateFlow(KEY_QUERY, "")
+
+    fun setQuery(text: String) {
+        saved[KEY_QUERY] = text
+    }
 
     fun create(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -62,5 +71,9 @@ class PlaylistsViewModel(
 
     fun enqueue(id: Long) {
         viewModelScope.launch { playback.enqueue(withContext(Dispatchers.IO) { tracks.load(id) }) }
+    }
+
+    private companion object {
+        const val KEY_QUERY = "query"
     }
 }

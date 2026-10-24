@@ -40,12 +40,15 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE album = :album AND year = :year")
     suspend fun find(album: String, year: Int): AlbumEntity?
 
-    /** Albums by name then year. Start with `afterAlbum = ""`, `afterYear = -1`. */
+    /**
+     * Albums by name then year, whose name matches [likePattern] (an escaped `%text%`, see
+     * [TagDao.likeContains]; `%%` is every album). Start with `afterAlbum = ""`, `afterYear = -1`.
+     */
     @Query(
-        "SELECT * FROM albums WHERE (album, year) > (:afterAlbum, :afterYear) " +
+        "SELECT * FROM albums WHERE (album, year) > (:afterAlbum, :afterYear) AND album LIKE :likePattern ESCAPE '\\' " +
             "ORDER BY album, year LIMIT :limit",
     )
-    suspend fun page(afterAlbum: String, afterYear: Int, limit: Int): List<AlbumEntity>
+    suspend fun page(afterAlbum: String, afterYear: Int, likePattern: String, limit: Int): List<AlbumEntity>
 
     @Query("SELECT * FROM albums WHERE id = :id")
     suspend fun byId(id: Long): AlbumEntity?
@@ -193,15 +196,20 @@ interface TagDao {
     @Query(
         "SELECT v.id AS valueId, v.value AS name, p.trackCount AS trackCount " +
             "FROM tag_values v CROSS JOIN people p ON p.valueId = v.id " +
-            "WHERE (v.value, v.id) > (:afterName, :afterId) " +
+            "WHERE (v.value, v.id) > (:afterName, :afterId) AND v.value LIKE :likePattern ESCAPE '\\' " +
             "ORDER BY v.value, v.id LIMIT :limit",
     )
-    suspend fun peoplePage(afterName: String, afterId: Long, limit: Int): List<PersonRow>
+    suspend fun peoplePage(afterName: String, afterId: Long, likePattern: String, limit: Int): List<PersonRow>
 
     companion object {
         /** Escapes LIKE wildcards in what the user typed and appends `%`. */
         fun likePrefix(typed: String): String =
-            typed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            likeEscape(typed) + "%"
+
+        /** Escapes LIKE wildcards in what the user typed and puts `%` on both sides: a match anywhere. */
+        fun likeContains(typed: String): String = "%" + likeEscape(typed) + "%"
+
+        private fun likeEscape(typed: String) = typed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     }
 }
 

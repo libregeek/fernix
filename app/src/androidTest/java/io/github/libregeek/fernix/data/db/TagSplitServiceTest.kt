@@ -109,7 +109,7 @@ class TagSplitServiceTest {
         assertNull(db.tagDao().libraryTrackCount(artist, simon.valueId))
         assertEquals(2, db.tagDao().libraryTrackCount(artist, db.tagDao().valueId("Simon")!!))
         assertEquals(2, db.tagDao().libraryTrackCount(artist, db.tagDao().valueId("Garfunkel")!!))
-        val people = db.tagDao().peoplePage("", 0, PAGE_SIZE).associate { it.name to it.trackCount }
+        val people = db.tagDao().peoplePage("", 0, TagDao.likeContains(""), PAGE_SIZE).associate { it.name to it.trackCount }
         assertEquals(mapOf("AC/DC" to 1, "Ann" to 1, "Garfunkel" to 2, "simon" to 2, "Zed" to 1), people)
     }
 

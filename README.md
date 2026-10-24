@@ -16,9 +16,9 @@ Fernix plays the music stored on your phone. It never connects to the internet, 
 - **Filter by any tag:** besides artist, album and genre, you can filter on any tag in your files (BPM, label, release type, MusicBrainz IDs, your own custom tags…).
 - **Simple screens:**
   - **Now Playing:** album art, playback controls, shuffle/repeat, and the track's title, album and date, plus three tags of your choice — composers, lyricists and artists by default; swap any of them for others such as conductor, genre or BPM in Settings. Tap a name to see every track that person worked on, or any other value to see all tracks that share it.
-  - **Tracks:** every track in your library. Type in the search box, and add filters on any tag (several values of the same tag mean "either"; different tags must all match). Clear it all with the ✕ button, then play the result, queue it, or add it to a playlist, including a new one.
+  - **Tracks:** every track in your library. Tap the search icon to type a search, and add filters on any tag (several values of the same tag mean "either"; different tags must all match). Tap the search icon at the top to search; the ✕ clears the text and the reset button next to the filters clears everything. Then play the result, queue it, or add it to a playlist, including a new one.
   - **Queue:** see, reorder and edit what's playing next
-  - **Albums:** albums grouped by name and year, each with its cover
+  - **Albums:** albums grouped by name and year, each with its cover; tap the search icon to find one by name
   - **Folders:** browse your music the way it's stored on your device
   - **Playlists:** Fernix keeps four playlists for you, and you can make your own.
     - **Favourites:** tap the heart on the Now Playing screen to add the song you're listening to, and tap it again to remove it. You can also add and remove songs from Favourites in any list.

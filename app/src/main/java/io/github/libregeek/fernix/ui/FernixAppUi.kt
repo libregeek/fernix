@@ -63,6 +63,7 @@ import io.github.libregeek.fernix.ui.people.PersonDetailScreen
 import io.github.libregeek.fernix.ui.tracks.TracksScreen
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackUiState
+import io.github.libregeek.fernix.ui.common.LibraryTopBar
 import io.github.libregeek.fernix.ui.nav.BackStack
 import io.github.libregeek.fernix.ui.nav.Screen
 
@@ -115,13 +116,15 @@ fun FernixAppUi(
     val backStack = rememberSaveable(saver = BackStack.Saver) { BackStack() }
     val current = backStack.current
     val openTrack: (Long) -> Unit = { backStack.push(Screen.TrackDetail, it) }
+    val openSettings = { backStack.push(Screen.Settings) }
 
     BackHandler(enabled = backStack.canPop) { backStack.pop() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            if (current.isTab) {
+            // Tracks, Albums, People and Playlists draw their own (it has the search); Folders uses the plain one.
+            if (current == Screen.Folders) {
                 LibraryTopBar(stringResource(current.label), onSettings = { backStack.push(Screen.Settings) })
             }
         },
@@ -222,6 +225,7 @@ fun FernixAppUi(
                 tagKeyId = backStack.currentArg2,
                 scanState = scanState,
                 onOpenTrack = openTrack,
+                onSettings = openSettings,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -232,6 +236,7 @@ fun FernixAppUi(
                 container.trackSearch,
                 container.playback,
                 onOpenPlaylist = { backStack.push(Screen.PlaylistDetail, it) },
+                onSettings = openSettings,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -252,6 +257,7 @@ fun FernixAppUi(
             PeopleScreen(
                 container.database,
                 onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
+                onSettings = openSettings,
                 scanState = scanState,
                 modifier = Modifier.padding(padding),
             )
@@ -275,6 +281,7 @@ fun FernixAppUi(
                 container.database,
                 container.playback,
                 onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                onSettings = openSettings,
                 scanState = scanState,
                 modifier = Modifier.padding(padding),
             )
@@ -290,22 +297,6 @@ fun FernixAppUi(
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
-        }
-    }
-}
-
-/** Title and settings gear of the five library screens; the gear opens Settings directly (spec §9). */
-@Composable
-private fun LibraryTopBar(title: String, onSettings: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surface) {
-        Row(
-            Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).height(48.dp).padding(start = 16.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            IconButton(onClick = onSettings) {
-                Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings))
-            }
         }
     }
 }

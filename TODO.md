@@ -119,6 +119,13 @@ The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§
 - [ ] Check scrolling the full track list with thumbnails on a large library (smoothness, memory); on the emulator the lists show and cache thumbnails (4 albums, 762 bytes to 11 KB each) — a real 16K-track library is still to be tried
 - [x] Tests: empty filter lists all tracks (paging across pages), ✕ clears text and chips, add-all-results to a new and to an existing playlist (more results than one page), All Songs gone
 
+### Top-bar search (2026-10-24, from review)
+
+- [x] `LibraryTopBar`: title, search icon and gear; the search icon opens a field under the title, which stays (the icon or Back closes and clears, the cross clears the text)
+- [x] Tracks: the boxed search container is gone; the add-filter (+) icon is in the top bar, the filter chips and the reset icon at the top of the list
+- [x] Albums, People and Playlists: search by any part of the name, no filters; the query is kept in saved state; `DatabaseTest` covers the contains pattern and the escaped wildcards
+- [ ] Check rotation and landscape of the top bar by hand
+
 ### AAC (M4A) support (2026-10-24, from review)
 
 - [x] TagLib's MP4 module on (`WITH_MP4`); `.m4a` tags, cover and audio properties read (bit depth only for ALAC); fixture `sample.m4a` in the fixtures script; `TagReaderTest` (tags, cover, properties) and `AudioPathTest` (rate and channels reach the audio track) cover it

@@ -128,9 +128,9 @@ class ScaleTest {
         timed("FTS broad: 'title'") { search.page(TrackFilter(text = "title")) }
         timed("FTS broad: 't'") { search.page(TrackFilter(text = "t")) }
 
-        timed("people, first page") { db.tagDao().peoplePage("", 0, PAGE_SIZE) }
+        timed("people, first page") { db.tagDao().peoplePage("", 0, "%", PAGE_SIZE) }
             .let { check("people first", it.second); assertEquals(PAGE_SIZE, it.first.size) }
-        timed("people, deep page") { db.tagDao().peoplePage("Person %06d".format(people / 2), 0, PAGE_SIZE) }
+        timed("people, deep page") { db.tagDao().peoplePage("Person %06d".format(people / 2), 0, "%", PAGE_SIZE) }
             .let { check("people deep", it.second) }
         timed("genre values, first page") { db.tagDao().valuesPage(3, TagDao.likePrefix(""), "", 0, PAGE_SIZE) }
             .let { check("genre values", it.second); assertEquals(genres, it.first.size) }
@@ -143,7 +143,7 @@ class ScaleTest {
         }
         timed("title values, no prefix") { db.tagDao().valuesPage(1, TagDao.likePrefix(""), "", 0, PAGE_SIZE) }
 
-        timed("albums, first page") { db.albumDao().page("", -1, PAGE_SIZE) }
+        timed("albums, first page") { db.albumDao().page("", -1, "%", PAGE_SIZE) }
 
         for (filter in listOf(TrackFilter(), TrackFilter(personValueId = person), TrackFilter(text = "title"))) {
             log("PLAN $filter:\n" + lib.plan(TrackQueryBuilder.build(filter, listOf(2L))))

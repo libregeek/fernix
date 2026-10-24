@@ -33,9 +33,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.LibraryTopBar
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.PlaylistRow
 import io.github.libregeek.fernix.data.db.TrackSearch
@@ -49,10 +51,11 @@ fun PlaylistsScreen(
     search: TrackSearch,
     playback: PlaybackController,
     onOpenPlaylist: (Long) -> Unit,
+    onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: PlaylistsViewModel = viewModel(
-        factory = viewModelFactory { initializer { PlaylistsViewModel(db, search, playback) } },
+        factory = viewModelFactory { initializer { PlaylistsViewModel(db, search, playback, createSavedStateHandle()) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     // Kept across rotation and the process being killed: the dialogs are remembered by playlist id.
@@ -62,7 +65,19 @@ fun PlaylistsScreen(
     val renaming = state?.playlists?.firstOrNull { it.id == renamingId }
     val deleting = state?.playlists?.firstOrNull { it.id == deletingId }
 
+    val query by vm.query.collectAsStateWithLifecycle()
+    // The playlists whose name contains what is typed (the default ones by their shown names).
+    val favouritesName = stringResource(R.string.playlist_favourites)
+    val shownDefaults = DefaultPlaylists.ReadOnly.filter { stringResource(DefaultPlaylists.title(it)).contains(query, ignoreCase = true) }
+
     Column(modifier.fillMaxSize()) {
+        LibraryTopBar(
+            stringResource(R.string.tab_playlists),
+            onSettings,
+            query = query,
+            onQuery = vm::setQuery,
+            hint = stringResource(R.string.search_playlists_hint),
+        )
         OutlinedButton(
             onClick = { creating = true },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -70,7 +85,7 @@ fun PlaylistsScreen(
         LazyColumn(Modifier.fillMaxSize()) {
             // The five default playlists come first; only Favourites among them can be edited,
             // and not renamed or deleted either, so none of them has a rename/delete menu.
-            state?.favourites?.let { favourites ->
+            state?.favourites?.takeIf { favouritesName.contains(query, ignoreCase = true) }?.let { favourites ->
                 item(key = "favourites") {
                     ListItem(
                         modifier = Modifier.clickable { onOpenPlaylist(favourites.id) },
@@ -84,7 +99,7 @@ fun PlaylistsScreen(
                     )
                 }
             }
-            items(DefaultPlaylists.ReadOnly, key = { "default$it" }) { id ->
+            items(shownDefaults, key = { "default$it" }) { id ->
                 ListItem(
                     modifier = Modifier.clickable { onOpenPlaylist(id) },
                     headlineContent = { Text(stringResource(DefaultPlaylists.title(id))) },
@@ -92,11 +107,11 @@ fun PlaylistsScreen(
                     trailingContent = { RowMenu(onPlay = { vm.play(id) }, onEnqueue = { vm.enqueue(id) }) },
                 )
             }
-            val own = state?.playlists.orEmpty()
-            if (state != null && own.isEmpty()) {
+            val own = state?.playlists.orEmpty().filter { it.name.contains(query, ignoreCase = true) }
+            if (state != null && own.isEmpty() && (query.isEmpty() || (shownDefaults.isEmpty() && !favouritesName.contains(query, ignoreCase = true)))) {
                 item(key = "none") {
                     Text(
-                        stringResource(R.string.playlists_empty),
+                        stringResource(if (query.isEmpty()) R.string.playlists_empty else R.string.playlists_no_match),
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                     )

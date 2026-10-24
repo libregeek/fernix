@@ -225,10 +225,31 @@ class DatabaseTest {
         assertEquals(listOf("A", "b", "c"), names)
         assertEquals(listOf("root"), db.folderDao().volumes().map { it.name })
 
+        val all = TagDao.likeContains("")
         lib.album("B", 2001); lib.album("B", 0); lib.album("a", 1999)
-        val albums = db.albumDao().page("", -1, PAGE_SIZE)
+        val albums = db.albumDao().page("", -1, all, PAGE_SIZE)
         assertEquals(listOf("a" to 1999, "B" to 0, "B" to 2001), albums.map { it.album to it.year })
-        assertEquals(listOf("B" to 2001), db.albumDao().page("B", 0, PAGE_SIZE).map { it.album to it.year })
+        assertEquals(listOf("B" to 2001), db.albumDao().page("B", 0, all, PAGE_SIZE).map { it.album to it.year })
+    }
+
+    @Test
+    fun albumsAndPeople_canBeNarrowedByAnyPartOfTheName_andWildcardsAreLiteral() = runBlocking {
+        listOf("Abbey Road", "Let It Be", "100% Pure", "A_B").forEach { lib.album(it) }
+        fun albums(typed: String) = runBlocking { db.albumDao().page("", -1, TagDao.likeContains(typed), PAGE_SIZE).map { it.album } }
+        assertEquals(listOf("Let It Be"), albums("it b"))
+        assertEquals(listOf("Abbey Road", "Let It Be", "A_B").sorted(), albums("b").sorted())
+        assertEquals(listOf("100% Pure"), albums("%"))
+        assertEquals(listOf("A_B"), albums("_"))
+        assertEquals(emptyList<String>(), albums("zzz"))
+
+        val f = lib.folder()
+        val t = lib.track("One", f)
+        lib.tag(t, "ARTIST", "Paul McCartney", "John Lennon")
+        lib.refreshSummaries(PeopleTags.KEYS)
+        fun people(typed: String) = runBlocking { db.tagDao().peoplePage("", 0, TagDao.likeContains(typed), PAGE_SIZE).map { it.name } }
+        assertEquals(listOf("Paul McCartney"), people("cart"))
+        assertEquals(listOf("John Lennon", "Paul McCartney"), people("n"))
+        assertEquals(emptyList<String>(), people("zzz"))
     }
 
     // --- filters ---
@@ -312,7 +333,7 @@ class DatabaseTest {
         lib.refreshSummaries(PeopleTags.KEYS)
         val r = search.page(TrackFilter(personValueId = lib.valueId("Gil")))
         assertEquals(listOf("PERFORMER:GUITAR"), r.single().roles)
-        assertEquals(listOf("Gil"), db.tagDao().peoplePage("", 0, PAGE_SIZE).map { it.name })
+        assertEquals(listOf("Gil"), db.tagDao().peoplePage("", 0, "%", PAGE_SIZE).map { it.name })
     }
 
     // --- pickers and people ---
@@ -320,9 +341,9 @@ class DatabaseTest {
     @Test
     fun peoplePage_listsEachPersonOnce_byName_withTrackCount() = runBlocking {
         filterLibrary()
-        val people = db.tagDao().peoplePage("", 0, PAGE_SIZE)
+        val people = db.tagDao().peoplePage("", 0, "%", PAGE_SIZE)
         assertEquals(listOf("Ann" to 3, "Bob" to 2, "Cy" to 1), people.map { it.name to it.trackCount })
-        assertEquals(listOf("Cy"), db.tagDao().peoplePage("Bob", people.first { it.name == "Bob" }.valueId, PAGE_SIZE).map { it.name })
+        assertEquals(listOf("Cy"), db.tagDao().peoplePage("Bob", people.first { it.name == "Bob" }.valueId, "%", PAGE_SIZE).map { it.name })
     }
 
     @Test

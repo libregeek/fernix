@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import io.github.libregeek.fernix.ui.common.AddToPlaylistSheet
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,9 +28,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.LibraryTopBar
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackController
@@ -42,11 +45,12 @@ fun AlbumsScreen(
     db: FernixDatabase,
     playback: PlaybackController,
     onOpenAlbum: (Long) -> Unit,
+    onSettings: () -> Unit,
     scanState: ScanState,
     modifier: Modifier = Modifier,
 ) {
     val vm: AlbumsViewModel = viewModel(
-        factory = viewModelFactory { initializer { AlbumsViewModel(db, playback) } },
+        factory = viewModelFactory { initializer { AlbumsViewModel(db, playback, createSavedStateHandle()) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -60,34 +64,44 @@ fun AlbumsScreen(
             .collect { last -> if (last >= state.albums.size - LOAD_AHEAD) vm.loadMore() }
     }
 
-    Box(modifier.fillMaxSize()) {
-        if (state.empty) {
-            Text(
-                stringResource(R.string.albums_empty),
-                modifier = Modifier.align(Alignment.Center).padding(16.dp),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            items(state.albums, key = { it.id }) { album ->
-                ListItem(
-                    modifier = Modifier.clickable { onOpenAlbum(album.id) },
-                    leadingContent = { Thumbnail(AlbumThumbnail(album.id)) },
-                    headlineContent = { Text(album.album, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    supportingContent = if (album.year != 0) {
-                        { Text(album.year.toString()) }
-                    } else {
-                        null
-                    },
-                    trailingContent = {
-                        RowMenu(
-                            onPlay = { vm.play(album) },
-                            onEnqueue = { vm.enqueue(album) },
-                            onAddToPlaylist = { addTracks = { vm.tracksOf(album) } },
-                        )
-                    },
+    Column(modifier.fillMaxSize()) {
+        LibraryTopBar(
+            stringResource(R.string.tab_albums),
+            onSettings,
+            query = state.query,
+            onQuery = vm::setQuery,
+            hint = stringResource(R.string.search_albums_hint),
+        )
+        Box(Modifier.fillMaxSize()) {
+            if (state.empty) {
+                Text(
+                    stringResource(if (state.query.isEmpty()) R.string.albums_empty else R.string.albums_no_match),
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                items(state.albums, key = { it.id }) { album ->
+                    ListItem(
+                        modifier = Modifier.clickable { onOpenAlbum(album.id) },
+                        leadingContent = { Thumbnail(AlbumThumbnail(album.id)) },
+                        headlineContent = { Text(album.album, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = if (album.year != 0) {
+                            { Text(album.year.toString()) }
+                        } else {
+                            null
+                        },
+                        trailingContent = {
+                            RowMenu(
+                                onPlay = { vm.play(album) },
+                                onEnqueue = { vm.enqueue(album) },
+                                onAddToPlaylist = { addTracks = { vm.tracksOf(album) } },
+                            )
+                        },
+                    )
+                }
+            }
+    
         }
     }
     addTracks?.let { AddToPlaylistSheet(db, it) { addTracks = null } }
