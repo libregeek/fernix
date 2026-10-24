@@ -10,8 +10,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -43,7 +43,9 @@ fun LibraryFoldersScreen(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    var pending by remember { mutableStateOf<Pair<ScanScope, ScopeImpact>?>(null) }
+    // The confirmation survives rotation and the process being killed: it is kept as plain strings.
+    var pendingRaw by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    val pending = pendingRaw?.let(::decodePending)
 
     // Inside the app shell: the padding keeps the buttons clear of the bottom bars.
     Box(modifier) {
@@ -57,7 +59,7 @@ fun LibraryFoldersScreen(
                         onApply(chosen)
                         onDone()
                     } else {
-                        pending = chosen to impact
+                        pendingRaw = encodePending(chosen, impact)
                     }
                 }
             },
@@ -66,7 +68,7 @@ fun LibraryFoldersScreen(
 
     pending?.let { (chosen, impact) ->
         AlertDialog(
-            onDismissRequest = { pending = null },
+            onDismissRequest = { pendingRaw = null },
             title = { Text(stringResource(R.string.scope_remove_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -78,11 +80,24 @@ fun LibraryFoldersScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { pending = null; onApply(chosen); onDone() }) {
+                TextButton(onClick = { pendingRaw = null; onApply(chosen); onDone() }) {
                     Text(stringResource(R.string.scope_remove_confirm))
                 }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text(stringResource(R.string.cancel)) } },
+            dismissButton = { TextButton(onClick = { pendingRaw = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+}
+
+/** The scope and its impact as strings: `all` or `selected`, the two counts, then the selected folders. */
+internal fun encodePending(scope: ScanScope, impact: ScopeImpact): List<String> = buildList {
+    add(if (scope is ScanScope.Selected) "selected" else "all")
+    add(impact.tracks.toString())
+    add(impact.playlistEntries.toString())
+    if (scope is ScanScope.Selected) addAll(scope.folders)
+}
+
+internal fun decodePending(raw: List<String>): Pair<ScanScope, ScopeImpact> {
+    val scope = if (raw[0] == "selected") ScanScope.Selected(raw.drop(3).toSet()) else ScanScope.All
+    return scope to ScopeImpact(raw[1].toInt(), raw[2].toInt())
 }

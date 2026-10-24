@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,9 +55,12 @@ fun PlaylistsScreen(
         factory = viewModelFactory { initializer { PlaylistsViewModel(db, search, playback) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
-    var creating by remember { mutableStateOf(false) }
-    var renaming by remember { mutableStateOf<PlaylistRow?>(null) }
-    var deleting by remember { mutableStateOf<PlaylistRow?>(null) }
+    // Kept across rotation and the process being killed: the dialogs are remembered by playlist id.
+    var creating by rememberSaveable { mutableStateOf(false) }
+    var renamingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val renaming = state?.playlists?.firstOrNull { it.id == renamingId }
+    val deleting = state?.playlists?.firstOrNull { it.id == deletingId }
 
     Column(modifier.fillMaxSize()) {
         OutlinedButton(
@@ -109,8 +113,8 @@ fun PlaylistsScreen(
                         PlaylistMenu(
                             onPlay = { vm.play(playlist.id) },
                             onEnqueue = { vm.enqueue(playlist.id) },
-                            onRename = { renaming = playlist },
-                            onDelete = { deleting = playlist },
+                            onRename = { renamingId = playlist.id },
+                            onDelete = { deletingId = playlist.id },
                         )
                     },
                 )
@@ -131,20 +135,20 @@ fun PlaylistsScreen(
             title = stringResource(R.string.playlist_rename),
             confirmLabel = stringResource(R.string.save),
             initial = playlist.name,
-            onConfirm = { vm.rename(playlist.id, it); renaming = null },
-            onDismiss = { renaming = null },
+            onConfirm = { vm.rename(playlist.id, it); renamingId = null },
+            onDismiss = { renamingId = null },
         )
     }
     deleting?.let { playlist ->
         AlertDialog(
-            onDismissRequest = { deleting = null },
+            onDismissRequest = { deletingId = null },
             text = { Text(stringResource(R.string.playlist_delete_confirm, playlist.name)) },
             confirmButton = {
-                TextButton(onClick = { vm.delete(playlist.id); deleting = null }) {
+                TextButton(onClick = { vm.delete(playlist.id); deletingId = null }) {
                     Text(stringResource(R.string.playlist_delete))
                 }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
+            dismissButton = { TextButton(onClick = { deletingId = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

@@ -331,6 +331,8 @@ Material 3 defaults, dynamic color on Android 12+, light/dark themes. Bottom nav
 
 All long lists (tracks, albums, people, folders, filter values) are keyset-paged from the database (§5) and rendered in `LazyColumn`s.
 
+**Process death and rotation.** What the user has set up on a screen survives the process being killed and a rotation: the Tracks search text and filters, the open Folders path (folders a scan has removed drop out) and the ticked folders in the folder chooser live in each view model's `SavedStateHandle` (as strings and ids, never as rows); dialogs and pickers that hold input (Settings, playlist rename/delete, the scope confirmation) use `rememberSaveable`; the back stack is saved too. Lists are re-queried from the database, not saved. Tracks and Person details put their header (search box, roles, actions) inside the list so a landscape screen scrolls as one.
+
 
 1. **Now Playing** — album art, title, album, date, the user's **Now Playing tags**, seek bar, play/pause/next/previous, shuffle/repeat.
    - Title, album and date are always shown and cannot be changed.

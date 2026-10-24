@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui.folders
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.libregeek.fernix.data.db.FernixDatabase
@@ -35,6 +36,8 @@ data class FoldersState(
 class FoldersViewModel(
     private val db: FernixDatabase,
     private val playback: PlaybackController,
+    /** The ids of the folders opened so far, so the place survives the process being killed. */
+    private val saved: SavedStateHandle,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FoldersState())
@@ -51,7 +54,14 @@ class FoldersViewModel(
     private var generation = 0
 
     init {
-        refresh()
+        viewModelScope.launch {
+            val ids = saved.get<ArrayList<Long>>(KEY_PATH).orEmpty()
+            if (ids.isNotEmpty()) {
+                // Folders a scan has removed since drop out; the rest is the path as it was.
+                stack = withContext(Dispatchers.IO) { ids.mapNotNull { db.folderDao().byId(it) } }
+            }
+            refresh()
+        }
     }
 
     /**
@@ -69,12 +79,18 @@ class FoldersViewModel(
 
     fun open(folder: FolderEntity) {
         stack = stack + folder
+        savePath()
         viewModelScope.launch { reset(null) }
+    }
+
+    private fun savePath() {
+        saved[KEY_PATH] = ArrayList(stack.map { it.id })
     }
 
     fun up(): Boolean {
         if (stack.size <= (if (lockedRoot != null) 1 else 0)) return false
         stack = stack.dropLast(1)
+        savePath()
         viewModelScope.launch { reset(null) }
         return true
     }
@@ -163,5 +179,9 @@ class FoldersViewModel(
     suspend fun subtree(folder: FolderEntity): List<TrackRow> = withContext(Dispatchers.IO) {
         val (low, high) = FolderPaths.subtreeRange(folder.path)
         db.trackDao().subtreeTracks(folder.path, low, high)
+    }
+
+    private companion object {
+        const val KEY_PATH = "path"
     }
 }

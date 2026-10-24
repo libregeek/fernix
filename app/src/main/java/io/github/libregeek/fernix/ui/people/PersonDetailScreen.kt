@@ -94,55 +94,58 @@ fun PersonDetailScreen(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (state.name != null) {
-            if (state.roles.isNotEmpty()) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(stringResource(R.string.person_roles), style = MaterialTheme.typography.labelMedium)
-                    // Each role as a very small outlined pill, with the number of tracks in it.
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        state.roles.forEach { role -> RolePill("${role.key} · ${role.trackCount}") }
+        // The roles and the actions are items of the list, so in landscape everything scrolls together.
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            if (state.name != null) {
+                if (state.roles.isNotEmpty()) {
+                    item(key = "roles") {
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(stringResource(R.string.person_roles), style = MaterialTheme.typography.labelMedium)
+                            // Each role as a small outlined pill, with the number of tracks in it.
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                state.roles.forEach { role -> RolePill("${role.key} · ${role.trackCount}") }
+                            }
+                        }
                     }
                 }
+                item(key = "actions") {
+                    // Every track of the person, not only the loaded rows: the same three icons as on Tracks.
+                    ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
+                }
             }
-            // Every track of the person, not only the loaded rows: the same three icons as on Tracks.
-            ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
-        }
-        Box(Modifier.fillMaxSize()) {
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                items(state.tracks, key = { it.track.id }) { result ->
-                    val track = result.track
-                    ListItem(
-                        modifier = Modifier.clickable { vm.playFrom(track) },
-                        headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = {
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                // The album with its date in brackets, as on Tracks, then the person's roles on the track.
-                                trackAlbumLine(track.album, track.date)?.let {
-                                    Text(
-                                        it,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                if (result.roles.isNotEmpty()) {
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        result.roles.forEach { RolePill(it) }
-                                    }
+            items(state.tracks, key = { it.track.id }) { result ->
+                val track = result.track
+                ListItem(
+                    modifier = Modifier.clickable { vm.playFrom(track) },
+                    headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    supportingContent = {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            // The album with its date in brackets, as on Tracks, then the person's roles on the track.
+                            trackAlbumLine(track.album, track.date)?.let {
+                                Text(
+                                    it,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            if (result.roles.isNotEmpty()) {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    result.roles.forEach { RolePill(it) }
                                 }
                             }
-                        },
-                        trailingContent = {
-                            RowMenu(
-                                onPlay = { vm.playFrom(track) },
-                                onEnqueue = { vm.enqueueTrack(track) },
-                                onAddToPlaylist = { addTracks = { listOf(track) } },
-                                onDetails = { onOpenTrack(track.id) },
-                            )
-                        },
-                    )
-                }
+                        }
+                    },
+                    trailingContent = {
+                        RowMenu(
+                            onPlay = { vm.playFrom(track) },
+                            onEnqueue = { vm.enqueueTrack(track) },
+                            onAddToPlaylist = { addTracks = { listOf(track) } },
+                            onDetails = { onOpenTrack(track.id) },
+                        )
+                    },
+                )
             }
         }
     }

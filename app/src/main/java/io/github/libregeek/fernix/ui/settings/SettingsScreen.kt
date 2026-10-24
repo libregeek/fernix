@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,7 +56,7 @@ fun SettingsScreen(
 ) {
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { initializer { SettingsViewModel(db, settings) } })
     val state by vm.state.collectAsStateWithLifecycle()
-    var picking by remember { mutableStateOf<Int?>(null) }
+    var picking by rememberSaveable { mutableStateOf<Int?>(null) }
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -108,7 +109,7 @@ fun SettingsScreen(
                     }
                 }
             }
-            var typed by remember { mutableStateOf("") }
+            var typed by rememberSaveable { mutableStateOf("") }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = typed,

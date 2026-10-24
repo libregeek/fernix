@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui.tracks
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.libregeek.fernix.data.db.FernixDatabase
@@ -60,6 +61,8 @@ class TracksViewModel(
     private val db: FernixDatabase,
     private val search: TrackSearch,
     private val playback: PlaybackController,
+    /** The search text and filters are kept here, so they survive the process being killed (spec §9). */
+    private val saved: SavedStateHandle,
     /**
      * A filter to start with, or 0: with [initialTagKeyId] 0 it is a person (`tag_values.id`); with a
      * tag key id it is that tag key's value (`tag_values.id`), as when a tag is tapped on Track details.
@@ -83,7 +86,10 @@ class TracksViewModel(
     private var valuesDone = false
 
     init {
-        if (initialPersonId == 0L) {
+        val restored = restore()
+        if (restored) {
+            rerun(debounce = false)
+        } else if (initialPersonId == 0L) {
             rerun(debounce = false)
         } else {
             viewModelScope.launch {
@@ -100,6 +106,27 @@ class TracksViewModel(
                 }
             }
         }
+    }
+
+    /** Puts back what [save] kept; false when there was nothing (a fresh start). */
+    private fun restore(): Boolean {
+        if (!saved.contains(KEY_TEXT)) return false
+        val chips = saved.get<ArrayList<String>>(KEY_CHIPS).orEmpty().mapNotNull { line ->
+            val p = line.split(SEP)
+            if (p.size == 4) TagChip(p[0].toLong(), p[1], p[2].toLong(), p[3]) else null
+        }
+        val person = saved.get<String>(KEY_PERSON)?.split(SEP)?.takeIf { it.size == 2 }
+            ?.let { PersonChip(it[0].toLong(), it[1]) }
+        _state.update { it.copy(text = saved.get<String>(KEY_TEXT).orEmpty(), chips = chips, person = person) }
+        return true
+    }
+
+    /** Keeps the text and the filters in the saved state; called whenever they may have changed. */
+    private fun save() {
+        val s = _state.value
+        saved[KEY_TEXT] = s.text
+        saved[KEY_PERSON] = s.person?.let { "${it.valueId}$SEP${it.name}" }
+        saved[KEY_CHIPS] = ArrayList(s.chips.map { "${it.keyId}$SEP${it.key}$SEP${it.valueId}$SEP${it.value}" })
     }
 
     /** Lists again from the first page with the same text and filters, e.g. after a scan changed the library. */
@@ -133,6 +160,7 @@ class TracksViewModel(
 
     /** Restarts the query from the first page; a page still in flight is dropped. */
     private fun rerun(debounce: Boolean) {
+        save()
         searchJob?.cancel()
         generation++
         done = false
@@ -263,5 +291,11 @@ class TracksViewModel(
 
     private companion object {
         const val DEBOUNCE_MS = 250L
+        const val KEY_TEXT = "text"
+        const val KEY_PERSON = "person"
+        const val KEY_CHIPS = "chips"
+
+        /** Unit separator: never in a tag value (spec §5), so it can join the fields of a chip. */
+        const val SEP = '\u001F'
     }
 }

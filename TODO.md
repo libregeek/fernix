@@ -177,7 +177,8 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 
 ## Phase 9 — Hardening & release
 
-- [ ] Process-death / config-change handling in all ViewModels
+- [x] Process-death / config-change handling: the Tracks search text and filters, the open Folders path and the ticked folders in the folder chooser are kept in `SavedStateHandle`; the Settings pickers, the playlist rename/delete dialogs and the scope confirmation use `rememberSaveable`; the back stack was already saved. Tracks and Person details scroll as one list so landscape is usable. `ProcessDeathTest` (6 tests) copies the handle into a fresh one and checks a new view model comes back the same; verified by killing the process on the emulator (2026-10-24)
+- [ ] Still to check by hand: rotation on Now Playing, Queue and Track details
 - [ ] Error handling: unreadable files, files removed mid-scan, permission revoked
 - [ ] Performance pass on large library (startup, first-scan time, scroll, memory)
 - [x] Audio-path check: output is unchanged from the source (no resampling, downmix or bit-depth reduction; equalizer off adds nothing); verify before and after every performance change [§8] — `AudioPathTest` (10 tests, with `PlayerFactory`) checks rates, channels and depth reaching the `AudioTrack` for WAV, FLAC, MP3, Ogg, Opus and hi-res FLAC/WAV, the equalizer off by default and no speed/silence/volume changes. It found that 24-bit sources were reduced to 16-bit; **float output is now on (approved 2026-10-24)**, so they arrive as 32-bit float, and a FLAC (16-bit too) arrives as float, which is exact. Re-run it after every change to playback or performance

@@ -31,6 +31,7 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
@@ -50,7 +51,7 @@ fun FolderChooserScreen(
     media: MediaSource = MediaStoreSource(LocalContext.current),
 ) {
     val vm: FolderChooserViewModel = viewModel(
-        factory = viewModelFactory { initializer { FolderChooserViewModel(media, initialSelection) } },
+        factory = viewModelFactory { initializer { FolderChooserViewModel(media, initialSelection, createSavedStateHandle()) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
 

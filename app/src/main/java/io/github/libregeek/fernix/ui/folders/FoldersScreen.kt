@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
@@ -52,7 +53,7 @@ fun FoldersScreen(
     modifier: Modifier = Modifier,
 ) {
     val vm: FoldersViewModel = viewModel(
-        factory = viewModelFactory { initializer { FoldersViewModel(db, playback) } },
+        factory = viewModelFactory { initializer { FoldersViewModel(db, playback, createSavedStateHandle()) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -59,7 +60,7 @@ class TracksViewModelTest {
 
         lateinit var vm: TracksViewModel
         instrumentation.runOnMainSync {
-            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext))
+            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), SavedStateHandle())
             // What the screen does: the filter is set, and in the same frame the still-empty list
             // asks for more rows, before the first page has come back from the database.
             vm.setPerson(PersonChip(person, "Johnson"))
@@ -84,7 +85,7 @@ class TracksViewModelTest {
     private fun newViewModel(personId: Long = 0, tagKeyId: Long = 0): TracksViewModel {
         lateinit var vm: TracksViewModel
         instrumentation.runOnMainSync {
-            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), personId, tagKeyId)
+            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), SavedStateHandle(), personId, tagKeyId)
         }
         return vm
     }

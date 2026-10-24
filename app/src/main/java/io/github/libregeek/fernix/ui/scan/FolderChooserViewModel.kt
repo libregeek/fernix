@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.ui.scan
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.libregeek.fernix.data.scan.CheckState
@@ -33,13 +34,15 @@ data class FolderChooserState(
 class FolderChooserViewModel(
     private val media: MediaSource,
     initialSelection: Set<String>,
+    /** The ticked folders are kept here, so a half-made choice survives the process being killed. */
+    private val saved: SavedStateHandle,
 ) : ViewModel() {
 
     private var tree = FolderTree(emptyList())
-    private var selected = initialSelection
+    private var selected: Set<String> = saved.get<ArrayList<String>>(KEY_SELECTED)?.toSet() ?: initialSelection
     private val expanded = HashSet<String>()
 
-    private val _state = MutableStateFlow(FolderChooserState(selected = initialSelection))
+    private val _state = MutableStateFlow(FolderChooserState(selected = selected))
     val state: StateFlow<FolderChooserState> = _state
 
     init {
@@ -53,6 +56,7 @@ class FolderChooserViewModel(
 
     fun toggleSelected(path: String) {
         selected = tree.toggle(selected, path)
+        saved[KEY_SELECTED] = ArrayList(selected)
         publish()
     }
 
@@ -70,5 +74,9 @@ class FolderChooserViewModel(
         }
         tree.roots.forEach { add(it, 0) }
         _state.update { FolderChooserState(loading, rows, selected) }
+    }
+
+    private companion object {
+        const val KEY_SELECTED = "selected"
     }
 }

@@ -46,10 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
@@ -76,7 +79,7 @@ fun TracksScreen(
 ) {
     val vm: TracksViewModel = viewModel(
         key = "tracks$personId-$tagKeyId",
-        factory = viewModelFactory { initializer { TracksViewModel(db, search, playback, personId, tagKeyId) } },
+        factory = viewModelFactory { initializer { TracksViewModel(db, search, playback, createSavedStateHandle(), personId, tagKeyId) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -93,62 +96,68 @@ fun TracksScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        // The search box and the filters live in one container; the icon at its bottom resets all of them.
-        OutlinedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                CompactSearchField(state.text, vm::setText, stringResource(R.string.search_hint))
-                // The chips wrap onto more lines instead of scrolling away.
-                if (state.person != null || state.chips.isNotEmpty()) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        itemVerticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        state.person?.let { person ->
-                            FilterChipItem(person.name) { vm.setPerson(null) }
+        // One list for everything, so in landscape (where the header alone would fill the screen) the search
+        // box, the actions and the results scroll together.
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            item(key = "search") {
+                OutlinedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        CompactSearchField(state.text, vm::setText, stringResource(R.string.search_hint))
+                        // The chips wrap onto more lines instead of scrolling away.
+                        if (state.person != null || state.chips.isNotEmpty()) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                itemVerticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                state.person?.let { person ->
+                                    FilterChipItem(person.name) { vm.setPerson(null) }
+                                }
+                                state.chips.forEach { chip ->
+                                    FilterChipItem("${chip.key}: ${chip.value}") { vm.removeChip(chip) }
+                                }
+                            }
                         }
-                        state.chips.forEach { chip ->
-                            FilterChipItem("${chip.key}: ${chip.value}") { vm.removeChip(chip) }
-                        }
-                    }
-                }
-                // The bottom of the container: add a filter on the left, reset everything on the right.
-                // Neither moves with the chips above, so both are always in view.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    IconButton(onClick = vm::openKeyPicker) {
-                        Icon(painterResource(R.drawable.ic_add), stringResource(R.string.search_add_filter))
-                    }
-                    if (state.hasFilter) {
-                        IconButton(onClick = vm::clearAll) {
-                            Icon(painterResource(R.drawable.ic_clear_all), stringResource(R.string.search_reset))
+                        // The bottom of the container: add a filter on the left, reset everything on the right.
+                        // Neither moves with the chips above, so both are always in view.
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            IconButton(onClick = vm::openKeyPicker) {
+                                Icon(painterResource(R.drawable.ic_add), stringResource(R.string.search_add_filter))
+                            }
+                            if (state.hasFilter) {
+                                IconButton(onClick = vm::clearAll) {
+                                    Icon(painterResource(R.drawable.ic_clear_all), stringResource(R.string.search_reset))
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-        if (state.results.isNotEmpty()) {
-            // Acts on every track matching the search and filters (not only the loaded rows); Add to playlist
-            // offers your playlists, Favourites, or a new playlist made from them.
-            ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
-        }
-        Box(Modifier.fillMaxSize()) {
+            if (state.results.isNotEmpty()) {
+                item(key = "actions") {
+                    // Acts on every track matching the search and filters (not only the loaded rows); Add to
+                    // playlist offers your playlists, Favourites, or a new playlist made from them.
+                    ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
+                }
+            }
             if (state.noResults) {
-                Text(
-                    stringResource(if (state.hasFilter) R.string.search_no_results else R.string.tracks_empty),
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                items(state.results, key = { it.track.id }) { result ->
-                    ResultRow(
-                        result,
-                        onPlay = { vm.playFrom(result.track) },
-                        onEnqueue = { vm.enqueueTrack(result.track) },
-                        onAddToPlaylist = { addTracks = { listOf(result.track) } },
-                        onDetails = { onOpenTrack(result.track.id) },
+                item(key = "none") {
+                    Text(
+                        stringResource(if (state.hasFilter) R.string.search_no_results else R.string.tracks_empty),
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
                     )
                 }
+            }
+            items(state.results, key = { it.track.id }) { result ->
+                ResultRow(
+                    result,
+                    onPlay = { vm.playFrom(result.track) },
+                    onEnqueue = { vm.enqueueTrack(result.track) },
+                    onAddToPlaylist = { addTracks = { listOf(result.track) } },
+                    onDetails = { onOpenTrack(result.track.id) },
+                )
             }
         }
     }
