@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,7 @@ import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.playback.PlaybackController
+import io.github.libregeek.fernix.ui.equalizer.EqualizerSheet
 import kotlinx.coroutines.delay
 
 /** Now Playing (spec/architecture.md §9.1). Album art waits for Coil, so a placeholder stands in. */
@@ -63,14 +65,21 @@ fun NowPlayingScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val player by playback.state.collectAsStateWithLifecycle()
     val track = state.track
+    var showEqualizer by rememberSaveable { mutableStateOf(false) }
+    if (showEqualizer) EqualizerSheet(playback, onDismiss = { showEqualizer = false })
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             IconButton(onClick = onBack) {
                 Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
             }
-            IconButton(onClick = onOpenQueue) {
-                Icon(painterResource(R.drawable.ic_queue_music), stringResource(R.string.queue))
+            Row {
+                IconButton(onClick = { showEqualizer = true }) {
+                    Icon(painterResource(R.drawable.ic_equalizer), stringResource(R.string.equalizer))
+                }
+                IconButton(onClick = onOpenQueue) {
+                    Icon(painterResource(R.drawable.ic_queue_music), stringResource(R.string.queue))
+                }
             }
         }
         if (track == null) {
