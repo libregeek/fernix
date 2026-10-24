@@ -36,7 +36,7 @@ private fun coverOf(open: (Long) -> ParcelFileDescriptor?, mediaStoreId: Long): 
     return TagReader.readPictures(pfd)?.let(Picture::cover)
 }
 
-private fun result(picture: Picture) = SourceFetchResult(
+internal fun result(picture: Picture) = SourceFetchResult(
     source = ImageSource(Buffer().write(picture.data), FileSystem.SYSTEM),
     mimeType = picture.mimeType.ifEmpty { null },
     dataSource = DataSource.DISK,

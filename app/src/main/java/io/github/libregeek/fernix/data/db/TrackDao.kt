@@ -75,6 +75,14 @@ interface TrackDao {
         limit: Int,
     ): List<TrackRow>
 
+    /** The files of a person's first [limit] tracks by `id`, to look for their image. */
+    @Query(
+        "SELECT id, mediaStoreId FROM tracks WHERE id IN " +
+            "(SELECT trackId FROM track_tags WHERE valueId = :personId AND keyId IN (:peopleKeyIds)) " +
+            "ORDER BY id LIMIT :limit",
+    )
+    suspend fun personTrackFiles(personId: Long, peopleKeyIds: List<Long>, limit: Int): List<TrackFile>
+
     /** The files of an album's first [limit] tracks (disc/track order), to look for its art. */
     @Query(
         "SELECT mediaStoreId FROM tracks WHERE albumId = :albumId " +

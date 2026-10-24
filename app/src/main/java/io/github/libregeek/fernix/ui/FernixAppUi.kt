@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -106,6 +107,8 @@ fun FernixAppUi(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             Column {
+                // A scan runs in the background; its progress shows on every screen, above the mini-player.
+                if (scanState is ScanState.Running) ScanProgress(scanState)
                 if (current != Screen.NowPlaying) {
                     MiniPlayer(playback, onOpen = { backStack.push(Screen.NowPlaying) }, onPlayPause = onPlayPause, onNext = onNext)
                 }
@@ -123,16 +126,7 @@ fun FernixAppUi(
         },
     ) { padding ->
         if (current == Screen.Folders) {
-            Column(Modifier.fillMaxSize().padding(padding)) {
-                if (scanState is ScanState.Running) {
-                    Text(
-                        scanState.describe(),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                FoldersScreen(container.database, container.playback, onOpenTrack = openTrack)
-            }
+            FoldersScreen(container.database, container.playback, onOpenTrack = openTrack, scanState = scanState, modifier = Modifier.padding(padding))
             return@Scaffold
         }
         if (current == Screen.NowPlaying) {
@@ -206,6 +200,7 @@ fun FernixAppUi(
             PeopleScreen(
                 container.database,
                 onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
+                scanState = scanState,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -229,6 +224,7 @@ fun FernixAppUi(
                 container.database,
                 container.playback,
                 onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                scanState = scanState,
                 modifier = Modifier.padding(padding),
             )
             return@Scaffold
@@ -257,6 +253,21 @@ fun FernixAppUi(
                     Text(stringResource(R.string.rescan))
                 }
             }
+        }
+    }
+}
+
+/** An indeterminate bar with the number of files processed so far (the total isn't known up front). */
+@Composable
+private fun ScanProgress(state: ScanState.Running) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        Column {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text(
+                state.describe(),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
     }
 }

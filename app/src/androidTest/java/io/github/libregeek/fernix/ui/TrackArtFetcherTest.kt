@@ -13,6 +13,11 @@ import coil3.toBitmap
 import io.github.libregeek.fernix.ui.art.AlbumArt
 import io.github.libregeek.fernix.ui.art.AlbumArtFetcher
 import io.github.libregeek.fernix.ui.art.AlbumArtKeyer
+import io.github.libregeek.fernix.ui.art.PersonArt
+import io.github.libregeek.fernix.ui.art.PersonArtFetcher
+import io.github.libregeek.fernix.ui.art.PersonArtKeyer
+import io.github.libregeek.fernix.ui.art.PersonArtSource
+import io.github.libregeek.fernix.ui.art.PersonArtTrack
 import io.github.libregeek.fernix.ui.art.TrackArt
 import io.github.libregeek.fernix.ui.art.TrackArtFetcher
 import io.github.libregeek.fernix.ui.art.TrackArtKeyer
@@ -50,6 +55,14 @@ class TrackArtFetcherTest {
         }
     }
 
+    /** person id → what the database would give the fetcher: tracks with their role values. */
+    private class FakePeople(val tracks: Map<Long, List<PersonArtTrack>>, val top: String?) : PersonArtSource {
+        override suspend fun tracks(personId: Long, limit: Int) = tracks[personId].orEmpty().take(limit)
+        override suspend fun topRoleKey(personId: Long) = top
+    }
+
+    private var people = FakePeople(emptyMap(), null)
+
     private lateinit var loader: ImageLoader
 
     @Before
@@ -58,6 +71,11 @@ class TrackArtFetcherTest {
             .components {
                 add(TrackArtKeyer())
                 add(TrackArtFetcher.Factory(open))
+                add(PersonArtKeyer())
+                add(PersonArtFetcher.Factory(object : PersonArtSource {
+                    override suspend fun tracks(personId: Long, limit: Int) = people.tracks(personId, limit)
+                    override suspend fun topRoleKey(personId: Long) = people.topRoleKey(personId)
+                }, open))
                 add(AlbumArtKeyer())
                 add(AlbumArtFetcher.Factory({ album, limit -> albums[album].orEmpty().take(limit) }, open))
             }
@@ -108,5 +126,30 @@ class TrackArtFetcherTest {
         assertTrue(load(AlbumArt(11)) is ErrorResult)
         assertTrue(load(AlbumArt(12)) is ErrorResult)
         assertTrue(load(AlbumArt(404)) is ErrorResult)
+    }
+
+    // Fixtures: art.mp3 has back (green), front (red) and a COMPOSER picture "Johnson" (blue);
+    // art.flac has front (red) and an ARTIST picture "Ann" (blue); art.ogg a lead-artist picture "Ann" (blue).
+
+    @Test
+    fun personImage_isTheRoleTypedPictureOfThatPerson_notTheCover() {
+        people = FakePeople(mapOf(1L to listOf(PersonArtTrack(1, mapOf("COMPOSER" to listOf("Mp3 Composer"))))), "COMPOSER")
+        assertEquals(0xFF0000FF.toInt(), pixel(1, PersonArt(1, "Johnson"))) // matched by description, blue
+    }
+
+    @Test
+    fun personImage_searchesTheirTracksInOrder_andSkipsFilesWithoutAMatch() {
+        people = FakePeople(
+            mapOf(2L to listOf(PersonArtTrack(4, emptyMap()), PersonArtTrack(2, emptyMap()))), // opus: none; flac: "Ann"
+            "ARTIST",
+        )
+        assertEquals(0xFF0000FF.toInt(), pixel(2, PersonArt(2, "Ann")))
+    }
+
+    @Test
+    fun personImage_withNoMatchingPicture_isAnError_soInitialsStay() {
+        people = FakePeople(mapOf(3L to listOf(PersonArtTrack(1, emptyMap()), PersonArtTrack(2, emptyMap()))), "ARTIST")
+        assertTrue(load(PersonArt(3, "Nobody")) is ErrorResult) // pictures exist, none is Nobody's
+        assertTrue(load(PersonArt(404, "Ann")) is ErrorResult) // no tracks
     }
 }

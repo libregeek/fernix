@@ -27,12 +27,16 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.data.scan.ScanState
 
 @Composable
-fun PeopleScreen(db: FernixDatabase, onOpenPerson: (Long) -> Unit, modifier: Modifier = Modifier) {
+fun PeopleScreen(db: FernixDatabase, onOpenPerson: (Long) -> Unit, scanState: ScanState, modifier: Modifier = Modifier) {
     val vm: PeopleViewModel = viewModel(factory = viewModelFactory { initializer { PeopleViewModel(db) } })
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    LaunchedEffect(scanState) {
+        if (scanState is ScanState.Finished || (scanState is ScanState.Running && state.empty)) vm.refresh()
+    }
 
     LaunchedEffect(listState, state.people.size) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }

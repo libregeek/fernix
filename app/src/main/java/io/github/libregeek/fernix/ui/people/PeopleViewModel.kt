@@ -32,6 +32,14 @@ class PeopleViewModel(private val db: FernixDatabase) : ViewModel() {
         loadMore()
     }
 
+    /** Starts the list again, e.g. after a scan added or removed people. */
+    fun refresh() {
+        done = false
+        busy = false
+        _state.value = PeopleState()
+        loadMore()
+    }
+
     fun loadMore() {
         if (busy || done) return
         busy = true

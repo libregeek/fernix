@@ -37,6 +37,14 @@ class AlbumsViewModel(
         loadMore()
     }
 
+    /** Starts the list again, e.g. after a scan added or removed albums. */
+    fun refresh() {
+        done = false
+        busy = false
+        _state.value = AlbumsState()
+        loadMore()
+    }
+
     fun loadMore() {
         if (busy || done) return
         busy = true

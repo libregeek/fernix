@@ -39,6 +39,7 @@ import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.FolderEntity
 import io.github.libregeek.fernix.data.db.TrackRow
+import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackController
 import io.github.libregeek.fernix.ui.common.RowMenu
 
@@ -47,6 +48,7 @@ fun FoldersScreen(
     db: FernixDatabase,
     playback: PlaybackController,
     onOpenTrack: (Long) -> Unit,
+    scanState: ScanState,
     modifier: Modifier = Modifier,
 ) {
     val vm: FoldersViewModel = viewModel(
@@ -57,6 +59,12 @@ fun FoldersScreen(
     var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     BackHandler(enabled = state.canGoUp) { vm.up() }
+
+    // The library changes under a running scan: show new music while it runs (only while there is
+    // nothing to show, so the list doesn't jump) and again when it has finished.
+    LaunchedEffect(scanState) {
+        if (scanState is ScanState.Finished || (scanState is ScanState.Running && state.empty)) vm.refresh()
+    }
 
     // Next page when the last loaded row comes into view.
     LaunchedEffect(listState, state.folders.size, state.tracks.size) {

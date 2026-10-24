@@ -109,6 +109,14 @@ interface TagDao {
     )
     fun playingTags(trackId: Long, keyIds: List<Long>): Flow<List<PlayingTag>>
 
+    /** The values a track has under the given [keys] (by name), by key then order. */
+    @Query(
+        "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +
+            "JOIN tag_keys k ON k.id = tt.keyId JOIN tag_values v ON v.id = tt.valueId " +
+            "WHERE tt.trackId = :trackId AND k.`key` IN (:keys) ORDER BY k.`key`, tt.ord",
+    )
+    suspend fun valuesOfKeys(trackId: Long, keys: List<String>): List<PlayingTag>
+
     /** Every tag of one track: all keys, each key's values in stored order (Track details). */
     @Query(
         "SELECT k.`key` AS `key`, v.id AS valueId, v.value AS value FROM track_tags tt " +

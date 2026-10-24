@@ -6,8 +6,11 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
+import io.github.libregeek.fernix.data.db.PersonArtDb
 import io.github.libregeek.fernix.ui.art.AlbumArtFetcher
 import io.github.libregeek.fernix.ui.art.AlbumArtKeyer
+import io.github.libregeek.fernix.ui.art.PersonArtFetcher
+import io.github.libregeek.fernix.ui.art.PersonArtKeyer
 import io.github.libregeek.fernix.ui.art.TrackArtFetcher
 import io.github.libregeek.fernix.ui.art.contentResolverOpener
 import io.github.libregeek.fernix.ui.art.TrackArtKeyer
@@ -33,6 +36,8 @@ class FernixApp : Application(), SingletonImageLoader.Factory {
                 val open = contentResolverOpener(contentResolver)
                 add(TrackArtKeyer())
                 add(TrackArtFetcher.Factory(open))
+                add(PersonArtKeyer())
+                add(PersonArtFetcher.Factory(PersonArtDb(container.database), open))
                 add(AlbumArtKeyer())
                 add(AlbumArtFetcher.Factory({ album, limit -> container.database.trackDao().albumMediaStoreIds(album, limit) }, open))
             }

@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackController
 import io.github.libregeek.fernix.ui.common.RowMenu
 
@@ -39,6 +40,7 @@ fun AlbumsScreen(
     db: FernixDatabase,
     playback: PlaybackController,
     onOpenAlbum: (Long) -> Unit,
+    scanState: ScanState,
     modifier: Modifier = Modifier,
 ) {
     val vm: AlbumsViewModel = viewModel(
@@ -46,6 +48,9 @@ fun AlbumsScreen(
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    LaunchedEffect(scanState) {
+        if (scanState is ScanState.Finished || (scanState is ScanState.Running && state.empty)) vm.refresh()
+    }
     var addTracks by remember { mutableStateOf<(suspend () -> List<TrackRow>)?>(null) }
 
     LaunchedEffect(listState, state.albums.size) {

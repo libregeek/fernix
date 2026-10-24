@@ -34,6 +34,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -43,7 +44,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import coil3.compose.AsyncImage
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.art.PersonArt
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.PlaybackController
@@ -80,7 +83,7 @@ fun PersonDetailScreen(
             }
             val name = state.name
             // No image support yet: initials stand in for the picture (spec §7 "Person images").
-            Initials(name.orEmpty())
+            Initials(personId, name.orEmpty())
             Text(
                 name ?: stringResource(R.string.album_unknown),
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -134,7 +137,7 @@ fun PersonDetailScreen(
 }
 
 @Composable
-private fun Initials(name: String) {
+private fun Initials(personId: Long, name: String) {
     val initials = name.split(' ').filter { it.isNotEmpty() }.take(2)
         .joinToString("") { it.first().uppercase() }
     Box(
@@ -142,6 +145,15 @@ private fun Initials(name: String) {
         contentAlignment = Alignment.Center,
     ) {
         Text(initials, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        // A role-typed embedded picture of this person, if any of their first tracks has one.
+        if (name.isNotEmpty()) {
+            AsyncImage(
+                model = PersonArt(personId, name),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
     }
 }
 

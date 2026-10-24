@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteConstraintException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.libregeek.fernix.tags.PeopleTags
+import io.github.libregeek.fernix.ui.art.PersonArtTrack
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -431,6 +432,27 @@ class DatabaseTest {
         )
         assertEquals("Rock", db.folderDao().byId(f)!!.name)
         assertEquals(null, db.folderDao().byId(9999))
+    }
+
+    @Test
+    fun personArtDb_givesTheFirst20TracksById_withRoleValues_andTheTopRole() = runBlocking {
+        val f = lib.folder()
+        val ids = (1..25).map { lib.track("T$it", f) }
+        ids.forEach { lib.tag(it, "COMPOSER", "Johnson") }
+        lib.tag(ids[0], "ARTIST", "Ann", "Bob")
+        lib.tag(ids[0], "GENRE", "Rock")
+        lib.tag(ids[1], "ARTIST", "Johnson")
+        lib.refreshSummaries(PeopleTags.KEYS)
+        val johnson = lib.valueId("Johnson")
+        val source = PersonArtDb(db)
+
+        val tracks = source.tracks(johnson, limit = 20)
+        assertEquals(20, tracks.size)
+        assertEquals(ids.take(20).map { runBlocking { db.trackDao().byId(it)!!.mediaStoreId } }, tracks.map { it.mediaStoreId })
+        assertEquals(mapOf("COMPOSER" to listOf("Johnson"), "ARTIST" to listOf("Ann", "Bob")), tracks[0].valuesByKey)
+        assertEquals(setOf("COMPOSER", "ARTIST"), tracks[1].valuesByKey.keys)
+        assertEquals("COMPOSER", source.topRoleKey(johnson)) // 25 composer tracks vs 1 artist track
+        assertEquals(emptyList<PersonArtTrack>(), source.tracks(lib.valueId("Rock"), 20))
     }
 
     // --- default playlists and play history ---

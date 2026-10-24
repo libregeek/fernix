@@ -51,10 +51,18 @@ class FoldersViewModel(
     private var generation = 0
 
     init {
+        refresh()
+    }
+
+    /**
+     * Loads the volumes and the open folder again, e.g. after a scan added or removed some. The
+     * folder you are in is kept; the top level follows the volumes (a single volume is skipped).
+     */
+    fun refresh() {
         viewModelScope.launch {
             val volumes = withContext(Dispatchers.IO) { db.folderDao().volumes() }
             lockedRoot = volumes.singleOrNull()
-            lockedRoot?.let { stack = listOf(it) }
+            if (stack.isEmpty()) lockedRoot?.let { stack = listOf(it) }
             reset(volumes)
         }
     }

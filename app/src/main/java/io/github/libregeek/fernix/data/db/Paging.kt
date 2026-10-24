@@ -33,6 +33,9 @@ data class PersonRow(val valueId: Long, val name: String, val trackCount: Int)
 
 data class KeyValueRow(val valueId: Long, val value: String, val trackCount: Int)
 
+/** A track's id and the MediaStore id of its file. */
+data class TrackFile(val id: Long, val mediaStoreId: Long)
+
 /** One value of a tag key on the playing track; [valueId] is the person id for a people key. */
 data class PlayingTag(val key: String, val valueId: Long, val value: String)
 

@@ -97,12 +97,12 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [x] Default playlists on the Playlists tab, above the user's own: Favourites (editable), Recently Added, All Songs, Never Played, Most Played (read-only: no remove/rename/delete, not offered by *Add to playlist*); detail screen reused with Play and Shuffle [§5, §9] (added 2026-10-24)
 - [x] *Add to playlist* picker offers Favourites and user playlists only (added 2026-10-24)
 - [x] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row
-- [ ] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
+- [x] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
 - [ ] Album details via album name: tapping an album name anywhere (track rows, Now Playing, track details) opens album art, name, year (hidden when 0) and the track list by disc/track — done from Now Playing, track details and the Albums list; the album name on plain track rows isn't tappable (those rows show no album)
 - [x] JNI additions: `AudioProperties` call and `PICTURE` complex-properties call (picture type, description, MIME, bytes) in `tag_reader.cpp` / `TagReader.kt`, with instrumented tests on MP3, FLAC, Ogg incl. role-typed pictures [§7] — both done (`TagReader.readPictures` and `readAudioProperties`, tested on MP3/FLAC/Ogg/Opus/WAV)
 - [x] Coil (`coil-compose`) album art from embedded art via content URI [§2] — `TrackArt` model + fetcher; used on Now Playing and the album details header; person images still to wire
 - [ ] Vector icons copied in as drawables (no `material-icons-extended`), including heart (filled and outline) for Favourites
-- [ ] Scan progress indicator
+- [x] Scan progress indicator (a bar and the file count above the mini-player on every screen; Folders, Albums and People reload when a scan finishes)
 
 ## Phase 6 — Now Playing & Queue
 
