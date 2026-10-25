@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import coil3.compose.AsyncImage
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.ArtPlaceholder
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.tags.TagSplitter
@@ -110,12 +111,7 @@ fun TrackDetailScreen(
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                painterResource(R.drawable.ic_launcher_monochrome),
-                null,
-                modifier = Modifier.fillMaxSize(),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            ArtPlaceholder()
             AsyncImage(
                 model = TrackArt(track.mediaStoreId),
                 contentDescription = null,

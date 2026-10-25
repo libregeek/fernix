@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.media3.common.Player
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.ArtPlaceholder
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.playback.PlaybackController
@@ -123,12 +124,7 @@ fun NowPlayingScreen(
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painterResource(R.drawable.ic_launcher_monochrome),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    ArtPlaceholder()
                     // Over the placeholder: nothing is drawn while loading or when the file has no picture.
                     AsyncImage(
                         model = TrackArt(track.mediaStoreId),

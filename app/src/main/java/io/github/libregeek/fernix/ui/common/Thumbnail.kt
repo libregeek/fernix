@@ -30,12 +30,7 @@ fun Thumbnail(model: Any, modifier: Modifier = Modifier) {
         modifier.size(48.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            painterResource(R.drawable.ic_launcher_monochrome),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        ArtPlaceholder()
         AsyncImage(
             model = model,
             contentDescription = null,
