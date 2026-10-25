@@ -253,7 +253,6 @@ fun FernixAppUi(
                     scanState = scanState,
                     settings = container.settings,
                     onOpenTrack = openTrack,
-                    onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
                     onSettings = openSettings,
                     modifier = Modifier.padding(padding),
                 )
@@ -301,7 +300,6 @@ fun FernixAppUi(
                     container.playback,
                     onBack = { backStack.pop() },
                     onOpenTrack = openTrack,
-                    onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
                     modifier = Modifier.padding(padding),
                 )
                 return@Scaffold

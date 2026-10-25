@@ -66,7 +66,6 @@ fun PersonDetailScreen(
     playback: PlaybackController,
     onBack: () -> Unit,
     onOpenTrack: (Long) -> Unit,
-    onOpenAlbum: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: PersonDetailViewModel = viewModel(
@@ -130,7 +129,6 @@ fun PersonDetailScreen(
                             trackAlbumLine(track.album, track.date)?.let {
                                 Text(
                                     it,
-                                    modifier = track.albumId?.let { id -> Modifier.clickable { onOpenAlbum(id) } } ?: Modifier,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,

@@ -85,7 +85,6 @@ fun TracksScreen(
     search: TrackSearch,
     playback: PlaybackController,
     onOpenTrack: (Long) -> Unit,
-    onOpenAlbum: (Long) -> Unit,
     modifier: Modifier = Modifier,
     personId: Long = 0,
     tagKeyId: Long = 0,
@@ -204,7 +203,6 @@ fun TracksScreen(
                     onEnqueue = { vm.enqueueTrack(result.track) },
                     onAddToPlaylist = { addTracks = { listOf(result.track) } },
                     onDetails = { onOpenTrack(result.track.id) },
-                    onOpenAlbum = result.track.albumId?.let { id -> { onOpenAlbum(id) } },
                 )
             }
         }
@@ -292,8 +290,6 @@ private fun ResultRow(
     onEnqueue: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onDetails: () -> Unit,
-    /** Opens the album details; null for a track with no album. */
-    onOpenAlbum: (() -> Unit)?,
 ) {
     val track = result.track
     val album = trackAlbumLine(track.album, track.date)
@@ -309,8 +305,7 @@ private fun ResultRow(
         } else {
             {
                 Column {
-                    // The album line has its own tap (the album details); the rest of the row plays.
-                    album?.let { if (onOpenAlbum != null) Box(Modifier.clickable(onClick = onOpenAlbum)) { SmallLine(it) } else SmallLine(it) }
+                    album?.let { SmallLine(it) }
                     artists?.let { SmallLine(it) }
                     if (result.roles.isNotEmpty()) SmallLine(result.roles.joinToString(", "), MaterialTheme.colorScheme.tertiary)
                 }
