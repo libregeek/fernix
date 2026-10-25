@@ -58,7 +58,7 @@ Phases are ordered so each one ends in something runnable and testable.
 - [x] Library folders screen: in-app chooser (volumes → folder tree, reads only `VOLUME_NAME` + `RELATIVE_PATH`), shown on first launch before the first scan [§6, §9]
 - [x] MediaStore discovery cursor ordered by `_ID`, limited to mounted volumes and the scan scope (folder test in code) [§6.1]
 - [x] Constant-memory merge-walk diff against `tracks` cursor (new / changed / vanished / out of scope) [§6.2]
-- [ ] Unmounted volumes: skip them, keep their tracks (and playlist entries), show as unavailable [§6] — skip/keep logic done; the "unavailable" display waits for the Phase 5 screens
+- [ ] Unmounted volumes: skip them, keep their tracks (and playlist entries), show as unavailable [§6] — skip/keep logic done. **Still open (2026-10-25):** the "unavailable" display was never built (the screens exist now; nothing marks a track on a missing volume, and a tap just fails to play and goes to the problem log)
 - [x] Folder tree builder from `VOLUME_NAME` + `RELATIVE_PATH` [§5]
 - [x] Tag ingestion: `openFileDescriptor` → `TagReader`; derive `trackNumber`, `discNumber`, `year`, album link [§6.3]
 - [x] Batched persistence (~500 tracks/transaction), id caches, `track_tags` replace on re-parse, `key_values` and `people` recompute [§6.4]
@@ -98,10 +98,10 @@ Each screen: one ViewModel, `StateFlow` UI state, paged `LazyColumn`.
 - [x] *Add to playlist* picker offers Favourites and user playlists only (added 2026-10-24)
 - [x] Track details screen: cover art, all tags (every `track_tags` key/value, multi-values listed), technical details from TagLib `AudioProperties` (format, duration, bitrate, sample rate, channels, bits per sample; read on demand, not stored) [§7, §9], file details (name, folder, volume, size, modified date, content URI); reachable from every track row
 - [x] Person details screen: image from an embedded picture typed Artist/Lead artist/Band/Conductor/Composer/Lyricist (matched by role key and description, initials placeholder otherwise) [§7], roles (the tag keys they appear under, e.g. COMPOSER, PERFORMER:*) and the list of all their tracks; reached from the People list and from tappable people values
-- [ ] Album details via album name: tapping an album name anywhere (track rows, Now Playing, track details) opens album art, name, year (hidden when 0) and the track list by disc/track — done from Now Playing, track details and the Albums list; the album name on plain track rows isn't tappable (those rows show no album)
+- [ ] Album details via album name: tapping an album name opens album art, name, year (hidden when 0) and the track list by disc/track — done from Now Playing, track details and the Albums list. **Still open (2026-10-25):** track rows now show the album line (`Album (1996)`), but it isn't tappable, because a tap on the row plays it; give the album line its own tap target, or leave it as is
 - [x] JNI additions: `AudioProperties` call and `PICTURE` complex-properties call (picture type, description, MIME, bytes) in `tag_reader.cpp` / `TagReader.kt`, with instrumented tests on MP3, FLAC, Ogg incl. role-typed pictures [§7] — both done (`TagReader.readPictures` and `readAudioProperties`, tested on MP3/FLAC/Ogg/Opus/WAV)
 - [x] Coil (`coil-compose`) album art from embedded art via content URI [§2] — `TrackArt` model + fetcher; used on Now Playing and the album details header; person images still to wire
-- [ ] Vector icons copied in as drawables (no `material-icons-extended`), including heart (filled and outline) for Favourites
+- [x] Vector icons copied in as drawables (no `material-icons-extended`), including heart (filled and outline) for Favourites — checked 2026-10-25: no `material-icons-extended` dependency; the icons are drawables, with `ic_favorite` and `ic_favorite_border`
 - [x] Scan progress indicator (a bar and the file count above the mini-player on every screen; Folders, Albums and People reload when a scan finishes)
 
 ## Phase 5b — Tracks screen redesign (2026-10-24)
@@ -132,7 +132,7 @@ The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§
 - [x] `LibraryTopBar`: title, search icon and gear; the search icon opens a field under the title, which stays (the icon or Back closes and clears, the cross clears the text)
 - [x] Tracks: the boxed search container is gone; the add-filter (+) icon is in the top bar, the filter chips and the reset icon at the top of the list
 - [x] Albums, People and Playlists: search by any part of the name, no filters; the query is kept in saved state; `DatabaseTest` covers the contains pattern and the escaped wildcards
-- [ ] Check rotation and landscape of the top bar by hand
+- [x] Check rotation and landscape of the top bar by hand — checked 2026-10-25 on the API 36 emulator (320×640 dp rotated): Tracks, Albums, Playlists and People keep the title and icons on one line and open the search row under the bar; the Tracks search with a typed text and the Sort button also fit
 
 ### AAC (M4A) support (2026-10-24, from review)
 
@@ -162,7 +162,7 @@ The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§
 - [x] Track row: title; then album with its date in brackets and the artists, both smaller (`TrackRow` gains `date`)
 - [x] Reset moved to the bottom of the container and made an icon (add-filter icon on its left), so the search box has the full width; the search box is a slim 40 dp pill (`CompactSearchField`)
 - [x] The three result actions form one tonal capsule; **Add to playlist** is reworked as a bottom sheet (`AddToPlaylistSheet`: highlighted New playlist row with an inline name field, Favourites and playlists as rounded tiles with counts, a toast on success) instead of a plain dialog
-- [ ] The same icon actions on the album and playlist detail screens (they still have text buttons; person details now has them) — only if wanted
+- [ ] The same icon actions on the album and playlist detail screens — album details has them now (`ListActions`, checked 2026-10-25); the playlist detail screen still has text buttons — only if wanted
 
 ## Phase 6 — Now Playing & Queue
 
