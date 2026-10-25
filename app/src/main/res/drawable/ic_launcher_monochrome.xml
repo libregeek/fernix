@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Themed-icon version: the notes only. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="56" android:scaleX="0.85" android:scaleY="0.85">
+        <group android:pivotX="41" android:pivotY="77" android:rotation="-20">
+            <path android:fillColor="#FFFFFF" android:pathData="M31.4,77a9.6,7 0 1,0 19.2,0a9.6,7 0 1,0 -19.2,0Z" />
+        </group>
+        <group android:pivotX="69" android:pivotY="71" android:rotation="-20">
+            <path android:fillColor="#FFFFFF" android:pathData="M59.4,71a9.6,7 0 1,0 19.2,0a9.6,7 0 1,0 -19.2,0Z" />
+        </group>
+        <path android:strokeColor="#FFFFFF" android:strokeAlpha="1.0" android:strokeWidth="4.2" android:strokeLineCap="round" android:pathData="M48.7,75.5V36M76.7,69.5V30" />
+        <path android:fillColor="#FFFFFF" android:pathData="M46.6,36L78.8,28.4V37L46.6,44.6Z" />
+    </group>
+</vector>

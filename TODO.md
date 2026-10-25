@@ -205,5 +205,5 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 - [x] R8 release build checked (JNI classes kept in `proguard-rules.pro`): `assembleRelease` builds; the signed release APK was installed on the emulator and scanned, listed, showed tags and covers (TagLib JNI, Room, Coil), opened Track details and played, with no crash in logcat (2026-10-24)
 - [x] Confirm APK size is reasonable; drop anything unused: release APK 8.2 MB unsigned for three ABIs (classes.dex 4.1 MB, `libfernix.so` 0.8–1.4 MB per ABI); nothing unused found. F-Droid can build per-ABI splits if wanted (2026-10-24)
 - [x] README updated for user-visible features, permissions, formats (the default playlists and that play history stays on the device are covered; permissions table matches the release manifest, checked 2026-10-24)
-- [x] F-Droid metadata (`fastlane/metadata/android/en-US`: title, short and full description, changelog for versionCode 1, 512 px icon), app icon (beamed notes and fern frond, 2026-10-24)
+- [x] F-Droid metadata (`fastlane/metadata/android/en-US`: title, short and full description, changelog for versionCode 1, 512 px icon), app icon (beamed notes over an embossed fern frond, reworked 2026-10-25)
 - [ ] Tag `v0.1.0` (waiting for the maintainer's go-ahead)
