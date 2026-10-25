@@ -1,0 +1,1 @@
+Scan only the folders you choose, and keep scanning when you leave the app. Fixes MP3s that were listed without tags, adds Re-read all tags, track count, a Library section on Track details, and Now Playing opens when you start a track.
