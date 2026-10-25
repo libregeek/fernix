@@ -24,7 +24,7 @@ sudo dnf install -y git unzip which java-25-openjdk-devel android-tools
 | `git` | Source control; TagLib is a git submodule. |
 | `unzip`, `which` | Needed by the SDK command-line tools and Gradle scripts. |
 | `java-25-openjdk-devel` | JDK to run Gradle. Fedora 44 ships JDK 25 (the project uses Gradle ≥ 9.1, which supports it). Android Studio bundles its own JDK, so Path A users may skip it. |
-| `android-tools` | System `adb`/`fastboot` and udev rules so physical devices are accessible without root. (The SDK also ships its own `adb`; either works — keep them on the same major version to avoid "adb server version mismatch".) |
+| `android-tools` | The only `adb`/`fastboot` used by this guide, plus udev rules so physical devices are accessible without root. It replaces the SDK's `platform-tools` package, which is deliberately **not** installed (section 4) — two different `adb` binaries cause "adb server version mismatch". |
 
 Verify:
 
@@ -78,7 +78,7 @@ else
     ANDROID_HOME="/opt/android-sdk"
 fi
 export ANDROID_HOME
-export PATH="/opt/android-studio/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+export PATH="/opt/android-studio/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$PATH"
 EOF
 ```
 
@@ -146,40 +146,14 @@ This creates `/opt/android-studio`, owned by root and readable/executable by eve
 studio.sh &
 ```
 
-### A3. Optional: desktop menu entry for all users
+### A3. First launch (each user)
 
-Skip this if you start Android Studio from the terminal.
-
-```bash
-sudo tee /usr/share/applications/android-studio.desktop >/dev/null <<'EOF'
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Android Studio
-GenericName=Android IDE
-Comment=Develop Android applications
-Exec=/opt/android-studio/bin/studio.sh %f
-Icon=/opt/android-studio/bin/studio.svg
-Categories=Development;IDE;
-Terminal=false
-StartupNotify=true
-StartupWMClass=jetbrains-studio
-EOF
-
-sudo desktop-file-validate /usr/share/applications/android-studio.desktop
-sudo update-desktop-database /usr/share/applications
-```
-
-Android Studio now appears in the GNOME/KDE application menu for every user (log out and back in if it doesn't show up immediately). Users should **not** use *Tools → Create Desktop Entry* inside Studio — that would create a duplicate per-user entry.
-
-### A4. First launch (each user)
-
-1. Start Android Studio: `studio.sh &` (or from the application menu if you did A3).
+1. Start Android Studio: `studio.sh &`.
 2. In the setup wizard choose **Custom** and set the SDK location to **`/opt/android-sdk`**. (Do *not* accept the default `~/Android/Sdk` — that would download a personal SDK and opt you out, see 3.4.)
 3. Missing components can be added via *Settings → Languages & Frameworks → Android SDK* (tick *Show Package Details* for exact NDK/CMake versions) — `androiddev` members only, and coordinate with others (section 3.3).
 4. *File → Open* the `fernix` directory. Studio writes `sdk.dir=/opt/android-sdk` to the project's untracked `local.properties`.
 
-### A5. Updating Android Studio (admin)
+### A4. Updating Android Studio (admin)
 
 Because `/opt/android-studio` is root-owned, the in-app updater cannot patch it — users will see update notifications but cannot apply them. To update:
 
@@ -194,7 +168,7 @@ sudo restorecon -R /opt/android-studio
 sudo rm -rf /opt/android-studio.old
 ```
 
-`studio.sh` (and the desktop entry, if created) keeps working since the path is unchanged. On first start after a major update, each user is offered to import settings from the previous version.
+`studio.sh` keeps working since the path is unchanged. On first start after a major update, each user is offered to import settings from the previous version.
 
 ## Path B — Command line + FOSS editor
 
@@ -215,13 +189,16 @@ Run as an `androiddev` member (once, into the shared SDK) — or as yourself if 
 yes | sdkmanager --licenses
 
 sdkmanager \
-  "platform-tools" \
   "platforms;android-37.0" \
   "build-tools;36.0.0" \
   "ndk;28.2.13676358" \
   "cmake;3.31.6" \
   "emulator"
 ```
+
+`adb` and `fastboot` come from Fedora's `android-tools` (section 1), so `platform-tools` is intentionally skipped. Do not install it later (e.g. from Android Studio's SDK Manager or when a tool prompts for it), or you will have two `adb` versions. The emulator uses whichever `adb` is first on `PATH`, which is `/usr/bin/adb`.
+
+> **Why not Fedora's `python3-sdkmanager`?** It is a third-party re-implementation (F-Droid project) of `sdkmanager`, and there is no matching `avdmanager`. This guide uses Google's command-line tools (section 3.3) so that `sdkmanager` and `avdmanager` behave as documented.
 
 Emulator system images — use **AOSP `default`** images (no Google APIs / Play Store) so testing matches de-Googled ROMs. Test the minimum API (29) and the newest API with an AOSP image (36 — there is no AOSP `default` image for API 37 yet; test API 37 on a real device):
 
@@ -327,4 +304,4 @@ And inspect the dependency tree for anything unexpected:
 | `Permission denied` / `Failed to install` under `/opt/android-sdk` | You are not in `androiddev` (or haven't logged in again since being added): check with `id -nG`. If files were created before the ACLs were set: `sudo setfacl -R -m g:androiddev:rwX -m d:g:androiddev:rwX /opt/android-sdk`. |
 | Wrong SDK used (shared vs personal) | `echo $ANDROID_HOME`; check `sdk.dir` in the project's `local.properties`. See 3.4. |
 | Emulator window black / crashes under Wayland | `emulator -avd <name> -gpu swiftshader_indirect`, or start with `QT_QPA_PLATFORM=xcb`. |
-| `adb server version (x) doesn't match this client (y)` | Two `adb`s on PATH. `adb kill-server`, then use one consistently (SDK `platform-tools` is first on PATH per section 3). |
+| `adb server version (x) doesn't match this client (y)` | Two `adb`s on PATH, usually because `platform-tools` was installed into the SDK. Check with `which -a adb`; `adb kill-server`, then remove it with `sdkmanager --uninstall "platform-tools"` so only Fedora's `/usr/bin/adb` remains. |
