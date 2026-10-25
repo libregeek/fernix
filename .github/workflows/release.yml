@@ -15,10 +15,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Android SDK pieces
+      - name: Accept the Android SDK licences
         run: |
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "ndk;28.2.13676358" "cmake;3.31.6" "build-tools;36.0.0" "platforms;android-37"
+          # Written by hand, so this does not depend on sdkmanager; Gradle then installs what it needs.
+          mkdir -p "$ANDROID_HOME/licenses"
+          printf '\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n' > "$ANDROID_HOME/licenses/android-sdk-license"
+          printf '\n84831b9409646a918e30573bab4c9c91346d8abd\n' > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+      - name: Install the NDK and CMake (best effort)
+        continue-on-error: true
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --install "ndk;28.2.13676358" "cmake;3.31.6" || echo "sdkmanager could not install them; Gradle will try"
+          "$SDKMANAGER" --list_installed || true
       - name: Build
         run: ./gradlew assembleRelease
       - name: No INTERNET permission
@@ -30,7 +38,8 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          BT=$ANDROID_HOME/build-tools/36.0.0
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          echo "Using $BT"
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           $BT/zipalign -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/aligned.apk"
           $BT/apksigner sign --ks "$RUNNER_TEMP/release.jks" --ks-key-alias "$KEY_ALIAS" \
