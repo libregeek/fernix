@@ -57,6 +57,7 @@ fun SettingsScreen(
     scanning: Boolean,
     unreadable: Int,
     onRescan: () -> Unit,
+    onRereadTags: () -> Unit,
     onChangeFolders: () -> Unit,
     problems: ProblemLog,
     onOpenProblems: () -> Unit,
@@ -66,6 +67,19 @@ fun SettingsScreen(
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { initializer { SettingsViewModel(db, settings) } })
     val state by vm.state.collectAsStateWithLifecycle()
     var picking by rememberSaveable { mutableStateOf<Int?>(null) }
+    var confirmReread by rememberSaveable { mutableStateOf(false) }
+
+    if (confirmReread) {
+        AlertDialog(
+            onDismissRequest = { confirmReread = false },
+            title = { Text(stringResource(R.string.reread_title)) },
+            text = { Text(stringResource(R.string.reread_note)) },
+            confirmButton = {
+                TextButton(onClick = { confirmReread = false; onRereadTags() }) { Text(stringResource(R.string.reread_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmReread = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -87,6 +101,8 @@ fun SettingsScreen(
             OutlinedButton(onClick = onChangeFolders, enabled = !scanning) { Text(stringResource(R.string.settings_change_folders)) }
             Text(stringResource(R.string.settings_rescan_detail), style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onRescan, enabled = !scanning) { Text(stringResource(R.string.rescan)) }
+            Text(stringResource(R.string.settings_reread_detail), style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick = { confirmReread = true }, enabled = !scanning) { Text(stringResource(R.string.reread_tags)) }
             if (unreadable > 0) {
                 Text(
                     pluralStringResource(R.plurals.scan_unreadable, unreadable, unreadable),

@@ -46,6 +46,11 @@
     <string name="scope_remove_note">Your music files are not touched, and adding the folders back brings the tracks back.</string>
     <string name="scope_remove_confirm">Remove and rescan</string>
     <string name="settings_rescan_detail">Look for new, changed and removed music.</string>
+    <string name="settings_reread_detail">Read the tags of every file again, for files whose tags were missed.</string>
+    <string name="reread_tags">Re-read all tags</string>
+    <string name="reread_title">Read all tags again?</string>
+    <string name="reread_note">Fernix reads every file in your folders again, which takes about as long as the first scan. Tags you split on Track details come back whole. Playlists and play history are kept, and your music files are not touched.</string>
+    <string name="reread_confirm">Read again</string>
     <string name="settings_np_tags">Now Playing tags</string>
     <string name="settings_np_tags_detail">The three tags shown under the title on Now Playing.</string>
     <string name="settings_slot">Slot %d</string>

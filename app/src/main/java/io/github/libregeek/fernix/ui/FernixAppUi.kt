@@ -198,6 +198,7 @@ fun FernixAppUi(
                     scanning = scanState is ScanState.Running,
                     unreadable = (scanState as? ScanState.Finished)?.unreadable ?: 0,
                     onRescan = onRescan,
+                    onRereadTags = container::rereadAllTags,
                     onChangeFolders = { backStack.push(Screen.LibraryFolders) },
                     problems = container.problems,
                     onOpenProblems = { backStack.push(Screen.ProblemFiles) },

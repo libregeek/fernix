@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Manual dependency container, owned by [FernixApp] (spec/architecture.md §2). Add the database,
@@ -104,6 +105,19 @@ class AppContainer(context: Context) {
      */
     /** True from the moment a scan is asked for until it ends; [ScanService] lasts as long as this. */
     val scanActive = MutableStateFlow(false)
+
+    /**
+     * Reads the tags of every track again (spec/architecture.md §6 *Re-reading tags*): forgets the stored
+     * file dates, then scans, so the diff finds every file changed. An interrupted run resumes at the next
+     * scan, since a track is marked read again only when its tags have been read.
+     */
+    fun rereadAllTags() {
+        if (scanner.state.value is ScanState.Running) return
+        appScope.launch {
+            withContext(Dispatchers.IO) { database.trackDao().forgetFileDates() }
+            startScan()
+        }
+    }
 
     fun changeScope(scope: ScanScope) {
         settings.scanScope = scope

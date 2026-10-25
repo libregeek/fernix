@@ -95,6 +95,28 @@ class LibraryScannerTest {
     }
 
     @Test
+    fun forgettingFileDates_makesTheNextScanReadEveryFileAgain_andKeepsPlayHistory() = runBlocking {
+        add(1, t = arrayOf("TITLE" to listOf("A")))
+        add(2, t = arrayOf("TITLE" to listOf("B")))
+        scanner().scan(EVERYTHING)
+        db.openHelper.writableDatabase.execSQL("UPDATE tracks SET playCount = 3 WHERE mediaStoreId = 1")
+        // The file now has a title it did not have when it was first read.
+        tags.tags[2] = mapOf("TITLE" to listOf("B (fixed)"))
+        val readsBefore = tags.reads
+
+        db.trackDao().forgetFileDates()
+        scanner().scan(EVERYTHING)
+
+        assertEquals(2, tags.reads - readsBefore)
+        assertEquals(1L, db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM tracks WHERE title = 'B (fixed)'").use { it.moveToFirst(); it.getLong(0) })
+        assertEquals(3L, db.openHelper.readableDatabase.query("SELECT playCount FROM tracks WHERE mediaStoreId = 1").use { it.moveToFirst(); it.getLong(0) })
+        // Read once more, nothing is read a third time.
+        val reads = tags.reads
+        scanner().scan(EVERYTHING)
+        assertEquals(reads, tags.reads)
+    }
+
+    @Test
     fun changedAndVanishedFiles_areApplied_andCleanedUp() = runBlocking {
         add(1, "external_primary/Music/Rock", t = arrayOf("ALBUM" to listOf("X"), "ARTIST" to listOf("Ann")))
         add(2, "external_primary/Music/Jazz", t = arrayOf("ALBUM" to listOf("Y"), "ARTIST" to listOf("Bob")))

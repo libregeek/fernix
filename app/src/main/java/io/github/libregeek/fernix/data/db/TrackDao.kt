@@ -156,6 +156,13 @@ interface TrackDao {
     )
     suspend fun mostPlayed(): List<TrackRow>
 
+    /**
+     * Forgets every file date, so the next scan sees each track as changed and reads its tags again (the
+     * *Re-read all tags* action; play history and playlist entries are kept, as in any re-parse).
+     */
+    @Query("UPDATE tracks SET dateModified = 0")
+    suspend fun forgetFileDates()
+
     /** The size of *Never Played*; a track is in it while `lastPlayedAt` is null. */
     @Query("SELECT COUNT(*) FROM tracks WHERE lastPlayedAt IS NULL")
     suspend fun neverPlayedCount(): Int
