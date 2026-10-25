@@ -225,3 +225,6 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
   - The playlist delete, scope-removal and split confirmations are still centred dialogs; name prompts are bottom sheets.
   - The album line no longer opens the album on Tracks and Person details rows.
 - [ ] Instrumented tests for the 2026-10-25 changes (TagLib fallback for MP3s with a long gap before the first frame, ID3v1/v2.2/v2.3 reads, the folder-only scope settings): all 185 pass on the API 36 emulator (`ScaleTest` skips without a size; the runner reports it as one failure) — still to run on API 29 (`fernix-api29`), and to try a 16K-track import on a real device.
+
+## Wishlist
+- [] Album details screen - tapping on the role shall filter the tracks
