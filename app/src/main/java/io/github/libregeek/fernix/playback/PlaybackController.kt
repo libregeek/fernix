@@ -13,7 +13,9 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import androidx.media3.session.SessionToken
 import io.github.libregeek.fernix.data.db.TrackRow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /** What the UI needs to know about playback; the details of a track come from the database. */
@@ -56,6 +58,14 @@ class PlaybackController(
     private val appContext = context.applicationContext
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state
+
+    private val _started = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * Emits when the user starts a track or list with [play]; the shell then shows Now Playing. Not
+     * emitted for [enqueue], the notification, the queue, auto-advance or a play that was refused.
+     */
+    val started: SharedFlow<Unit> = _started
 
     private val _queue = MutableStateFlow<List<QueueItem>>(emptyList())
 
@@ -126,6 +136,7 @@ class PlaybackController(
         }
         val first = start?.let { s -> playable.indexOfFirst { it.id == s.id } }?.coerceAtLeast(0) ?: 0
         playItems(playable.map(MediaItems::of), first, shuffle)
+        if (playable.isNotEmpty()) _started.tryEmit(Unit)
     }
 
     private fun reportUnavailable() {

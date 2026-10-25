@@ -129,6 +129,9 @@ fun FernixAppUi(
 
     BackHandler(enabled = backStack.canPop) { backStack.pop() }
 
+    // Starting a track or list from any screen shows Now Playing (spec §9); Back returns to where it was started.
+    LaunchedEffect(Unit) { container.playback.started.collect { backStack.showNowPlaying() } }
+
     // Tracks on a volume that is not mounted are marked in every list and cannot be played (spec §6).
     val unavailable by container.volumes.unavailableFolders.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { container.volumes.refresh() }

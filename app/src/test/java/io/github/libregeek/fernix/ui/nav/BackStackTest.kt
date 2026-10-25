@@ -74,4 +74,32 @@ class BackStackTest {
             Screen.entries.filter { it.isTab },
         )
     }
+
+    @Test
+    fun showNowPlaying_pushesItOnTopOfTheList() {
+        val back = BackStack()
+        back.push(Screen.Albums)
+        back.showNowPlaying()
+        assertEquals(listOf(Screen.Tracks, Screen.Albums, Screen.NowPlaying), back.stack)
+        back.pop()
+        assertEquals(Screen.Albums, back.current)
+    }
+
+    @Test
+    fun showNowPlaying_whenAlreadyInTheStack_popsBackToIt() {
+        val back = BackStack()
+        back.push(Screen.NowPlaying)
+        back.push(Screen.Tracks, 7)
+        back.push(Screen.AlbumDetail, 3)
+        back.showNowPlaying()
+        assertEquals(listOf(Screen.Tracks, Screen.NowPlaying), back.stack)
+    }
+
+    @Test
+    fun showNowPlaying_onNowPlaying_changesNothing() {
+        val back = BackStack()
+        back.push(Screen.NowPlaying)
+        back.showNowPlaying()
+        assertEquals(listOf(Screen.Tracks, Screen.NowPlaying), back.stack)
+    }
 }

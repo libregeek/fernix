@@ -61,6 +61,19 @@ class BackStack(initial: List<BackEntry> = listOf(BackEntry(Screen.Tracks))) {
         return true
     }
 
+    /**
+     * Shows Now Playing: pops back to it if it is already in the stack (a play started from a list
+     * that was opened from Now Playing), else pushes it.
+     */
+    fun showNowPlaying() {
+        val at = entries.indexOfLast { it.screen == Screen.NowPlaying }
+        if (at >= 0) {
+            while (entries.lastIndex > at) entries.removeAt(entries.lastIndex)
+        } else {
+            push(Screen.NowPlaying)
+        }
+    }
+
     fun switchTab(tab: Screen) {
         require(tab.isTab) { "$tab is not a tab" }
         entries.clear()
