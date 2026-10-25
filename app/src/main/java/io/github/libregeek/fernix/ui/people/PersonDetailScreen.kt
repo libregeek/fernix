@@ -17,11 +17,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import io.github.libregeek.fernix.ui.common.ListItem
@@ -37,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,23 +84,23 @@ fun PersonDetailScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
-            }
-            val name = state.name
-            // No image support yet: initials stand in for the picture (spec §7 "Person images").
-            Initials(personId, name.orEmpty())
-            Text(
-                name ?: stringResource(R.string.album_unknown),
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        IconButton(onClick = onBack) {
+            Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.album_back))
         }
         // The roles and the actions are items of the list, so in landscape everything scrolls together.
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            item(key = "header") {
+                // The picture as large as the cover on Track details, with the name under it.
+                Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    PersonImage(personId, state.name.orEmpty())
+                    Text(
+                        state.name ?: stringResource(R.string.album_unknown),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
             if (state.name != null) {
                 if (state.roles.isNotEmpty()) {
                     item(key = "roles") {
@@ -157,15 +159,22 @@ fun PersonDetailScreen(
     addTracks?.let { AddToPlaylistSheet(db, it) { addTracks = null } }
 }
 
+/** Same size and shape as the cover on Track details (spec §9.10): a rounded square, up to 240 dp. */
 @Composable
-private fun Initials(personId: Long, name: String) {
+private fun PersonImage(personId: Long, name: String) {
     val initials = name.split(' ').filter { it.isNotEmpty() }.take(2)
         .joinToString("") { it.first().uppercase() }
     Box(
-        Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.tertiaryContainer),
+        Modifier
+            .padding(horizontal = 80.dp)
+            .widthIn(max = 240.dp)
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        Text(initials, color = MaterialTheme.colorScheme.onTertiaryContainer)
+        Text(initials, style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
         // A role-typed embedded picture of this person, if any of their first tracks has one.
         if (name.isNotEmpty()) {
             AsyncImage(
