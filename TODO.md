@@ -208,3 +208,9 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 - [x] F-Droid metadata (`fastlane/metadata/android/en-US`: title, short and full description, changelog for versionCode 1, 512 px icon), app icon (beamed notes over an embossed fern frond, reworked 2026-10-25)
 - [x] Re-verified on the final code (2026-10-25): `lint` clean (the icon background is now a 432 px PNG, since lint flags a 16,000-character vector path), unit tests, release build and merged manifest (no `INTERNET`), and all 172 instrumented tests on the API 36 emulator (`ScaleTest` skips without a size)
 - [x] Tag `v0.1.0` (2026-10-25, local; not pushed)
+
+## Tracks sorting (2026-10-25)
+
+- [x] Sort the Tracks list by up to 4 levels (Title, Album, Year, Track, Duration, Date added), each ascending or descending, unknown values always last, remembered between launches; a **Sort** button in the actions capsule opens a bottom sheet (presets, per-level field and direction, move up, remove, Apply, Reset); Play / Add to queue / Add to playlist follow the order (spec §5 *Sorting*, §9.3). Tests: `TrackSortTest`, `TrackQueryBuilderTest` (SQL), `SortPagingTest` (8 sorts paged in 7-row pages against an independent comparator), `TracksViewModelTest` (setSort, remembered). `ScaleTest` at 1,000,000 tracks on the API 36 emulator (no index serves a custom sort; each page scans the library): year/album/track first page about 200 ms, deep page about 300-400 ms; year descending / album / track descending the same; recently added 4-6 ms first, 60-75 ms deep; the default title sort is unchanged (15 ms first, 4 ms deep)
+- [ ] Not done: reordering a sort level by dragging (a "move up" button is used instead, which also fits the 320 dp width); sort on Person details, playlists and Albums
+

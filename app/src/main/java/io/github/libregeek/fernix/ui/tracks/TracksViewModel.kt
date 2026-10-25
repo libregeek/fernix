@@ -10,7 +10,9 @@ import io.github.libregeek.fernix.data.db.PAGE_SIZE
 import io.github.libregeek.fernix.data.db.TagCondition
 import io.github.libregeek.fernix.data.db.TagDao
 import io.github.libregeek.fernix.data.db.TagKeyEntity
+import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.TrackCursor
+import io.github.libregeek.fernix.data.db.TrackSort
 import io.github.libregeek.fernix.data.db.TrackFilter
 import io.github.libregeek.fernix.data.db.TrackResult
 import io.github.libregeek.fernix.data.db.TrackRow
@@ -49,6 +51,10 @@ data class TracksState(
     /** Non-null while the tag-key picker is open. */
     val keyChoices: List<TagKeyEntity>? = null,
     val valuePicker: ValuePicker? = null,
+    /** The order of the list: title unless the user has set one (kept between launches). */
+    val sort: TrackSort = TrackSort.DEFAULT,
+    /** The sort sheet is open. */
+    val sortOpen: Boolean = false,
 ) {
     val hasFilter get() = text.isNotBlank() || chips.isNotEmpty() || person != null
 }
@@ -63,6 +69,8 @@ class TracksViewModel(
     private val playback: PlaybackController,
     /** The search text and filters are kept here, so they survive the process being killed (spec §9). */
     private val saved: SavedStateHandle,
+    /** Keeps the sort between launches. */
+    private val settings: Settings,
     /**
      * A filter to start with, or 0: with [initialTagKeyId] 0 it is a person (`tag_values.id`); with a
      * tag key id it is that tag key's value (`tag_values.id`), as when a tag is tapped on Track details.
@@ -71,7 +79,7 @@ class TracksViewModel(
     initialTagKeyId: Long = 0,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(TracksState())
+    private val _state = MutableStateFlow(TracksState(sort = settings.trackSort))
     val state: StateFlow<TracksState> = _state
 
     private var searchJob: Job? = null
@@ -143,6 +151,17 @@ class TracksViewModel(
     }
 
     /** The ✕ in the search box: removes every search term, the text and all filter chips. */
+    fun openSort() = _state.update { it.copy(sortOpen = true) }
+
+    fun closeSort() = _state.update { it.copy(sortOpen = false) }
+
+    /** Applies the order chosen in the sort sheet (and keeps it for the next launch), then lists again. */
+    fun setSort(sort: TrackSort) {
+        settings.trackSort = sort
+        _state.update { it.copy(sort = sort, sortOpen = false) }
+        rerun(debounce = false)
+    }
+
     fun clearAll() {
         _state.update { it.copy(text = "", chips = emptyList(), person = null) }
         rerun(debounce = false)
@@ -193,7 +212,7 @@ class TracksViewModel(
         val filter = filter()
         val last = _state.value.results.lastOrNull()?.track
         val cursor = last?.let { TrackCursor(it.title, it.id) } ?: TrackCursor.START
-        val page = withContext(Dispatchers.IO) { search.page(filter, cursor) }
+        val page = withContext(Dispatchers.IO) { search.page(filter, cursor, sort = _state.value.sort) }
         if (gen != generation) return
         if (page.size < PAGE_SIZE) done = true
         busy = false
@@ -287,7 +306,7 @@ class TracksViewModel(
     fun enqueueTrack(track: TrackRow) = playback.enqueue(listOf(track))
 
     /** Every track matching the text and filters, all pages: to play, queue or add to a playlist. */
-    suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter()) }
+    suspend fun allTracks(): List<TrackRow> = withContext(Dispatchers.IO) { search.all(filter(), _state.value.sort) }
 
     private companion object {
         const val DEBOUNCE_MS = 250L

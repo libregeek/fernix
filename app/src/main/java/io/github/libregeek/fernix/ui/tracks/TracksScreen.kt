@@ -63,7 +63,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.ui.common.LibraryTopBar
+import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.data.db.TrackSort
 import io.github.libregeek.fernix.data.db.TrackResult
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.MediaItems
@@ -84,10 +86,11 @@ fun TracksScreen(
     tagKeyId: Long = 0,
     onSettings: () -> Unit = {},
     scanState: ScanState = ScanState.Idle,
+    settings: Settings,
 ) {
     val vm: TracksViewModel = viewModel(
         key = "tracks$personId-$tagKeyId",
-        factory = viewModelFactory { initializer { TracksViewModel(db, search, playback, createSavedStateHandle(), personId, tagKeyId) } },
+        factory = viewModelFactory { initializer { TracksViewModel(db, search, playback, createSavedStateHandle(), settings, personId, tagKeyId) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -143,7 +146,29 @@ fun TracksScreen(
                 item(key = "actions") {
                     // Acts on every track matching the search and filters (not only the loaded rows); Add to
                     // playlist offers your playlists, Favourites, or a new playlist made from them.
-                    ListActions(onPlay = vm::playAll, onEnqueue = vm::enqueueAll, onAddToPlaylist = { addTracks = vm::allTracks })
+                    ListActions(
+                        onPlay = vm::playAll,
+                        onEnqueue = vm::enqueueAll,
+                        onAddToPlaylist = { addTracks = vm::allTracks },
+                        onSort = vm::openSort,
+                        sortActive = !state.sort.isDefault,
+                    )
+                }
+                if (!state.sort.isDefault) {
+                    item(key = "sort") {
+                        // The order in force; tap it to change it, the cross goes back to title order.
+                        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(R.string.sort_sorted_by, state.sort.summary()),
+                                modifier = Modifier.weight(1f).clickable(onClick = vm::openSort),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            IconButton(onClick = { vm.setSort(TrackSort.DEFAULT) }) {
+                                Icon(painterResource(R.drawable.ic_close), stringResource(R.string.sort_clear))
+                            }
+                        }
+                    }
                 }
             }
             if (state.noResults) {
@@ -167,6 +192,8 @@ fun TracksScreen(
             }
         }
     }
+
+    if (state.sortOpen) SortSheet(state.sort, onApply = vm::setSort, onDismiss = vm::closeSort)
 
     // Adding a filter: one bottom sheet, first the tag, then its value (the arrow goes back to the tags).
     if (state.keyChoices != null || state.valuePicker != null) {

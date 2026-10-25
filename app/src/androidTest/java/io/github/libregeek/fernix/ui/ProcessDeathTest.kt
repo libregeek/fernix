@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TestLibrary
 import io.github.libregeek.fernix.data.db.TrackSearch
@@ -62,7 +63,7 @@ class ProcessDeathTest {
     private fun tracks(handle: SavedStateHandle, person: Long = 0, tagKey: Long = 0): TracksViewModel {
         lateinit var vm: TracksViewModel
         instrumentation.runOnMainSync {
-            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), handle, person, tagKey)
+            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), handle, Settings(instrumentation.targetContext), person, tagKey)
         }
         return vm
     }

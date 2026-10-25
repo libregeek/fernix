@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -17,11 +18,19 @@ import androidx.compose.ui.unit.dp
 import io.github.libregeek.fernix.R
 
 /**
- * The three actions on a whole list of tracks, as one tonal capsule of icons: **Play**, **Add to queue**
- * and **Add to playlist** (spec/architecture.md §9.3). Used by the Tracks screen and the person details.
+ * The actions on a whole list of tracks, as one tonal capsule of icons: **Play**, **Add to queue**
+ * and **Add to playlist**, and on the Tracks screen **Sort** (spec/architecture.md §9.3). Also used by the person details.
  */
 @Composable
-fun ListActions(onPlay: () -> Unit, onEnqueue: () -> Unit, onAddToPlaylist: () -> Unit, modifier: Modifier = Modifier) {
+fun ListActions(
+    onPlay: () -> Unit,
+    onEnqueue: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** A fourth button, **Sort**, when given; [sortActive] fills it while the order is not the default. */
+    onSort: (() -> Unit)? = null,
+    sortActive: Boolean = false,
+) {
     Surface(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         shape = CircleShape,
@@ -37,6 +46,21 @@ fun ListActions(onPlay: () -> Unit, onEnqueue: () -> Unit, onAddToPlaylist: () -
             }
             IconButton(onClick = onAddToPlaylist) {
                 Icon(painterResource(R.drawable.ic_playlist_add), stringResource(R.string.add_to_playlist))
+            }
+            if (onSort != null) {
+                IconButton(
+                    onClick = onSort,
+                    colors = if (sortActive) {
+                        IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            contentColor = MaterialTheme.colorScheme.onTertiary,
+                        )
+                    } else {
+                        IconButtonDefaults.iconButtonColors()
+                    },
+                ) {
+                    Icon(painterResource(R.drawable.ic_sort), stringResource(R.string.sort))
+                }
             }
         }
     }

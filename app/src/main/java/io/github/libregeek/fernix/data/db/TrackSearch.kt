@@ -17,12 +17,12 @@ class TrackSearch(private val db: FernixDatabase) {
         peopleKeyIds = null
     }
 
-    /** Every track matching [filter], title-sorted: the whole list, to play or queue it. */
-    suspend fun all(filter: TrackFilter): List<TrackRow> {
+    /** Every track matching [filter] in the order of [sort]: the whole list, to play or queue it. */
+    suspend fun all(filter: TrackFilter, sort: TrackSort = TrackSort.DEFAULT): List<TrackRow> {
         val rows = mutableListOf<TrackRow>()
         var cursor = TrackCursor.START
         while (true) {
-            val page = page(filter, cursor)
+            val page = page(filter, cursor, sort = sort)
             rows += page.map { it.track }
             if (page.size < PAGE_SIZE) return rows
             cursor = cursor.after(page.last().track)
@@ -34,12 +34,13 @@ class TrackSearch(private val db: FernixDatabase) {
         filter: TrackFilter,
         after: TrackCursor = TrackCursor.START,
         limit: Int = PAGE_SIZE,
+        sort: TrackSort = TrackSort.DEFAULT,
     ): List<TrackResult> {
         val peopleKeys = peopleKeyIds ?: db.tagDao()
             .peopleKeyIds(PeopleTags.KEYS.toList())
             .also { peopleKeyIds = it }
 
-        val built = TrackQueryBuilder.build(filter, peopleKeys, after, limit)
+        val built = TrackQueryBuilder.build(filter, peopleKeys, after, limit, sort)
         val rows = db.trackDao().rawPage(SimpleSQLiteQuery(built.sql, built.args.toTypedArray()))
 
         val person = filter.personValueId

@@ -28,12 +28,14 @@ class TestLibrary(val db: FernixDatabase) {
         dateAdded: Long = 0,
         playCount: Int = 0,
         lastPlayedAt: Long? = null,
+        year: Int? = null,
+        durationMs: Long = 1000,
     ): Long = db.trackDao().insert(
         TrackEntity(
             mediaStoreId = nextMediaStoreId++,
             folderId = folderId,
             displayName = displayName,
-            durationMs = 1000,
+            durationMs = durationMs,
             dateModified = 0,
             sizeBytes = 1,
             title = title,
@@ -45,6 +47,7 @@ class TestLibrary(val db: FernixDatabase) {
             dateAdded = dateAdded,
             playCount = playCount,
             lastPlayedAt = lastPlayedAt,
+            year = year,
         ),
     )
 

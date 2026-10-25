@@ -81,9 +81,9 @@ class ScaleTest {
             // Fires the FTS triggers, like a real scan.
             exec(
                 seq(n) + "INSERT INTO tracks(id, mediaStoreId, folderId, displayName, durationMs, dateModified, " +
-                    "sizeBytes, title, album, date, artist, composer, lyricist) " +
+                    "sizeBytes, title, album, date, artist, composer, lyricist, year, trackNumber, dateAdded) " +
                     "SELECT n, n, 1, 'f' || n || '.mp3', 200000, 0, 1, 'Title ' || printf('%07d', n), " +
-                    "'Album ' || (n / 12), '2020', 'Person ' || printf('%06d', n % $p + 1), '', '' FROM seq",
+                    "'Album ' || (n / 12), '2020', 'Person ' || printf('%06d', n % $p + 1), '', '', 1980 + n % 40, n % 12 + 1, n % 5000 FROM seq",
             )
             exec(
                 seq(n) + "INSERT INTO track_tags(trackId, keyId, valueId, ord) " +
@@ -124,6 +124,17 @@ class ScaleTest {
             .let { check("FTS selective", it.second); assertEquals(1, it.first.size) }
         timed("FTS selective + person") { search.page(TrackFilter(text = "person 000001")) }
             .let { check("FTS person text", it.second) }
+        // Custom sorts (spec §5 "Sorting"): no index serves them, so the whole library is scanned for each page.
+        val sorts = mapOf(
+            "year, album, track" to TrackSort.YEAR_ALBUM_TRACK,
+            "recently added" to TrackSort.RECENTLY_ADDED,
+            "year desc, album, track desc" to TrackSort.decode("YEAR:D,ALBUM:A,TRACK:D"),
+        )
+        for ((name, sort) in sorts) {
+            timed("sort $name, first page") { search.page(TrackFilter(), sort = sort) }.let { check("sort $name first", it.second) }
+            timed("sort $name, deep page") { search.page(TrackFilter(), TrackCursor("", (tracks / 2 + 2500).toLong()), sort = sort) }
+                .let { check("sort $name deep", it.second); assertEquals(PAGE_SIZE, it.first.size) }
+        }
         // Broad queries: match a large part of the library. Logged, not asserted.
         timed("FTS broad: 'title'") { search.page(TrackFilter(text = "title")) }
         timed("FTS broad: 't'") { search.page(TrackFilter(text = "t")) }

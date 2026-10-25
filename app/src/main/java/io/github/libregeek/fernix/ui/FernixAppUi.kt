@@ -238,6 +238,7 @@ fun FernixAppUi(
                 personId = backStack.currentArg,
                 tagKeyId = backStack.currentArg2,
                 scanState = scanState,
+                settings = container.settings,
                 onOpenTrack = openTrack,
                 onSettings = openSettings,
                 modifier = Modifier.padding(padding),

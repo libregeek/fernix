@@ -103,4 +103,38 @@ class TrackQueryBuilderTest {
         val q = TrackQueryBuilder.build(TrackFilter(text = "  "), emptyList())
         assertFalse(q.sql.contains("tracks_fts"))
     }
+
+    @Test
+    fun customSort_firstPage_hasNoCursorAndOrdersUnknownsLast() {
+        val q = TrackQueryBuilder.build(TrackFilter(), emptyList(), sort = TrackSort.YEAR_ALBUM_TRACK)
+        assertFalse(q.sql.contains("WITH ref"))
+        assertTrue(
+            q.sql.endsWith(
+                " ORDER BY (t.year IS NULL) ASC, COALESCE(t.year, 0) ASC, (t.album = '') ASC, t.album COLLATE NOCASE ASC, " +
+                    "(t.trackNumber IS NULL) ASC, COALESCE(t.discNumber, 0) ASC, COALESCE(t.trackNumber, 0) ASC, " +
+                    "t.title COLLATE NOCASE ASC, t.id ASC LIMIT ?",
+            ),
+        )
+        assertEquals(listOf<Any>(PAGE_SIZE), q.args)
+    }
+
+    @Test
+    fun customSort_descendingKeepsUnknownsLast() {
+        val q = TrackQueryBuilder.build(TrackFilter(), emptyList(), sort = TrackSort(listOf(SortLevel(SortField.YEAR, ascending = false))))
+        assertTrue(q.sql.contains("ORDER BY (t.year IS NULL) ASC, COALESCE(t.year, 0) DESC, "))
+    }
+
+    @Test
+    fun customSort_cursorIsOneBoundId_andFilterArgsFollow() {
+        val q = TrackQueryBuilder.build(
+            TrackFilter(neverPlayed = true, tags = listOf(TagCondition(3, 9))),
+            emptyList(),
+            after = TrackCursor("x", 77),
+            sort = TrackSort.RECENTLY_ADDED,
+        )
+        assertTrue(q.sql.startsWith("WITH ref AS (SELECT "))
+        assertTrue(q.sql.contains("FROM tracks r WHERE r.id = ?)"))
+        assertTrue(q.sql.contains("t.dateAdded < ref.v0"))
+        assertEquals(listOf<Any>(77L, 3L, 9L, PAGE_SIZE), q.args)
+    }
 }

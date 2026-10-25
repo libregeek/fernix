@@ -5,6 +5,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.libregeek.fernix.data.Settings
+import io.github.libregeek.fernix.data.db.TrackSort
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TestLibrary
 import io.github.libregeek.fernix.data.db.TrackSearch
@@ -31,10 +33,14 @@ class TracksViewModelTest {
     fun open() {
         db = Room.inMemoryDatabaseBuilder(instrumentation.targetContext, FernixDatabase::class.java).build()
         lib = TestLibrary(db)
+        Settings(instrumentation.targetContext).trackSort = TrackSort.DEFAULT
     }
 
     @After
-    fun close() = db.close()
+    fun close() {
+        db.close()
+        Settings(instrumentation.targetContext).trackSort = TrackSort.DEFAULT
+    }
 
     private fun waitFor(condition: () -> Boolean) {
         val end = System.currentTimeMillis() + 10_000
@@ -60,7 +66,7 @@ class TracksViewModelTest {
 
         lateinit var vm: TracksViewModel
         instrumentation.runOnMainSync {
-            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), SavedStateHandle())
+            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), SavedStateHandle(), Settings(instrumentation.targetContext))
             // What the screen does: the filter is set, and in the same frame the still-empty list
             // asks for more rows, before the first page has come back from the database.
             vm.setPerson(PersonChip(person, "Johnson"))
@@ -85,7 +91,7 @@ class TracksViewModelTest {
     private fun newViewModel(personId: Long = 0, tagKeyId: Long = 0): TracksViewModel {
         lateinit var vm: TracksViewModel
         instrumentation.runOnMainSync {
-            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), SavedStateHandle(), personId, tagKeyId)
+            vm = TracksViewModel(db, TrackSearch(db), PlaybackController(instrumentation.targetContext), SavedStateHandle(), Settings(instrumentation.targetContext), personId, tagKeyId)
         }
         return vm
     }
@@ -182,5 +188,27 @@ class TracksViewModelTest {
         instrumentation.runOnMainSync { vm.refresh() }
         waitFor("narrowed, with the new one") { vm.state.value.results.size == 3 && !vm.state.value.loading }
         assertEquals("alpha", vm.state.value.text)
+    }
+
+    @Test
+    fun setSort_listsAgainInThatOrder_andIsKeptForTheNextViewModel() = runBlocking {
+        val f = lib.folder()
+        lib.track("A", f, year = 2001)
+        lib.track("B", f, year = 1990)
+        lib.track("C", f)
+        val vm = newViewModel()
+        waitFor("the first page") { vm.state.value.results.size == 3 }
+        assertEquals(listOf("A", "B", "C"), vm.state.value.results.map { it.track.title })
+
+        instrumentation.runOnMainSync { vm.setSort(TrackSort.decode("YEAR:A")) }
+        waitFor("the sorted page") { vm.state.value.results.map { it.track.title } == listOf("B", "A", "C") }
+        assertEquals(listOf("B", "A", "C"), vm.allTracks().map { it.title })
+
+        instrumentation.runOnMainSync { vm.setSort(TrackSort.decode("YEAR:D")) }
+        waitFor("the descending page") { vm.state.value.results.map { it.track.title } == listOf("A", "B", "C") }
+
+        val next = newViewModel()
+        assertEquals(TrackSort.decode("YEAR:D"), next.state.value.sort)
+        waitFor("the remembered sort") { next.state.value.results.size == 3 }
     }
 }

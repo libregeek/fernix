@@ -4,6 +4,7 @@ package io.github.libregeek.fernix.data
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import io.github.libregeek.fernix.data.db.TrackSort
 import io.github.libregeek.fernix.data.scan.ScanScope
 import io.github.libregeek.fernix.tags.TagValues
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,13 @@ class Settings(context: Context) {
         prefs.getString(KEY_THEME, null)?.let { saved -> ThemeMode.entries.firstOrNull { it.name == saved } ?: ThemeMode.Fernix.takeIf { saved == "Light" } }
             ?: ThemeMode.Fernix,
     )
+
+    /** The order of the Tracks list, kept between launches (spec/architecture.md §5 "Sorting"). */
+    var trackSort: TrackSort
+        get() = TrackSort.decode(prefs.getString(KEY_TRACK_SORT, null))
+        set(value) {
+            prefs.edit { putString(KEY_TRACK_SORT, value.encode()) }
+        }
 
     fun resetNowPlayingSlots() {
         prefs.edit { remove(KEY_NOW_PLAYING_SLOTS) }
@@ -133,6 +141,7 @@ class Settings(context: Context) {
 
         private const val FILE_NAME = "settings"
         private const val KEY_THEME = "theme_mode"
+        private const val KEY_TRACK_SORT = "track_sort"
         private const val KEY_NOW_PLAYING_SLOTS = "now_playing_slots"
         private const val KEY_SPLIT_DELIMITERS = "split_delimiters"
         private const val KEY_STORAGE_ASKED = "storage_permission_asked"
