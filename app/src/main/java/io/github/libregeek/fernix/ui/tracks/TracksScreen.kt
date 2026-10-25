@@ -51,6 +51,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -97,6 +98,7 @@ fun TracksScreen(
         factory = viewModelFactory { initializer { TracksViewModel(db, search, playback, createSavedStateHandle(), settings, personId, tagKeyId) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    val total by vm.total.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     // The library changes under a running scan: show new tracks while it runs (only while there is nothing
     // to show, so the list doesn't jump) and again when it has finished, so the first launch ends on a full list.
@@ -144,6 +146,16 @@ fun TracksScreen(
                             Icon(painterResource(R.drawable.ic_clear_all), stringResource(R.string.search_reset))
                         }
                     }
+                }
+            }
+            if (total > 0 && !state.hasFilter) {
+                item(key = "total") {
+                    Text(
+                        pluralStringResource(R.plurals.track_count, total, total),
+                        modifier = Modifier.padding(start = 24.dp, end = 16.dp, top = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             if (state.results.isNotEmpty()) {

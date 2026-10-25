@@ -71,6 +71,132 @@ class TagReaderTest {
     }
 
     @Test
+    fun mp3_paddingBetweenTagAndFirstFrame_isStillRead() {
+        // Tag editors can leave more than 1024 bytes of zeros between the ID3v2 tag and the first frame,
+        // which TagLib's content sniffing misses (spec §7 "File type detection").
+        val original = InstrumentationRegistry.getInstrumentation().context.assets.open("sample.mp3").use { it.readBytes() }
+        val tagEnd = 10 + ((original[6].toInt() shl 21) or (original[7].toInt() shl 14) or (original[8].toInt() shl 7) or original[9].toInt())
+        val padded = original.copyOfRange(0, tagEnd) + ByteArray(2048) + original.copyOfRange(tagEnd, original.size)
+        val file = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "padded.mp3")
+        try {
+            file.writeBytes(padded)
+            fun open() = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            assertEquals(listOf("Mp3 Song"), TagReader.readProperties(open())!!["TITLE"])
+            assertNotNull(TagReader.readAudioProperties(open()))
+            assertNotNull(TagReader.readPictures(open()))
+        } finally {
+            file.delete()
+        }
+    }
+
+    // --- Older ID3 versions (ID3v1, v2.2, v2.3), each as written and with padding before the first frame ---
+
+    /** The MPEG frames of sample.mp3, without its ID3v2 tag. */
+    private fun mp3Audio(): ByteArray {
+        val all = InstrumentationRegistry.getInstrumentation().context.assets.open("sample.mp3").use { it.readBytes() }
+        val tagEnd = 10 + ((all[6].toInt() shl 21) or (all[7].toInt() shl 14) or (all[8].toInt() shl 7) or all[9].toInt())
+        return all.copyOfRange(tagEnd, all.size)
+    }
+
+    private fun syncsafe(n: Int) = byteArrayOf((n shr 21 and 0x7f).toByte(), (n shr 14 and 0x7f).toByte(), (n shr 7 and 0x7f).toByte(), (n and 0x7f).toByte())
+
+    private fun be(n: Int, bytes: Int) = ByteArray(bytes) { (n shr (8 * (bytes - 1 - it)) and 0xff).toByte() }
+
+    /** An ID3v2.[version] tag (2 or 3) of ISO-8859-1 text frames, or UTF-16 with a byte order mark when [utf16]. */
+    private fun id3v2(version: Int, frames: List<Pair<String, String>>, utf16: Boolean = false): ByteArray {
+        val body = frames.fold(ByteArray(0)) { acc, (id, text) ->
+            val data = if (utf16) byteArrayOf(1, 0xFF.toByte(), 0xFE.toByte()) + text.toByteArray(Charsets.UTF_16LE) else byteArrayOf(0) + text.toByteArray(Charsets.ISO_8859_1)
+            acc + id.toByteArray() + (if (version == 2) be(data.size, 3) else be(data.size, 4) + byteArrayOf(0, 0)) + data
+        }
+        return "ID3".toByteArray() + byteArrayOf(version.toByte(), 0, 0) + syncsafe(body.size) + body
+    }
+
+    private fun id3v1(title: String, artist: String, album: String, year: String, track: Int, genre: Int): ByteArray {
+        fun field(text: String, n: Int) = text.toByteArray(Charsets.ISO_8859_1).copyOf(n)
+        return "TAG".toByteArray() + field(title, 30) + field(artist, 30) + field(album, 30) + field(year, 4) +
+            field("", 28) + byteArrayOf(0, track.toByte(), genre.toByte())
+    }
+
+    /** Reads [bytes] as written, then with 2048 zero bytes between [tag] and the audio. */
+    private fun readBothWays(tag: ByteArray, audio: ByteArray, trailer: ByteArray = ByteArray(0)): List<Map<String, List<String>>> {
+        val file = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "old-id3.mp3")
+        try {
+            return listOf(ByteArray(0), ByteArray(2048)).map { padding ->
+                file.writeBytes(tag + padding + audio + trailer)
+                TagReader.readProperties(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))!!
+            }
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun mp3_id3v1_isRead() {
+        // ID3v1.1 sits at the end of the file; there is no leading tag, so only the unpadded form applies.
+        val file = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "v1.mp3")
+        try {
+            file.writeBytes(mp3Audio() + id3v1("Old Song", "Old Artist", "Old Album", "1999", 5, 17))
+            val tags = TagReader.readProperties(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY))!!
+            assertEquals(listOf("Old Song"), tags["TITLE"])
+            assertEquals(listOf("Old Artist"), tags["ARTIST"])
+            assertEquals(listOf("Old Album"), tags["ALBUM"])
+            assertEquals(listOf("1999"), tags["DATE"])
+            assertEquals(listOf("5"), tags["TRACKNUMBER"])
+            assertEquals(listOf("Rock"), tags["GENRE"])
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun mp3_id3v23_isRead() {
+        val tag = id3v2(3, listOf("TIT2" to "Three Song", "TPE1" to "Three Artist", "TALB" to "Three Album", "TYER" to "2004", "TRCK" to "7/9"))
+        for (tags in readBothWays(tag, mp3Audio())) {
+            assertEquals(listOf("Three Song"), tags["TITLE"])
+            assertEquals(listOf("Three Artist"), tags["ARTIST"])
+            assertEquals(listOf("Three Album"), tags["ALBUM"])
+            assertEquals(listOf("2004"), tags["DATE"])
+            assertEquals(listOf("7/9"), tags["TRACKNUMBER"])
+        }
+    }
+
+    @Test
+    fun mp3_id3v23_utf16Text_isRead() {
+        val tag = id3v2(3, listOf("TIT2" to "Ünïcode Sóng", "TPE1" to "മലയാളം"), utf16 = true)
+        for (tags in readBothWays(tag, mp3Audio())) {
+            assertEquals(listOf("Ünïcode Sóng"), tags["TITLE"])
+            assertEquals(listOf("മലയാളം"), tags["ARTIST"])
+        }
+    }
+
+    @Test
+    fun mp3_id3v22_isRead() {
+        val tag = id3v2(2, listOf("TT2" to "Two Song", "TP1" to "Two Artist", "TAL" to "Two Album", "TYE" to "1995", "TRK" to "2/10"))
+        for (tags in readBothWays(tag, mp3Audio())) {
+            assertEquals(listOf("Two Song"), tags["TITLE"])
+            assertEquals(listOf("Two Artist"), tags["ARTIST"])
+            assertEquals(listOf("Two Album"), tags["ALBUM"])
+            assertEquals(listOf("1995"), tags["DATE"])
+            assertEquals(listOf("2/10"), tags["TRACKNUMBER"])
+        }
+    }
+
+    @Test
+    fun mp3_id3v2AndId3v1Together_prefersV2() {
+        val tag = id3v2(3, listOf("TIT2" to "New Title"))
+        for (tags in readBothWays(tag, mp3Audio(), id3v1("Old Title", "Old Artist", "", "", 0, 255))) {
+            assertEquals(listOf("New Title"), tags["TITLE"])
+        }
+    }
+
+    @Test
+    fun mp3_withoutAnyTag_isReadAsEmpty() {
+        for (tags in readBothWays(ByteArray(0), mp3Audio())) {
+            assertTrue(tags.isEmpty())
+        }
+    }
+
+    @Test
     fun ogg_vorbis_customTagsAndFixedFields() {
         val tags = read("sample.ogg")!!
         assertEquals(listOf("Ogg Song"), tags["TITLE"])

@@ -71,6 +71,10 @@ interface TrackDao {
     @Query("SELECT COUNT(*) FROM tracks")
     suspend fun count(): Int
 
+    /** The number of tracks in the library, again whenever it changes (shown on Tracks, spec §9.3). */
+    @Query("SELECT COUNT(*) FROM tracks")
+    fun observeCount(): Flow<Int>
+
     /** Album detail, by disc then track number (missing numbers sort first). */
     @Query(
         "SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date, folderId FROM tracks " +

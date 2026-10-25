@@ -33,6 +33,7 @@ add_library(fernix SHARED tag_reader.cpp)
 # TagLib's target only exports install-time include paths, so add the source tree ones.
 target_include_directories(fernix PRIVATE
     ${TAGLIB_SOURCE_DIR}/taglib
-    ${TAGLIB_SOURCE_DIR}/taglib/toolkit)
+    ${TAGLIB_SOURCE_DIR}/taglib/toolkit
+    ${TAGLIB_SOURCE_DIR}/taglib/mpeg/id3v2)  # mpegfile.h includes "id3v2.h" and the like
 target_link_libraries(fernix PRIVATE tag log)
 target_link_options(fernix PRIVATE -Wl,--gc-sections)

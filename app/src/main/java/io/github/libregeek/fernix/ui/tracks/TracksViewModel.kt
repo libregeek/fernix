@@ -22,7 +22,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -81,6 +83,9 @@ class TracksViewModel(
 
     private val _state = MutableStateFlow(TracksState(sort = settings.trackSort))
     val state: StateFlow<TracksState> = _state
+
+    /** Every track in the library, whatever the search and filters; kept up to date while a scan runs. */
+    val total: StateFlow<Int> = db.trackDao().observeCount().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private var searchJob: Job? = null
     private var valuesJob: Job? = null

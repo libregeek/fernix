@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.data.scan
 
+import android.util.Log
 import io.github.libregeek.fernix.data.ProblemKind
 import io.github.libregeek.fernix.data.ProblemLog
 import io.github.libregeek.fernix.data.db.FernixDatabase
@@ -82,9 +83,11 @@ class LibraryScanner(
             _state.value = ScanState.Running(processed)
         }
 
+        val started = System.currentTimeMillis()
+        var counts: DiffCounts? = null
         media.query(mounted).use { mediaRows ->
             StoredRows(db.trackDao().storedCursor()).use { storedRows ->
-                ScanDiff.walk(mediaRows, storedRows, scope, mounted) { event ->
+                counts = ScanDiff.walk(mediaRows, storedRows, scope, mounted) { event ->
                     coroutineContext.ensureActive()
                     pending += when (event) {
                         is DiffEvent.New -> upsert(event.media)
@@ -98,7 +101,18 @@ class LibraryScanner(
         }
         flush()
         cleanUp()
+        counts?.let { logSummary(it, System.currentTimeMillis() - started) }
         return processed
+    }
+
+    /**
+     * One line in logcat (`adb logcat -s FernixScan`) after each scan: the files MediaStore listed in
+     * scope, and what the scan did with them. Counts only, never a file name or path.
+     */
+    private fun logSummary(counts: DiffCounts, millis: Long) {
+        val files = counts.new + counts.changed + counts.unchanged
+        Log.i(LOG_TAG, "Scanned $files files in scope: ${counts.new} new, ${counts.changed} changed, " +
+            "${counts.unchanged} unchanged, ${counts.vanished} removed, $unreadable unreadable; ${millis} ms")
     }
 
     /** Reads the file's tags; a file that cannot be read is counted and stored untagged (see [LibraryWriter]). */
@@ -121,6 +135,7 @@ class LibraryScanner(
 
     companion object {
         const val BATCH_SIZE = 500
+        private const val LOG_TAG = "FernixScan"
 
         /** The reason logged for a file whose tags could not be read. */
         const val REASON_TAGS_UNREADABLE = "TAGS_UNREADABLE"

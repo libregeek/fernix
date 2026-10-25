@@ -12,7 +12,9 @@
 #include <fileref.h>
 #include <flac/flacproperties.h>
 #include <mp4/mp4properties.h>
+#include <mpeg/mpegfile.h>
 #include <riff/wav/wavproperties.h>
+#include <tfile.h>
 #include <tfilestream.h>
 #include <tpropertymap.h>
 #include <tvariant.h>
@@ -30,6 +32,36 @@ jstring toJString(JNIEnv *env, const TagLib::String &s) {
     return env->NewString(reinterpret_cast<const jchar *>(utf16.data()),
                           static_cast<jsize>(utf16.size() / 2));
 }
+
+// The parsed file behind a stream. A stream opened from a descriptor has no name, so FileRef can
+// only sniff the content, and its MP3 check looks for a frame header in the 1024 bytes after the
+// ID3v2 tag: a file with more padding than that (tag editors write about 2 KB) is "unsupported"
+// although it plays. When FileRef finds nothing, try MPEG, which scans the whole file for a frame,
+// and accept it only if it finds one (spec §7 "File type detection"). Must not outlive the stream.
+class TagFile {
+public:
+    TagFile(TagLib::IOStream *stream, bool readAudioProperties,
+            TagLib::AudioProperties::ReadStyle style = TagLib::AudioProperties::Average)
+        : ref_(stream, readAudioProperties, style) {
+        if (!ref_.isNull()) {
+            file_ = ref_.file();
+            return;
+        }
+        auto mpeg = std::make_unique<TagLib::MPEG::File>(stream, readAudioProperties, style);
+        if (mpeg->isValid() && mpeg->firstFrameOffset() >= 0) {
+            mpeg_ = std::move(mpeg);
+            file_ = mpeg_.get();
+        }
+    }
+
+    bool isNull() const { return file_ == nullptr; }
+    TagLib::File *get() const { return file_; }
+
+private:
+    TagLib::FileRef ref_;  // does not own the stream
+    std::unique_ptr<TagLib::MPEG::File> mpeg_;
+    TagLib::File *file_ = nullptr;
+};
 
 }  // namespace
 
@@ -52,12 +84,12 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadProperties(JNIEnv *env,
     TagLib::PropertyMap properties;
     try {
         // FileRef does not own the stream; it must be destroyed first.
-        const TagLib::FileRef ref(stream.get(), false);
-        if (ref.isNull()) {
+        const TagFile file(stream.get(), false);
+        if (file.isNull()) {
             __android_log_print(ANDROID_LOG_WARN, kLogTag, "Unsupported or unreadable file");
             return nullptr;
         }
-        properties = ref.properties();
+        properties = file.get()->properties();
     } catch (...) {
         // A corrupt file must never take the scan (or the app) down with it: it is just unreadable.
         __android_log_print(ANDROID_LOG_WARN, kLogTag, "Exception while reading properties");
@@ -101,12 +133,12 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadPictures(JNIEnv *env, j
 
     TagLib::List<TagLib::VariantMap> pictures;
     try {
-        const TagLib::FileRef ref(stream.get(), false);
-        if (ref.isNull()) {
+        const TagFile file(stream.get(), false);
+        if (file.isNull()) {
             __android_log_print(ANDROID_LOG_WARN, kLogTag, "Unsupported or unreadable file");
             return nullptr;
         }
-        pictures = ref.complexProperties("PICTURE");
+        pictures = file.get()->complexProperties("PICTURE");
     } catch (...) {
         __android_log_print(ANDROID_LOG_WARN, kLogTag, "Exception while reading pictures");
         return nullptr;
@@ -152,12 +184,12 @@ Java_io_github_libregeek_fernix_tags_TagReader_nativeReadAudioProperties(JNIEnv 
 
     jint values[5];
     try {
-        const TagLib::FileRef ref(stream.get(), true, TagLib::AudioProperties::Average);
-        if (ref.isNull() || ref.audioProperties() == nullptr) {
+        const TagFile file(stream.get(), true);
+        if (file.isNull() || file.get()->audioProperties() == nullptr) {
             __android_log_print(ANDROID_LOG_WARN, kLogTag, "No audio properties");
             return nullptr;
         }
-        const TagLib::AudioProperties *properties = ref.audioProperties();
+        const TagLib::AudioProperties *properties = file.get()->audioProperties();
         int bits = 0;
         if (const auto *flac = dynamic_cast<const TagLib::FLAC::Properties *>(properties)) {
             bits = flac->bitsPerSample();
