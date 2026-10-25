@@ -16,6 +16,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LibraryScannerTest {
 
+    private val EVERYTHING = ScanScope(setOf("external_primary", "1234-5678"))
+
     private class FakeMedia : MediaSource {
         var mounted = setOf("external_primary")
         val rows = sortedMapOf<Long, MediaRow>()
@@ -72,7 +74,7 @@ class LibraryScannerTest {
         add(2, t = arrayOf("TITLE" to listOf("B"), "ARTIST" to listOf("Ann")))
         val scanner = scanner()
 
-        scanner.scan(ScanScope.All)
+        scanner.scan(EVERYTHING)
 
         assertEquals(ScanState.Finished(2), scanner.state.value)
         assertEquals(2L, count("tracks"))
@@ -82,11 +84,11 @@ class LibraryScannerTest {
     @Test
     fun secondScan_withNothingChanged_readsNoFiles() = runBlocking {
         add(1, t = arrayOf("TITLE" to listOf("A")))
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
         val reads = tags.reads
 
         val again = scanner()
-        again.scan(ScanScope.All)
+        again.scan(EVERYTHING)
 
         assertEquals(reads, tags.reads)
         assertEquals(ScanState.Finished(0), again.state.value)
@@ -96,12 +98,12 @@ class LibraryScannerTest {
     fun changedAndVanishedFiles_areApplied_andCleanedUp() = runBlocking {
         add(1, "external_primary/Music/Rock", t = arrayOf("ALBUM" to listOf("X"), "ARTIST" to listOf("Ann")))
         add(2, "external_primary/Music/Jazz", t = arrayOf("ALBUM" to listOf("Y"), "ARTIST" to listOf("Bob")))
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
         assertEquals(2L, count("albums"))
 
         media.rows.remove(2)
         add(1, "external_primary/Music/Rock", size = 99, "ALBUM" to listOf("X"), "ARTIST" to listOf("Cy"))
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
 
         assertEquals(1L, count("tracks"))
         assertEquals(1L, count("albums"))
@@ -117,14 +119,14 @@ class LibraryScannerTest {
         add(2, t = arrayOf("TITLE" to listOf("Bad later")))
         tags.tags.remove(2) // the file cannot be read this time
         val first = scanner()
-        first.scan(ScanScope.All)
+        first.scan(EVERYTHING)
         assertEquals(ScanState.Finished(2, unreadable = 1), first.state.value)
         assertEquals(2L, count("tracks"))
 
         tags.tags[2] = mapOf("TITLE" to listOf("Bad later"))
         val readsBefore = tags.reads
         val second = scanner()
-        second.scan(ScanScope.All)
+        second.scan(EVERYTHING)
 
         // Only the unreadable one is read again, and now it has its title.
         assertEquals(1, tags.reads - readsBefore)
@@ -139,7 +141,7 @@ class LibraryScannerTest {
         add(1, "external_primary/Music/Rock", t = arrayOf("TITLE" to listOf("Good")))
         add(2, "external_primary/Music/Jazz")
         tags.tags.remove(2)
-        LibraryScanner(db, media, tags, problems = problems).scan(ScanScope.All)
+        LibraryScanner(db, media, tags, problems = problems).scan(EVERYTHING)
 
         val logged = problems.entries().single()
         assertEquals("2.mp3", logged.name)
@@ -154,11 +156,11 @@ class LibraryScannerTest {
         add(1, t = arrayOf("TITLE" to listOf("Here")))
         add(2, t = arrayOf("TITLE" to listOf("Gone")))
         tags.tags.remove(2)
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
         assertEquals(2L, count("tracks"))
 
         media.rows.remove(2) // it really is gone
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
 
         assertEquals(1L, count("tracks"))
     }
@@ -167,11 +169,11 @@ class LibraryScannerTest {
     fun aFailedMediaStoreQuery_failsTheScan_andLeavesTheLibraryAlone() = runBlocking {
         add(1, t = arrayOf("TITLE" to listOf("A")))
         add(2, t = arrayOf("TITLE" to listOf("B")))
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
 
         media.failing = true // e.g. access revoked
         val failed = scanner()
-        failed.scan(ScanScope.All)
+        failed.scan(EVERYTHING)
 
         assertTrue(failed.state.value is ScanState.Failed)
         assertEquals(2L, count("tracks"))
@@ -185,7 +187,7 @@ class LibraryScannerTest {
         tags.failAfter = 3
 
         val first = scanner(batch = 2)
-        first.scan(ScanScope.All)
+        first.scan(EVERYTHING)
         assertTrue(first.state.value is ScanState.Failed)
         // Batch 1 (ids 1-2) was committed; the failure came while reading id 4.
         assertEquals(2L, count("tracks"))
@@ -193,7 +195,7 @@ class LibraryScannerTest {
         tags.failAfter = Int.MAX_VALUE
         val readsBefore = tags.reads
         val second = scanner(batch = 2)
-        second.scan(ScanScope.All)
+        second.scan(EVERYTHING)
 
         assertEquals(ScanState.Finished(3), second.state.value)
         assertEquals(5L, count("tracks"))
@@ -205,11 +207,11 @@ class LibraryScannerTest {
         add(1, "external_primary/Music")
         add(2, "1234-5678/Music")
         media.mounted = setOf("external_primary", "1234-5678")
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
         assertEquals(2L, count("tracks"))
 
         media.mounted = setOf("external_primary")
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
 
         assertEquals(2L, count("tracks"))
         assertEquals(4L, count("folders"))
@@ -220,10 +222,10 @@ class LibraryScannerTest {
         add(1, "external_primary/Music/Rock", t = arrayOf("TITLE" to listOf("A")))
         add(2, "external_primary/Music/Rock", t = arrayOf("TITLE" to listOf("B")))
         add(3, "external_primary/Music/Jazz", t = arrayOf("TITLE" to listOf("C")))
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
         val playlist = db.playlistDao().insert(io.github.libregeek.fernix.data.db.PlaylistEntity(name = "p", createdAt = 0, updatedAt = 0))
         db.playlistDao().append(playlist, listOf(1L, 2L, 3L).map { db.trackDao().idByMediaStoreId(it)!! }, now = 1)
-        val narrower = ScanScope.Selected(setOf("external_primary/Music/Jazz"))
+        val narrower = ScanScope(setOf("external_primary/Music/Jazz"))
 
         val impact = ScopeImpact.compute(db, narrower, media.mountedVolumes())
         assertEquals(ScopeImpact(tracks = 2, playlistEntries = 2), impact)
@@ -237,9 +239,9 @@ class LibraryScannerTest {
     fun narrowingTheScope_removesTracksOutsideIt() = runBlocking {
         add(1, "external_primary/Music/Rock")
         add(2, "external_primary/Music/Jazz")
-        scanner().scan(ScanScope.All)
+        scanner().scan(EVERYTHING)
 
-        scanner().scan(ScanScope.Selected(setOf("external_primary/Music/Jazz")))
+        scanner().scan(ScanScope(setOf("external_primary/Music/Jazz")))
 
         assertEquals(1L, count("tracks"))
         assertEquals(null, db.trackDao().idByMediaStoreId(1))
@@ -248,7 +250,7 @@ class LibraryScannerTest {
     @Test
     fun emptySelection_indexesNothing() = runBlocking {
         add(1)
-        scanner().scan(ScanScope.Selected(emptySet()))
+        scanner().scan(ScanScope(emptySet()))
         assertEquals(0L, count("tracks"))
     }
 }

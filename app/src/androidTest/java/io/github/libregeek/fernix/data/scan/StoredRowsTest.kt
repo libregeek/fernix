@@ -18,6 +18,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class StoredRowsTest {
 
+    private val EVERYTHING = ScanScope(setOf("external_primary", "1234-5678"))
+
     private lateinit var db: FernixDatabase
 
     @Before
@@ -69,7 +71,7 @@ class StoredRowsTest {
         db.trackDao().storedCursor().let(::StoredRows).use { stored ->
             ScanDiff.walk(
                 listOf(media(1), media(3, size = 11), media(4)).iterator(),
-                stored, ScanScope.All, setOf("external_primary"), events::add,
+                stored, EVERYTHING, setOf("external_primary"), events::add,
             )
         }
 

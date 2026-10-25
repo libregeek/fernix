@@ -8,6 +8,8 @@ import org.junit.Test
 
 class ScopeImpactTest {
 
+    private val EVERYTHING = ScanScope(setOf("external_primary", "1234-5678"))
+
     private val primary = "external_primary"
     private val sd = "1234-5678"
     private val tracks = listOf(
@@ -24,33 +26,33 @@ class ScopeImpactTest {
         ScopeImpact.of(tracks, entries, scope, mounted)
 
     @Test
-    fun allStorage_removesNothing() {
-        assertTrue(impact(ScanScope.All).isEmpty)
+    fun everyVolume_removesNothing() {
+        assertTrue(impact(EVERYTHING).isEmpty)
     }
 
     @Test
     fun aNarrowerScope_countsTheTracksAndPlaylistEntriesOutsideIt() {
         // Only Jazz is kept: Rock (10 tracks, 3 entries) and the SD card (6 tracks, 2 entries) go.
-        assertEquals(ScopeImpact(16, 5), impact(ScanScope.Selected(setOf("$primary/Music/Jazz"))))
+        assertEquals(ScopeImpact(16, 5), impact(ScanScope(setOf("$primary/Music/Jazz"))))
     }
 
     @Test
     fun aFolderCoversItsSubFolders() {
-        assertEquals(ScopeImpact(6, 2), impact(ScanScope.Selected(setOf("$primary/Music"))))
+        assertEquals(ScopeImpact(6, 2), impact(ScanScope(setOf("$primary/Music"))))
     }
 
     @Test
     fun anUnmountedVolume_isNotCounted_becauseTheScanKeepsItsTracks() {
-        assertEquals(ScopeImpact(10, 3), impact(ScanScope.Selected(setOf("$primary/Music/Jazz")), mounted = setOf(primary)))
+        assertEquals(ScopeImpact(10, 3), impact(ScanScope(setOf("$primary/Music/Jazz")), mounted = setOf(primary)))
     }
 
     @Test
     fun anEmptySelection_removesEverythingOnMountedVolumes() {
-        assertEquals(ScopeImpact(20, 5), impact(ScanScope.Selected(emptySet())))
+        assertEquals(ScopeImpact(20, 5), impact(ScanScope(emptySet())))
     }
 
     @Test
     fun aWiderScopeThanBefore_removesNothing() {
-        assertTrue(impact(ScanScope.Selected(setOf("$primary/Music/Rock", "$primary/Music/Jazz", "$sd/Music"))).isEmpty)
+        assertTrue(impact(ScanScope(setOf("$primary/Music/Rock", "$primary/Music/Jazz", "$sd/Music"))).isEmpty)
     }
 }

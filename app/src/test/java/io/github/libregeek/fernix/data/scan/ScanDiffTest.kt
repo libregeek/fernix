@@ -7,6 +7,8 @@ import org.junit.Test
 
 class ScanDiffTest {
 
+    private val EVERYTHING = ScanScope(setOf("external_primary", "1234-5678"))
+
     private val primary = "external_primary"
     private val mounted = setOf(primary)
 
@@ -19,7 +21,7 @@ class ScanDiffTest {
     private fun walk(
         media: List<MediaRow>,
         stored: List<StoredRow>,
-        scope: ScanScope = ScanScope.All,
+        scope: ScanScope = EVERYTHING,
         mountedVolumes: Set<String> = mounted,
     ): Pair<List<DiffEvent>, DiffCounts> {
         val events = mutableListOf<DiffEvent>()
@@ -122,7 +124,7 @@ class ScanDiffTest {
 
     @Test
     fun outOfScopeStoredTrack_isRemoved_andOutOfScopeMediaIsNotNew() {
-        val scope = ScanScope.Selected(setOf("$primary/Music/Jazz"))
+        val scope = ScanScope(setOf("$primary/Music/Jazz"))
         val (events, counts) = walk(
             media = listOf(media(1, folder = "$primary/Music/Jazz/Blue"), media(2, folder = "$primary/Music/Rock"), media(3, folder = "$primary/Music/Jazz")),
             stored = listOf(stored(1, folder = "$primary/Music/Jazz/Blue"), stored(2, folder = "$primary/Music/Rock")),
@@ -137,7 +139,7 @@ class ScanDiffTest {
 
     @Test
     fun emptySelection_indexesNothing() {
-        val (events, _) = walk(listOf(media(1)), listOf(stored(2)), scope = ScanScope.Selected(emptySet()))
+        val (events, _) = walk(listOf(media(1)), listOf(stored(2)), scope = ScanScope(emptySet()))
         assertEquals(listOf<DiffEvent>(DiffEvent.Vanished(2)), events)
     }
 }

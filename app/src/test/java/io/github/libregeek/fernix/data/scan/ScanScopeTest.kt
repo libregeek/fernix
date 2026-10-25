@@ -26,20 +26,22 @@ class ScanScopeTest {
     }
 
     @Test
-    fun all_containsEverything() {
-        assertTrue(ScanScope.All.contains("external_primary/Anything"))
+    fun aVolumeRoot_containsEverythingOnThatVolumeOnly() {
+        val scope = ScanScope(setOf("external_primary"))
+        assertTrue(scope.contains("external_primary/Anything/Deep"))
+        assertFalse(scope.contains("1234-5678/Music"))
     }
 
     @Test
     fun selected_includesSubFolders() {
-        val scope = ScanScope.Selected(setOf("external_primary/Music"))
+        val scope = ScanScope(setOf("external_primary/Music"))
         assertTrue(scope.contains("external_primary/Music"))
         assertTrue(scope.contains("external_primary/Music/Rock/Live"))
     }
 
     @Test
     fun selected_doesNotMatchSiblingWithSamePrefix() {
-        val scope = ScanScope.Selected(setOf("external_primary/Music"))
+        val scope = ScanScope(setOf("external_primary/Music"))
         assertFalse(scope.contains("external_primary/Music2"))
         assertFalse(scope.contains("external_primary/Podcasts"))
         assertFalse(scope.contains("1234-5678/Music"))
@@ -47,7 +49,7 @@ class ScanScopeTest {
 
     @Test
     fun selectedVolumeRoot_includesWholeVolume() {
-        val scope = ScanScope.Selected(setOf("1234-5678"))
+        val scope = ScanScope(setOf("1234-5678"))
         assertTrue(scope.contains("1234-5678"))
         assertTrue(scope.contains("1234-5678/Music/A"))
         assertFalse(scope.contains("external_primary/Music"))
@@ -55,6 +57,6 @@ class ScanScopeTest {
 
     @Test
     fun emptySelection_containsNothing() {
-        assertFalse(ScanScope.Selected(emptySet()).contains("external_primary/Music"))
+        assertFalse(ScanScope(emptySet()).contains("external_primary/Music"))
     }
 }

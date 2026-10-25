@@ -65,23 +65,16 @@ class Settings(context: Context) {
         }
 
     /**
-     * What the scanner indexes (spec/architecture.md §6). Null until the user has chosen on the
-     * first-launch screen; the first scan waits for that choice.
+     * The folders the scanner indexes (spec/architecture.md §6). Null until the user has chosen them on
+     * the first-launch screen, and for an install from before folders were the only choice (it had
+     * `scan_scope = all`): the first scan, or the next one, waits for that choice.
      */
     var scanScope: ScanScope?
-        get() = when (prefs.getString(KEY_SCAN_SCOPE, null)) {
-            SCOPE_ALL -> ScanScope.All
-            SCOPE_SELECTED -> ScanScope.Selected(prefs.getStringSet(KEY_SCAN_FOLDERS, null).orEmpty().toSet())
-            else -> null
-        }
+        get() = if (prefs.contains(KEY_SCAN_FOLDERS)) ScanScope(prefs.getStringSet(KEY_SCAN_FOLDERS, null).orEmpty().toSet()) else null
         set(value) {
             prefs.edit {
-                when (value) {
-                    null -> remove(KEY_SCAN_SCOPE).remove(KEY_SCAN_FOLDERS)
-                    ScanScope.All -> putString(KEY_SCAN_SCOPE, SCOPE_ALL).remove(KEY_SCAN_FOLDERS)
-                    is ScanScope.Selected -> putString(KEY_SCAN_SCOPE, SCOPE_SELECTED)
-                        .putStringSet(KEY_SCAN_FOLDERS, value.folders.toSet())
-                }
+                remove(KEY_LEGACY_SCOPE)
+                if (value == null) remove(KEY_SCAN_FOLDERS) else putStringSet(KEY_SCAN_FOLDERS, value.folders.toSet())
             }
         }
 
@@ -149,10 +142,9 @@ class Settings(context: Context) {
         private const val KEY_EQ_LEVELS = "equalizer_levels"
         private const val KEY_NOTIFICATION_ASKED = "notification_permission_asked"
         private const val KEY_SCAN_COMPLETED = "scan_completed"
-        private const val KEY_SCAN_SCOPE = "scan_scope"
+        /** Written before folders were the only choice (`all` or `selected`); dropped when a scope is saved. */
+        private const val KEY_LEGACY_SCOPE = "scan_scope"
         private const val KEY_SCAN_FOLDERS = "scan_folders"
-        private const val SCOPE_ALL = "all"
-        private const val SCOPE_SELECTED = "selected"
     }
 }
 

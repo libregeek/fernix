@@ -49,7 +49,6 @@ import io.github.libregeek.fernix.data.ThemeMode
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import io.github.libregeek.fernix.data.db.FernixDatabase
-import io.github.libregeek.fernix.data.scan.ScanScope
 
 @Composable
 fun SettingsScreen(
@@ -79,13 +78,10 @@ fun SettingsScreen(
         Section(stringResource(R.string.settings_library)) {
             val scope = settings.scanScope
             Text(
-                when (scope) {
-                    is ScanScope.Selected -> pluralStringResource(R.plurals.settings_scope_folders, scope.folders.size, scope.folders.size)
-                    else -> stringResource(R.string.scope_all)
-                },
+                pluralStringResource(R.plurals.settings_scope_folders, scope?.folders?.size ?: 0, scope?.folders?.size ?: 0),
                 style = MaterialTheme.typography.bodyLarge,
             )
-            (scope as? ScanScope.Selected)?.folders?.sorted()?.forEach { path ->
+            scope?.folders?.sorted()?.forEach { path ->
                 Text(path, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             OutlinedButton(onClick = onChangeFolders, enabled = !scanning) { Text(stringResource(R.string.settings_change_folders)) }

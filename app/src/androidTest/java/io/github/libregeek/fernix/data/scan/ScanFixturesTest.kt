@@ -29,7 +29,7 @@ class ScanFixturesTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val folder = "Music/FernixScan"
-    private val scope = ScanScope.Selected(setOf("external_primary/$folder"))
+    private val scope = ScanScope(setOf("external_primary/$folder"))
     private val inserted = mutableListOf<Uri>()
     private lateinit var db: FernixDatabase
 

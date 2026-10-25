@@ -26,31 +26,35 @@ class SettingsScanScopeTest {
     fun unset_isNull() = assertNull(settings.scanScope)
 
     @Test
-    fun all_roundTrips() {
-        settings.scanScope = ScanScope.All
-        assertEquals(ScanScope.All, settings.scanScope)
-    }
-
-    @Test
-    fun selected_roundTrips() {
-        val scope = ScanScope.Selected(setOf("external_primary/Music", "1234-5678"))
+    fun folders_roundTrip() {
+        val scope = ScanScope(setOf("external_primary/Music", "1234-5678"))
         settings.scanScope = scope
         assertEquals(scope, settings.scanScope)
     }
 
     @Test
-    fun selectedWithNoFolders_staysSelected() {
-        settings.scanScope = ScanScope.Selected(emptySet())
-        assertEquals(ScanScope.Selected(emptySet()), settings.scanScope)
+    fun noFolders_isAnEmptyScope_notUnset() {
+        settings.scanScope = ScanScope(emptySet())
+        assertEquals(ScanScope(emptySet()), settings.scanScope)
     }
 
     @Test
-    fun switchingToAll_dropsFolders() {
-        settings.scanScope = ScanScope.Selected(setOf("external_primary/Music"))
-        settings.scanScope = ScanScope.All
-        settings.scanScope = ScanScope.Selected(emptySet())
-        assertEquals(ScanScope.Selected(emptySet()), settings.scanScope)
+    fun anInstallThatHadAllStorage_hasNoScopeUntilFoldersAreChosen() {
+        prefs().edit().putString("scan_scope", "all").commit()
+        assertNull(settings.scanScope)
+        settings.scanScope = ScanScope(setOf("external_primary/Music"))
+        assertEquals(ScanScope(setOf("external_primary/Music")), settings.scanScope)
+        assertEquals(false, prefs().contains("scan_scope"))
     }
+
+    @Test
+    fun anInstallThatHadSelectedFolders_keepsThem() {
+        prefs().edit().putString("scan_scope", "selected").putStringSet("scan_folders", setOf("external_primary/Music")).commit()
+        assertEquals(ScanScope(setOf("external_primary/Music")), settings.scanScope)
+    }
+
+    private fun prefs() = ApplicationProvider.getApplicationContext<android.content.Context>()
+        .getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
 
     @Test
     fun scanCompleted_defaultsFalse_andRoundTrips() {

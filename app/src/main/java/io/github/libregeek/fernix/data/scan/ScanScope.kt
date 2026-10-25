@@ -1,25 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.libregeek.fernix.data.scan
 
-/** What the scanner indexes (spec/architecture.md §6, "Scan scope"). */
-sealed interface ScanScope {
+/**
+ * What the scanner indexes (spec/architecture.md §6, "Scan scope"): only files inside one of [folders]
+ * (`<volume>/<relativePath>` strings), sub-folders included. There is no "everything" scope; an empty
+ * set indexes nothing.
+ */
+data class ScanScope(val folders: Set<String>) {
 
     /** Whether a file in [folderPath] (see [folderPath]) is inside this scope. */
-    fun contains(folderPath: String): Boolean
-
-    /** Every audio file MediaStore reports on a mounted external volume. */
-    data object All : ScanScope {
-        override fun contains(folderPath: String) = true
-    }
-
-    /**
-     * Only files inside one of [folders] (`<volume>/<relativePath>` strings), sub-folders included.
-     * An empty set indexes nothing.
-     */
-    data class Selected(val folders: Set<String>) : ScanScope {
-        override fun contains(folderPath: String) =
-            folders.any { folderPath == it || folderPath.startsWith("$it/") }
-    }
+    fun contains(folderPath: String) = folders.any { folderPath == it || folderPath.startsWith("$it/") }
 
     companion object {
         /**

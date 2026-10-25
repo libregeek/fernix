@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 StoragePermissionGate(container.settings) {
                     var scope by remember { mutableStateOf(container.settings.scanScope) }
                     if (scope == null) {
-                        ScanScopeScreen(onChosen = { container.settings.scanScope = it; scope = it })
+                        ScanScopeScreen(container.database, container.mediaSource, onChosen = { container.changeScope(it); scope = it })
                     } else {
                         // First launch after the scope is chosen, or resuming an interrupted scan.
                         LaunchedEffect(scope) { if (!container.settings.scanCompleted) container.startScan() }
