@@ -45,6 +45,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import coil3.compose.AsyncImage
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.unavailableOverline
+import io.github.libregeek.fernix.ui.common.isUnavailable
+import io.github.libregeek.fernix.ui.common.dimmedIf
 import io.github.libregeek.fernix.ui.art.PersonArt
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TrackSearch
@@ -63,6 +66,7 @@ fun PersonDetailScreen(
     playback: PlaybackController,
     onBack: () -> Unit,
     onOpenTrack: (Long) -> Unit,
+    onOpenAlbum: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm: PersonDetailViewModel = viewModel(
@@ -115,8 +119,10 @@ fun PersonDetailScreen(
             }
             items(state.tracks, key = { it.track.id }) { result ->
                 val track = result.track
+                val gone = track.isUnavailable()
                 ListItem(
-                    modifier = Modifier.clickable { vm.playFrom(track) },
+                    modifier = Modifier.dimmedIf(gone).clickable { vm.playFrom(track) },
+                    overlineContent = unavailableOverline(gone),
                     headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     supportingContent = {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -124,6 +130,7 @@ fun PersonDetailScreen(
                             trackAlbumLine(track.album, track.date)?.let {
                                 Text(
                                     it,
+                                    modifier = track.albumId?.let { id -> Modifier.clickable { onOpenAlbum(id) } } ?: Modifier,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,

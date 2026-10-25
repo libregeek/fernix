@@ -66,7 +66,7 @@ object TrackQueryBuilder {
     private fun byTitle(filter: TrackFilter, subqueries: List<String>, subArgs: List<Any>, after: TrackCursor, limit: Int): SqlQuery {
         val args = mutableListOf<Any>(after.title, after.id)
         val sql = buildString {
-            append("SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date ")
+            append("SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date, t.folderId ")
             append("FROM tracks t WHERE (t.title, t.id) > (?, ?)")
             if (filter.neverPlayed) append(" AND t.lastPlayedAt IS NULL")
             if (subqueries.isNotEmpty()) {
@@ -132,7 +132,7 @@ object TrackQueryBuilder {
                 append(" FROM tracks r WHERE r.id = ?) ")
                 args += after.id
             }
-            append("SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date FROM tracks t")
+            append("SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date, t.folderId FROM tracks t")
             if (cursor) append(", ref")
             append(" WHERE 1")
             if (cursor) {

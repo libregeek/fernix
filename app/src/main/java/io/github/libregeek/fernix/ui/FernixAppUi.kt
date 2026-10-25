@@ -39,6 +39,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import io.github.libregeek.fernix.ui.common.LocalUnavailableFolders
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,194 +129,202 @@ fun FernixAppUi(
 
     BackHandler(enabled = backStack.canPop) { backStack.pop() }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        topBar = {
-            // Tracks, Albums, People and Playlists draw their own (it has the search); Folders uses the plain one.
-            if (current == Screen.Folders) {
-                LibraryTopBar(stringResource(current.label), onSettings = { backStack.push(Screen.Settings) })
-            }
-        },
-        bottomBar = {
-            Column {
-                // A scan runs in the background; its progress shows on every screen, above the mini-player.
-                if (scanState is ScanState.Running) ScanProgress(scanState)
-                if (scanState is ScanState.Failed) ScanFailure(scanState.message, onRetry = onRescan, onDismiss = container.scanner::clearFailure)
-                if (current != Screen.NowPlaying) {
-                    val miniPlayer: MiniPlayerViewModel = viewModel(
-                        factory = viewModelFactory { initializer { MiniPlayerViewModel(container.database, container.playback) } },
-                    )
-                    val playing by miniPlayer.track.collectAsStateWithLifecycle()
-                    MiniPlayer(playback, playing, onOpen = { backStack.push(Screen.NowPlaying) }, onPlayPause = onPlayPause, onNext = onNext)
+    // Tracks on a volume that is not mounted are marked in every list and cannot be played (spec §6).
+    val unavailable by container.volumes.unavailableFolders.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { container.volumes.refresh() }
+    LaunchedEffect(scanState) { if (scanState is ScanState.Finished) container.volumes.refresh() }
+    CompositionLocalProvider(LocalUnavailableFolders provides unavailable) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            topBar = {
+                // Tracks, Albums, People and Playlists draw their own (it has the search); Folders uses the plain one.
+                if (current == Screen.Folders) {
+                    LibraryTopBar(stringResource(current.label), onSettings = { backStack.push(Screen.Settings) })
                 }
-                CompactNavBar {
-                    Screen.entries.filter { it.isTab }.forEach { tab ->
-                        CompactNavItem(
-                            selected = tab == backStack.stack.first(),
-                            onClick = { backStack.switchTab(tab) },
-                            icon = tab.icon,
-                            description = stringResource(tab.label),
+            },
+            bottomBar = {
+                Column {
+                    // A scan runs in the background; its progress shows on every screen, above the mini-player.
+                    if (scanState is ScanState.Running) ScanProgress(scanState)
+                    if (scanState is ScanState.Failed) ScanFailure(scanState.message, onRetry = onRescan, onDismiss = container.scanner::clearFailure)
+                    if (current != Screen.NowPlaying) {
+                        val miniPlayer: MiniPlayerViewModel = viewModel(
+                            factory = viewModelFactory { initializer { MiniPlayerViewModel(container.database, container.playback) } },
                         )
+                        val playing by miniPlayer.track.collectAsStateWithLifecycle()
+                        MiniPlayer(playback, playing, onOpen = { backStack.push(Screen.NowPlaying) }, onPlayPause = onPlayPause, onNext = onNext)
+                    }
+                    CompactNavBar {
+                        Screen.entries.filter { it.isTab }.forEach { tab ->
+                            CompactNavItem(
+                                selected = tab == backStack.stack.first(),
+                                onClick = { backStack.switchTab(tab) },
+                                icon = tab.icon,
+                                description = stringResource(tab.label),
+                            )
+                        }
                     }
                 }
+            },
+        ) { padding ->
+            if (current == Screen.Folders) {
+                FoldersScreen(container.database, container.playback, onOpenTrack = openTrack, scanState = scanState, modifier = Modifier.padding(padding))
+                return@Scaffold
             }
-        },
-    ) { padding ->
-        if (current == Screen.Folders) {
-            FoldersScreen(container.database, container.playback, onOpenTrack = openTrack, scanState = scanState, modifier = Modifier.padding(padding))
-            return@Scaffold
-        }
-        if (current == Screen.NowPlaying) {
-            NowPlayingScreen(
-                container.database,
-                container.settings,
-                container.playback,
-                onBack = { backStack.pop() },
-                onOpenPerson = { backStack.push(Screen.Tracks, it) },
-                onOpenQueue = { backStack.push(Screen.Queue) },
-                onOpenTag = { keyId, valueId -> backStack.push(Screen.Tracks, valueId, keyId) },
-                onOpenTrack = openTrack,
-                onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.Settings) {
-            SettingsScreen(
-                container.database,
-                container.settings,
-                scanning = scanState is ScanState.Running,
-                unreadable = (scanState as? ScanState.Finished)?.unreadable ?: 0,
-                onRescan = onRescan,
-                onChangeFolders = { backStack.push(Screen.LibraryFolders) },
-                problems = container.problems,
-                onOpenProblems = { backStack.push(Screen.ProblemFiles) },
-                onBack = { backStack.pop() },
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.ProblemFiles) {
-            ProblemFilesScreen(container.problems, onBack = { backStack.pop() }, modifier = Modifier.padding(padding))
-            return@Scaffold
-        }
-        if (current == Screen.LibraryFolders) {
-            LibraryFoldersScreen(
-                container.database,
-                container.mediaSource,
-                container.settings,
-                onApply = container::changeScope,
-                onDone = { backStack.pop() },
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.TrackDetail) {
-            TrackDetailScreen(
-                backStack.currentArg,
-                container.database,
-                container.settings,
-                container.trackFiles,
-                onBack = { backStack.pop() },
-                onOpenTag = { keyId, valueId -> backStack.push(Screen.Tracks, valueId, keyId) },
-                onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
-                onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.Queue) {
-            QueueScreen(
-                container.playback,
-                onBack = { backStack.pop() },
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.Tracks) {
-            TracksScreen(
-                container.database,
-                container.trackSearch,
-                container.playback,
-                personId = backStack.currentArg,
-                tagKeyId = backStack.currentArg2,
-                scanState = scanState,
-                settings = container.settings,
-                onOpenTrack = openTrack,
-                onSettings = openSettings,
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.Playlists) {
-            PlaylistsScreen(
-                container.database,
-                container.trackSearch,
-                container.playback,
-                onOpenPlaylist = { backStack.push(Screen.PlaylistDetail, it) },
-                onSettings = openSettings,
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.PlaylistDetail) {
-            PlaylistDetailScreen(
-                backStack.currentArg,
-                container.database,
-                container.trackSearch,
-                container.playback,
-                onBack = { backStack.pop() },
-                onOpenTrack = openTrack,
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.People) {
-            PeopleScreen(
-                container.database,
-                onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
-                onSettings = openSettings,
-                scanState = scanState,
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.PersonDetail) {
-            val personId = backStack.currentArg
-            PersonDetailScreen(
-                personId,
-                container.database,
-                container.trackSearch,
-                container.playback,
-                onBack = { backStack.pop() },
-                onOpenTrack = openTrack,
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.Albums) {
-            AlbumsScreen(
-                container.database,
-                container.playback,
-                onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
-                onSettings = openSettings,
-                scanState = scanState,
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
-        }
-        if (current == Screen.AlbumDetail) {
-            AlbumDetailScreen(
-                backStack.currentArg,
-                container.database,
-                container.playback,
-                onBack = { backStack.pop() },
-                onOpenTrack = openTrack,
-                modifier = Modifier.padding(padding),
-            )
-            return@Scaffold
+            if (current == Screen.NowPlaying) {
+                NowPlayingScreen(
+                    container.database,
+                    container.settings,
+                    container.playback,
+                    onBack = { backStack.pop() },
+                    onOpenPerson = { backStack.push(Screen.Tracks, it) },
+                    onOpenQueue = { backStack.push(Screen.Queue) },
+                    onOpenTag = { keyId, valueId -> backStack.push(Screen.Tracks, valueId, keyId) },
+                    onOpenTrack = openTrack,
+                    onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.Settings) {
+                SettingsScreen(
+                    container.database,
+                    container.settings,
+                    scanning = scanState is ScanState.Running,
+                    unreadable = (scanState as? ScanState.Finished)?.unreadable ?: 0,
+                    onRescan = onRescan,
+                    onChangeFolders = { backStack.push(Screen.LibraryFolders) },
+                    problems = container.problems,
+                    onOpenProblems = { backStack.push(Screen.ProblemFiles) },
+                    onBack = { backStack.pop() },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.ProblemFiles) {
+                ProblemFilesScreen(container.problems, onBack = { backStack.pop() }, modifier = Modifier.padding(padding))
+                return@Scaffold
+            }
+            if (current == Screen.LibraryFolders) {
+                LibraryFoldersScreen(
+                    container.database,
+                    container.mediaSource,
+                    container.settings,
+                    onApply = container::changeScope,
+                    onDone = { backStack.pop() },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.TrackDetail) {
+                TrackDetailScreen(
+                    backStack.currentArg,
+                    container.database,
+                    container.settings,
+                    container.trackFiles,
+                    onBack = { backStack.pop() },
+                    onOpenTag = { keyId, valueId -> backStack.push(Screen.Tracks, valueId, keyId) },
+                    onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
+                    onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.Queue) {
+                QueueScreen(
+                    container.playback,
+                    onBack = { backStack.pop() },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.Tracks) {
+                TracksScreen(
+                    container.database,
+                    container.trackSearch,
+                    container.playback,
+                    personId = backStack.currentArg,
+                    tagKeyId = backStack.currentArg2,
+                    scanState = scanState,
+                    settings = container.settings,
+                    onOpenTrack = openTrack,
+                    onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                    onSettings = openSettings,
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.Playlists) {
+                PlaylistsScreen(
+                    container.database,
+                    container.trackSearch,
+                    container.playback,
+                    onOpenPlaylist = { backStack.push(Screen.PlaylistDetail, it) },
+                    onSettings = openSettings,
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.PlaylistDetail) {
+                PlaylistDetailScreen(
+                    backStack.currentArg,
+                    container.database,
+                    container.trackSearch,
+                    container.playback,
+                    onBack = { backStack.pop() },
+                    onOpenTrack = openTrack,
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.People) {
+                PeopleScreen(
+                    container.database,
+                    onOpenPerson = { backStack.push(Screen.PersonDetail, it) },
+                    onSettings = openSettings,
+                    scanState = scanState,
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.PersonDetail) {
+                val personId = backStack.currentArg
+                PersonDetailScreen(
+                    personId,
+                    container.database,
+                    container.trackSearch,
+                    container.playback,
+                    onBack = { backStack.pop() },
+                    onOpenTrack = openTrack,
+                    onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.Albums) {
+                AlbumsScreen(
+                    container.database,
+                    container.playback,
+                    onOpenAlbum = { backStack.push(Screen.AlbumDetail, it) },
+                    onSettings = openSettings,
+                    scanState = scanState,
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
+            if (current == Screen.AlbumDetail) {
+                AlbumDetailScreen(
+                    backStack.currentArg,
+                    container.database,
+                    container.playback,
+                    onBack = { backStack.pop() },
+                    onOpenTrack = openTrack,
+                    modifier = Modifier.padding(padding),
+                )
+                return@Scaffold
+            }
         }
     }
 }

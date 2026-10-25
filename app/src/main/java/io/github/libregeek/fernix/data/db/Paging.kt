@@ -21,6 +21,8 @@ data class TrackRow(
     val albumId: Long? = null,
     /** The `DATE` tag, `U+001F`-joined like the other fixed fields; shown in brackets after the album on the Tracks list. */
     val date: String = "",
+    /** The folder it is in, to tell whether its volume is mounted (spec §6 *Unmounted volumes*). */
+    val folderId: Long = 0,
 )
 
 /** Position in a title-sorted track list: the last row of the previous page. */
@@ -62,3 +64,6 @@ data class PlaylistEntryRow(
     val position: Int,
     @Embedded val track: TrackRow,
 )
+
+/** A folder id and its `<volume>/<path>`. */
+data class FolderIdPath(val id: Long, val path: String)

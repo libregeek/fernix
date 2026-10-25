@@ -63,6 +63,9 @@ class MainActivity : ComponentActivity() {
                         LaunchedEffect(playback.errorCount) {
                             if (playback.errorCount > 0) Toast.makeText(context, R.string.playback_error, Toast.LENGTH_SHORT).show()
                         }
+                        LaunchedEffect(playback.unavailableCount) {
+                            if (playback.unavailableCount > 0) Toast.makeText(context, R.string.storage_not_connected, Toast.LENGTH_SHORT).show()
+                        }
                         FernixAppUi(
                             container = container,
                             scanState = scanState,

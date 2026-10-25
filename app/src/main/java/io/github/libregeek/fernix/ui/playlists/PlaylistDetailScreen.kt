@@ -39,6 +39,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.unavailableOverline
+import io.github.libregeek.fernix.ui.common.isUnavailable
+import io.github.libregeek.fernix.ui.common.dimmedIf
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.PlaylistEntryRow
 import io.github.libregeek.fernix.data.db.TrackSearch
@@ -103,8 +106,10 @@ fun PlaylistDetailScreen(
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 items(state.entries, key = { it.position }) { entry ->
                     val track = entry.track
+                    val gone = track.isUnavailable()
                     ListItem(
-                        modifier = Modifier.clickable { vm.play(position = entry.position) },
+                        modifier = Modifier.dimmedIf(gone).clickable { vm.play(position = entry.position) },
+                        overlineContent = unavailableOverline(gone),
                         headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = MediaItems.display(track.artist)?.let {
                             { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }

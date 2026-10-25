@@ -33,6 +33,8 @@ data class PlaybackUiState(
     val error: String? = null,
     /** Counts the errors, so the UI can tell a new one from one it has shown already. */
     val errorCount: Int = 0,
+    /** Counts the times a track on a volume that is not mounted was asked for, so the UI can say so. */
+    val unavailableCount: Int = 0,
 )
 
 /** One entry of the play queue, as the Queue screen shows it. [index] is its position in the queue. */
@@ -45,7 +47,11 @@ data class QueueItem(val index: Int, val trackId: Long?, val title: String, val 
  *
  * Main thread only, like the controller it wraps.
  */
-class PlaybackController(context: Context) {
+class PlaybackController(
+    context: Context,
+    /** False for a track on a volume that is not mounted: it is not queued, and the user is told. */
+    private val isAvailable: (TrackRow) -> Boolean = { true },
+) {
 
     private val appContext = context.applicationContext
     private val _state = MutableStateFlow(PlaybackUiState())
@@ -110,8 +116,21 @@ class PlaybackController(context: Context) {
     }
 
     /** Replaces the queue with [tracks] and starts at [startIndex]; the queue is not capped. */
-    fun play(tracks: List<TrackRow>, startIndex: Int = 0, shuffle: Boolean = false) =
-        playItems(tracks.map(MediaItems::of), startIndex, shuffle)
+    fun play(tracks: List<TrackRow>, startIndex: Int = 0, shuffle: Boolean = false) {
+        val start = tracks.getOrNull(startIndex)
+        val playable = tracks.filter(isAvailable)
+        // The track that was asked for is out of reach, or nothing is: say so and leave the queue alone.
+        if (tracks.isNotEmpty() && (playable.isEmpty() || (start != null && !isAvailable(start)))) {
+            reportUnavailable()
+            return
+        }
+        val first = start?.let { s -> playable.indexOfFirst { it.id == s.id } }?.coerceAtLeast(0) ?: 0
+        playItems(playable.map(MediaItems::of), first, shuffle)
+    }
+
+    private fun reportUnavailable() {
+        _state.value = _state.value.copy(unavailableCount = _state.value.unavailableCount + 1)
+    }
 
     fun playItems(items: List<MediaItem>, startIndex: Int = 0, shuffle: Boolean = false) = run {
         if (items.isEmpty()) return@run
@@ -122,7 +141,10 @@ class PlaybackController(context: Context) {
     }
 
     /** Appends [tracks] to the end of the queue. */
-    fun enqueue(tracks: List<TrackRow>) = enqueueItems(tracks.map(MediaItems::of))
+    fun enqueue(tracks: List<TrackRow>) {
+        val playable = tracks.filter(isAvailable)
+        if (tracks.isNotEmpty() && playable.isEmpty()) reportUnavailable() else enqueueItems(playable.map(MediaItems::of))
+    }
 
     fun enqueueItems(items: List<MediaItem>) = run {
         if (items.isEmpty()) return@run
@@ -216,6 +238,7 @@ class PlaybackController(context: Context) {
             repeatMode = player.repeatMode,
             error = _state.value.error,
             errorCount = _state.value.errorCount,
+            unavailableCount = _state.value.unavailableCount,
         )
     }
 }

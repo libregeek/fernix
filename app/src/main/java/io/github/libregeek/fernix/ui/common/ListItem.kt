@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * The list row of the app, tighter than Material's `ListItem` (which is 56 to 88 dp tall): a headline, an
- * optional smaller line under it, and optional leading and trailing content, on the screen's background.
+ * optional smaller line under it (and one above), and optional leading and trailing content, on the screen's background.
  */
 @Composable
 fun ListItem(
@@ -27,6 +27,8 @@ fun ListItem(
     supportingContent: (@Composable () -> Unit)? = null,
     leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
+    /** A small line above the headline, e.g. the "Storage not connected" mark of a track that is out of reach. */
+    overlineContent: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
@@ -35,6 +37,7 @@ fun ListItem(
     ) {
         leadingContent?.invoke()
         Column(Modifier.weight(1f)) {
+            overlineContent?.invoke()
             ProvideTextStyle(MaterialTheme.typography.bodyLarge) { headlineContent() }
             if (supportingContent != null) {
                 CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {

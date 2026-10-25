@@ -37,6 +37,9 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.unavailableOverline
+import io.github.libregeek.fernix.ui.common.isUnavailable
+import io.github.libregeek.fernix.ui.common.dimmedIf
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.FolderEntity
 import io.github.libregeek.fernix.data.db.TrackRow
@@ -122,8 +125,10 @@ fun FoldersScreen(
                 )
             }
             items(state.tracks, key = { "t${it.id}" }) { track ->
+                val gone = track.isUnavailable()
                 ListItem(
-                    modifier = Modifier.clickable { vm.playTrack(track) },
+                    modifier = Modifier.dimmedIf(gone).clickable { vm.playTrack(track) },
+                    overlineContent = unavailableOverline(gone),
                     headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     supportingContent = track.subtitle()?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
                     trailingContent = {

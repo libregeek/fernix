@@ -62,6 +62,9 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.ui.common.unavailableOverline
+import io.github.libregeek.fernix.ui.common.isUnavailable
+import io.github.libregeek.fernix.ui.common.dimmedIf
 import io.github.libregeek.fernix.ui.common.LibraryTopBar
 import io.github.libregeek.fernix.data.Settings
 import io.github.libregeek.fernix.data.db.FernixDatabase
@@ -81,6 +84,7 @@ fun TracksScreen(
     search: TrackSearch,
     playback: PlaybackController,
     onOpenTrack: (Long) -> Unit,
+    onOpenAlbum: (Long) -> Unit,
     modifier: Modifier = Modifier,
     personId: Long = 0,
     tagKeyId: Long = 0,
@@ -188,6 +192,7 @@ fun TracksScreen(
                     onEnqueue = { vm.enqueueTrack(result.track) },
                     onAddToPlaylist = { addTracks = { listOf(result.track) } },
                     onDetails = { onOpenTrack(result.track.id) },
+                    onOpenAlbum = result.track.albumId?.let { id -> { onOpenAlbum(id) } },
                 )
             }
         }
@@ -275,12 +280,16 @@ private fun ResultRow(
     onEnqueue: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onDetails: () -> Unit,
+    /** Opens the album details; null for a track with no album. */
+    onOpenAlbum: (() -> Unit)?,
 ) {
     val track = result.track
     val album = trackAlbumLine(track.album, track.date)
     val artists = MediaItems.display(track.artist)
+    val gone = track.isUnavailable()
     ListItem(
-        modifier = Modifier.clickable(onClick = onPlay),
+        modifier = Modifier.dimmedIf(gone).clickable(onClick = onPlay),
+        overlineContent = unavailableOverline(gone),
         leadingContent = { Thumbnail(trackThumbnail(track.albumId, track.mediaStoreId)) },
         headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (album == null && artists == null && result.roles.isEmpty()) {
@@ -288,7 +297,8 @@ private fun ResultRow(
         } else {
             {
                 Column {
-                    album?.let { SmallLine(it) }
+                    // The album line has its own tap (the album details); the rest of the row plays.
+                    album?.let { if (onOpenAlbum != null) Box(Modifier.clickable(onClick = onOpenAlbum)) { SmallLine(it) } else SmallLine(it) }
                     artists?.let { SmallLine(it) }
                     if (result.roles.isNotEmpty()) SmallLine(result.roles.joinToString(", "), MaterialTheme.colorScheme.tertiary)
                 }

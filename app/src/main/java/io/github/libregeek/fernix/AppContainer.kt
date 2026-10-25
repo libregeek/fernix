@@ -23,6 +23,7 @@ import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.data.ProblemKind
 import io.github.libregeek.fernix.data.ProblemLog
 import io.github.libregeek.fernix.playback.MediaItems
+import io.github.libregeek.fernix.data.scan.AvailableVolumes
 import io.github.libregeek.fernix.playback.PlaybackController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +63,10 @@ class AppContainer(context: Context) {
     }
 
     /** Main thread only. Connects to the playback service on first use. */
-    val playback: PlaybackController by lazy { PlaybackController(appContext) }
+    /** Which volumes are mounted, so a track on a removed SD card is marked and not played (spec §6). */
+    val volumes: AvailableVolumes by lazy { AvailableVolumes(appContext, database).also { it.start() } }
+
+    val playback: PlaybackController by lazy { PlaybackController(appContext, volumes::isAvailable) }
 
     /** Outlives activities, so a scan keeps going across rotation and screen changes. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

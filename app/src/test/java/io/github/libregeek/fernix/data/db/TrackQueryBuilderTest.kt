@@ -14,7 +14,7 @@ class TrackQueryBuilderTest {
     fun emptyFilter_pagesAllTracks() {
         val q = TrackQueryBuilder.build(TrackFilter(), emptyList())
         assertEquals(
-            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date " +
+            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date, t.folderId " +
                 "FROM tracks t WHERE (t.title, t.id) > (?, ?)$tail",
             q.sql,
         )
@@ -25,7 +25,7 @@ class TrackQueryBuilderTest {
     fun neverPlayed_addsAFixedCondition_withoutArguments() {
         val q = TrackQueryBuilder.build(TrackFilter(neverPlayed = true), emptyList())
         assertEquals(
-            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date " +
+            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date, t.folderId " +
                 "FROM tracks t WHERE (t.title, t.id) > (?, ?) AND t.lastPlayedAt IS NULL$tail",
             q.sql,
         )
@@ -54,7 +54,7 @@ class TrackQueryBuilderTest {
         )
         val q = TrackQueryBuilder.build(filter, listOf(5L, 6L), TrackCursor("x", 1), 10)
         assertEquals(
-            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date FROM tracks t " +
+            "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date, t.folderId FROM tracks t " +
                 "WHERE (t.title, t.id) > (?, ?) AND t.id IN (" +
                 "SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ? INTERSECT " +
                 "SELECT trackId FROM track_tags WHERE keyId = ? AND valueId IN (?) INTERSECT " +

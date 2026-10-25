@@ -17,6 +17,10 @@ interface FolderDao {
     @Query("SELECT * FROM folders WHERE parentId IS NULL ORDER BY name, id")
     suspend fun volumes(): List<FolderEntity>
 
+    /** Every folder's id and path (`<volume>/<path>`), to find the folders of an unmounted volume. */
+    @Query("SELECT id, path FROM folders")
+    suspend fun idsAndPaths(): List<FolderIdPath>
+
     /** Sub-folders of [parentId] by name. Start with `afterName = ""`, `afterId = 0`. */
     @Query(
         "SELECT * FROM folders WHERE parentId = :parentId AND (name, id) > (:afterName, :afterId) " +
@@ -264,7 +268,7 @@ interface PlaylistDao {
     /** Entries after [afterPosition] in playlist order. Start with `afterPosition = -1`. */
     @Query(
         "SELECT e.position AS position, t.id AS id, t.mediaStoreId AS mediaStoreId, t.title AS title, " +
-            "t.album AS album, t.artist AS artist, t.durationMs AS durationMs, t.albumId AS albumId, t.date AS date " +
+            "t.album AS album, t.artist AS artist, t.durationMs AS durationMs, t.albumId AS albumId, t.date AS date, t.folderId AS folderId " +
             "FROM playlist_entries e JOIN tracks t ON t.id = e.trackId " +
             "WHERE e.playlistId = :playlistId AND e.position > :afterPosition " +
             "ORDER BY e.position LIMIT :limit",
@@ -274,7 +278,7 @@ interface PlaylistDao {
     /** Every track of a playlist, in playlist order (the same track may repeat). */
     @Query(
         "SELECT t.id AS id, t.mediaStoreId AS mediaStoreId, t.title AS title, t.album AS album, " +
-            "t.artist AS artist, t.durationMs AS durationMs, t.albumId AS albumId, t.date AS date " +
+            "t.artist AS artist, t.durationMs AS durationMs, t.albumId AS albumId, t.date AS date, t.folderId AS folderId " +
             "FROM playlist_entries e JOIN tracks t ON t.id = e.trackId " +
             "WHERE e.playlistId = :playlistId ORDER BY e.position",
     )

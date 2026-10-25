@@ -28,6 +28,7 @@ class FolderResolverTest {
         override suspend fun byId(id: Long) = rows.firstOrNull { it.id == id }
 
         override suspend fun volumes() = rows.filter { it.parentId == null }
+        override suspend fun idsAndPaths() = rows.map { io.github.libregeek.fernix.data.db.FolderIdPath(it.id, it.path) }
         override suspend fun childrenPage(parentId: Long, afterName: String, afterId: Long, limit: Int) =
             rows.filter { it.parentId == parentId }
     }

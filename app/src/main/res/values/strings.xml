@@ -66,6 +66,8 @@
         <item quantity="other">It applies to the %d tracks in your library with this value. It lasts until a file changes and is read again.</item>
     </plurals>
     <string name="track_details">Track details</string>
+    <string name="storage_not_connected">That storage is not connected. Its tracks play again when it is back.</string>
+    <string name="track_unavailable">Storage not connected</string>
     <string name="sort">Sort</string>
     <string name="sort_title">Sort tracks</string>
     <string name="sort_preset_title">Title</string>
