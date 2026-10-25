@@ -156,6 +156,10 @@ interface TrackDao {
     )
     suspend fun mostPlayed(): List<TrackRow>
 
+    /** The size of *Never Played*; a track is in it while `lastPlayedAt` is null. */
+    @Query("SELECT COUNT(*) FROM tracks WHERE lastPlayedAt IS NULL")
+    suspend fun neverPlayedCount(): Int
+
     /** A track played through to its end (spec §5 *What counts as a play*). */
     @Query("UPDATE tracks SET playCount = playCount + 1, lastPlayedAt = :now WHERE id = :trackId")
     suspend fun recordPlay(trackId: Long, now: Long)

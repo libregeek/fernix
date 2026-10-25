@@ -243,6 +243,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists WHERE id = :id")
     suspend fun byId(id: Long): PlaylistEntity?
 
+    @Query("SELECT COUNT(*) FROM playlist_entries WHERE playlistId = :playlistId")
+    suspend fun entryCount(playlistId: Long): Int
+
     /** Playlists by name with their entry counts; re-emits when playlists or entries change. */
     @Query(
         "SELECT p.id AS id, p.name AS name, COUNT(e.position) AS trackCount FROM playlists p " +

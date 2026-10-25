@@ -15,7 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import io.github.libregeek.fernix.ui.common.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -42,7 +43,7 @@ import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.PlaylistRow
 import io.github.libregeek.fernix.data.db.TrackSearch
 import io.github.libregeek.fernix.playback.PlaybackController
-import io.github.libregeek.fernix.ui.common.NameDialog
+import io.github.libregeek.fernix.ui.common.NameSheet
 import io.github.libregeek.fernix.ui.common.RowMenu
 
 @Composable
@@ -78,10 +79,6 @@ fun PlaylistsScreen(
             onQuery = vm::setQuery,
             hint = stringResource(R.string.search_playlists_hint),
         )
-        OutlinedButton(
-            onClick = { creating = true },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        ) { Text(stringResource(R.string.playlist_new)) }
         LazyColumn(Modifier.fillMaxSize()) {
             // The five default playlists come first; only Favourites among them can be edited,
             // and not renamed or deleted either, so none of them has a rename/delete menu.
@@ -134,11 +131,19 @@ fun PlaylistsScreen(
                     },
                 )
             }
+            item(key = "new") {
+                // After the last playlist: an icon, not a button.
+                Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                    FilledTonalIconButton(onClick = { creating = true }) {
+                        Icon(painterResource(R.drawable.ic_add), stringResource(R.string.playlist_new))
+                    }
+                }
+            }
         }
     }
 
     if (creating) {
-        NameDialog(
+        NameSheet(
             title = stringResource(R.string.playlist_new),
             confirmLabel = stringResource(R.string.playlist_create),
             onConfirm = { vm.create(it); creating = false },
@@ -146,7 +151,7 @@ fun PlaylistsScreen(
         )
     }
     renaming?.let { playlist ->
-        NameDialog(
+        NameSheet(
             title = stringResource(R.string.playlist_rename),
             confirmLabel = stringResource(R.string.save),
             initial = playlist.name,

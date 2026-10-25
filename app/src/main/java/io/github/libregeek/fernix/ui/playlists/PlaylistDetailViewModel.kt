@@ -29,6 +29,8 @@ data class PlaylistDetailState(
     val readOnly: Boolean = false,
     val entries: List<PlaylistEntryRow> = emptyList(),
     val empty: Boolean = false,
+    /** The number of tracks in the playlist (not only the pages loaded); null until known. */
+    val trackCount: Int? = null,
 )
 
 /**
@@ -54,12 +56,16 @@ class PlaylistDetailViewModel(
     init {
         viewModelScope.launch {
             if (DefaultPlaylists.isReadOnly(playlistId)) {
-                _state.update { it.copy(exists = true) }
+                // Recently Added and Most Played are one page, counted when it is loaded.
+                val count = if (playlistId == DefaultPlaylists.NEVER_PLAYED) withContext(Dispatchers.IO) { db.trackDao().neverPlayedCount() } else null
+                _state.update { it.copy(exists = true, trackCount = count) }
             } else {
                 val playlist = withContext(Dispatchers.IO) { db.playlistDao().byId(playlistId) }
+                val count = if (playlist != null) withContext(Dispatchers.IO) { db.playlistDao().entryCount(playlistId) } else null
                 _state.update {
                     it.copy(
                         exists = playlist != null,
+                        trackCount = count,
                         loading = playlist != null,
                         name = playlist?.name,
                         isFavourites = playlist?.kind == PlaylistEntity.KIND_FAVOURITES,
@@ -81,7 +87,8 @@ class PlaylistDetailViewModel(
             busy = false
             _state.update {
                 val all = it.entries + page
-                it.copy(loading = false, entries = all, empty = done && all.isEmpty())
+                val one = playlistId == DefaultPlaylists.RECENTLY_ADDED || playlistId == DefaultPlaylists.MOST_PLAYED
+                it.copy(loading = false, entries = all, empty = done && all.isEmpty(), trackCount = if (one) all.size else it.trackCount)
             }
         }
     }
@@ -111,7 +118,7 @@ class PlaylistDetailViewModel(
             }
             _state.update {
                 val rest = it.entries - entry
-                it.copy(entries = rest, empty = done && rest.isEmpty())
+                it.copy(entries = rest, empty = done && rest.isEmpty(), trackCount = it.trackCount?.minus(1))
             }
         }
     }
