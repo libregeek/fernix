@@ -192,6 +192,9 @@
     <string name="folders_empty">No music in this folder</string>
     <string name="volume_internal">Internal storage</string>
     <string name="rescan">Rescan</string>
+    <string name="scan_channel">Library scan</string>
+    <string name="scan_notification_title">Scanning your music</string>
+    <string name="scan_notification_starting">Starting\u2026</string>
     <string name="scan_idle">Library not scanned yet</string>
     <plurals name="scan_running">
         <item quantity="one">Scanning… %1$d file processed</item>

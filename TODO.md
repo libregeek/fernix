@@ -216,7 +216,7 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 
 ## Open items (2026-10-25, from the 16,094-file import on a Redmi 9)
 
-- [ ] **Keep a scan going when the app is in the background.** The scan runs in a plain coroutine (`AppContainer.startScan`), so switching apps lets Android (MIUI especially) freeze or kill the process; each 500-track batch is committed, so the next scan resumes, but the first big scan needs the app in front. Needs a foreground service (`dataSync`), which means a new manifest permission: ask the maintainer first (CLAUDE.md rule 2) and update spec §3 and §6. Until then: battery set to "No restrictions", keep the app open for the first scan.
+- [x] **Keep a scan going when the app is in the background** (2026-10-25, permission approved by the maintainer): `ScanService`, a foreground service of type `dataSync` (`FOREGROUND_SERVICE_DATA_SYNC`), lasts as long as `AppContainer.scanActive` and shows a quiet progress notification; the scan itself is unchanged (spec §3, §6). `ScanServiceTest` passes on the API 36 emulator. Still to confirm on the Redmi 9: a full 16K-file scan with the app in the background.
 - [ ] **Re-read tags for tracks that were read as empty.** Only a failed read gets `dateModified = 0` and is retried; a file TagLib accepts but returns no tags for keeps its real date and is never read again, because the diff compares only size, date, name and folder. Add a "Re-read all tags" action in Settings (and decide whether a changed TagLib or parser version should trigger it).
 - [ ] **Design choices to revisit with the maintainer:**
   - Track details *Added* is MediaStore's `DATE_ADDED`, not the day Fernix first saw the file (that would need a new column and a migration).

@@ -2,6 +2,7 @@
 package io.github.libregeek.fernix
 
 import android.content.Context
+import android.content.Intent
 import io.github.libregeek.fernix.ui.permission.StoragePermission
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
@@ -19,6 +20,7 @@ import io.github.libregeek.fernix.data.scan.LibraryScanner
 import io.github.libregeek.fernix.data.scan.MediaStoreSource
 import io.github.libregeek.fernix.data.scan.MediaStoreTagSource
 import io.github.libregeek.fernix.data.scan.ScanScope
+import io.github.libregeek.fernix.data.scan.ScanService
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.data.ProblemKind
 import io.github.libregeek.fernix.data.ProblemLog
@@ -28,6 +30,7 @@ import io.github.libregeek.fernix.playback.PlaybackController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -99,6 +102,9 @@ class AppContainer(context: Context) {
      * narrower one deletes the tracks outside it and, through the playlists' cascade, their entries.
      * The caller has already shown [ScopeImpact] and had it confirmed.
      */
+    /** True from the moment a scan is asked for until it ends; [ScanService] lasts as long as this. */
+    val scanActive = MutableStateFlow(false)
+
     fun changeScope(scope: ScanScope) {
         settings.scanScope = scope
         startScan()
@@ -114,9 +120,21 @@ class AppContainer(context: Context) {
         if (scanner.state.value is ScanState.Running) return
         // Without the audio permission MediaStore answers with nothing: don't scan (and so don't look like an empty library).
         if (ContextCompat.checkSelfPermission(appContext, StoragePermission.permission) != PackageManager.PERMISSION_GRANTED) return
+        scanActive.value = true
+        // A foreground service keeps the process alive while the scan runs in the background (spec §6). If Android
+        // refuses to start it (the app is not in front), the scan still runs, only without that protection.
+        try {
+            ContextCompat.startForegroundService(appContext, Intent(appContext, ScanService::class.java))
+        } catch (e: Exception) {
+            // Best effort.
+        }
         appScope.launch {
             settings.scanCompleted = false
-            scanner.scan(scope)
+            try {
+                scanner.scan(scope)
+            } finally {
+                scanActive.value = false
+            }
             val state = scanner.state.value
             if (state is ScanState.Finished) {
                 settings.scanCompleted = true

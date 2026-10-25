@@ -49,8 +49,8 @@ Android 10 or newer.
 | Permission | Why Fernix needs it |
 |---|---|
 | Music and audio (storage on Android 10–12) | To find and play the music on your device. |
-| Notifications (Android 13+) | To show playback controls in the notification. |
-| Run in the background (foreground service) | To keep playing when you leave the app. |
+| Notifications (Android 13+) | To show playback controls, and the progress of a library scan, in notifications. |
+| Run in the background (foreground service) | To keep playing, and to finish scanning a large library, when you leave the app. |
 | Prevent phone from sleeping | To keep the music from stopping when the screen turns off. |
 
 ## Installation

@@ -73,14 +73,15 @@ Exact versions are pinned in `gradle/libs.versions.toml` (libraries, plugins), `
 | `READ_EXTERNAL_STORAGE` | `maxSdkVersion="32"` | Read the audio library on Android 10–12. |
 | `FOREGROUND_SERVICE` | all | Keep playing in the background. |
 | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | API 34+ | Required service-type permission for media playback. |
-| `POST_NOTIFICATIONS` | API 33+ | Show the playback notification. |
+| `FOREGROUND_SERVICE_DATA_SYNC` | API 34+ | Required service-type permission for the library scan service (approved 2026-10-25; `FOREGROUND_SERVICE` above covers Android 10–13). |
+| `POST_NOTIFICATIONS` | API 33+ | Show the playback notification, and the scan progress notification. |
 | `WAKE_LOCK` | all | Keep the CPU awake during playback with the screen off (`setWakeMode(C.WAKE_MODE_LOCAL)`; no Wi-Fi lock). |
 
 Added automatically by `androidx.core` (approved): `io.github.libregeek.fernix.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` — a signature-level permission the app defines for itself to protect its own non-exported broadcast receivers. Not user-visible; grants no access.
 
 `android.permission.ACCESS_NETWORK_STATE`, which `media3-exoplayer` adds through manifest merging (it only tunes buffering for streaming), is removed with `tools:node="remove"`; Fernix plays local files only. After any dependency change, list the merged permissions and make sure only those above remain.
 
-The playback service is declared with `android:foregroundServiceType="mediaPlayback"`.
+The playback service is declared with `android:foregroundServiceType="mediaPlayback"`, and the scan service (`ScanService`, §6) with `android:foregroundServiceType="dataSync"`.
 
 **`android.permission.INTERNET` is never declared** — network traffic is structurally prevented at the OS level.
 
@@ -285,6 +286,8 @@ The folders are stored in `SharedPreferences` as `scan_folders` (a set of `<volu
 - **Unmounted volume:** see above; the tracks stay.
 
 **Scan summary (2026-10-25).** After each finished scan one line goes to logcat (`adb logcat -s FernixScan`): the files MediaStore listed in scope (new + changed + unchanged), how many were new, changed, unchanged and removed, how many could not be read, and the time taken. Counts only, never a file name or path; nothing is written to storage.
+
+**Scanning in the background (2026-10-25).** A scan of tens of thousands of files takes minutes, and Android (MIUI especially) freezes or kills a backgrounded app in the middle of it. While a scan runs, `ScanService`, a foreground service of type `dataSync` (permission `FOREGROUND_SERVICE_DATA_SYNC`, §3), keeps the process alive and shows a quiet, ongoing notification (low importance, no sound) with the progress; tapping it opens the app. The scan itself still runs in `AppContainer` on `Dispatchers.IO`; the service does not scan, it only lasts as long as `AppContainer.scanActive` (set before the service is started, cleared when the scan ends, however it ends). If Android refuses to start the service (the app is not in front) the scan runs unprotected, as before. Android 15 ends a `dataSync` service after about six hours (`onTimeout` stops it; the scan goes on). Without the notification permission the service still protects the process; only the notification is hidden.
 
 Each committed batch is final, so an interrupted scan resumes where it stopped on the next run (the diff skips what is already stored). The library is usable while a scan runs, and the UI shows progress. Scanning runs on `Dispatchers.IO` and never blocks the UI.
 
