@@ -96,6 +96,11 @@
     <string name="details_lyricist">Lyricist</string>
     <string name="details_artists">Artists</string>
     <string name="details_technical">Technical details</string>
+    <string name="details_library">Library</string>
+    <string name="details_added">Added</string>
+    <string name="details_last_played">Last played</string>
+    <string name="details_plays">Plays</string>
+    <string name="details_never">Never</string>
     <string name="details_file">File</string>
     <string name="details_format">Format</string>
     <string name="details_duration">Duration</string>

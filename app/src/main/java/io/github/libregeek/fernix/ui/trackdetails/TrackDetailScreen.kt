@@ -193,6 +193,19 @@ fun TrackDetailScreen(
             Section(stringResource(R.string.details_technical)) { Technical(audio, state.format) }
         }
 
+        run {
+            val context = LocalContext.current
+            Section(stringResource(R.string.details_library)) {
+                // dateAdded is MediaStore's, 0 for a row stored before the column existed.
+                if (track.dateAdded > 0) Fact(stringResource(R.string.details_added), dateTime(context, track.dateAdded * 1000))
+                Fact(
+                    stringResource(R.string.details_last_played),
+                    track.lastPlayedAt?.let { dateTime(context, it) } ?: stringResource(R.string.details_never),
+                )
+                Fact(stringResource(R.string.details_plays), track.playCount.toString())
+            }
+        }
+
         state.file?.let { file ->
             val context = LocalContext.current
             Section(stringResource(R.string.details_file)) {
@@ -200,16 +213,16 @@ fun TrackDetailScreen(
                 if (file.folder.isNotEmpty()) Fact(stringResource(R.string.details_folder), file.folder)
                 Fact(stringResource(R.string.details_volume), volumeName(file.volume))
                 Fact(stringResource(R.string.details_size), Formatter.formatFileSize(context, file.sizeBytes))
-                Fact(
-                    stringResource(R.string.details_modified),
-                    DateFormat.getMediumDateFormat(context).format(Date(file.modifiedSeconds * 1000)) + " " +
-                        DateFormat.getTimeFormat(context).format(Date(file.modifiedSeconds * 1000)),
-                )
+                Fact(stringResource(R.string.details_modified), dateTime(context, file.modifiedSeconds * 1000))
                 Fact(stringResource(R.string.details_uri), file.contentUri)
             }
         }
     }
 }
+
+/** A date and a time in the user's formats. */
+private fun dateTime(context: android.content.Context, epochMs: Long): String =
+    DateFormat.getMediumDateFormat(context).format(Date(epochMs)) + " " + DateFormat.getTimeFormat(context).format(Date(epochMs))
 
 @Composable
 private fun volumeName(volume: String): String =
