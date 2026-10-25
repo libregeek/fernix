@@ -36,6 +36,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -152,7 +155,11 @@ fun TrackDetailScreen(
                 }
             }
         }
-        val other = state.tags.filter { it.label !in shown }
+        // The comment is read from the file in full and shown as a block; until then (or if the file can't be read) the stored row stands in.
+        if (state.comments.isNotEmpty()) {
+            Section(stringResource(R.string.details_comment)) { state.comments.forEach { Comment(it) } }
+        }
+        val other = state.tags.filter { it.label !in shown && !(it.label == "COMMENT" && state.comments.isNotEmpty()) }
         if (other.isNotEmpty()) {
             Section(stringResource(R.string.details_other_tags)) {
                 other.forEach { line -> TagRow(line.label, line, state.delimiters, onOpenPerson, onOpenTag, splitter) }
@@ -218,6 +225,21 @@ private fun Section(title: String?, content: @Composable () -> Unit) {
         title?.let { Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) }
         content()
     }
+}
+
+/** A comment, cut to a few lines with a tap to show all of it. */
+@Composable
+private fun Comment(text: String) {
+    var expanded by remember { mutableStateOf(false) }
+    var overflows by remember { mutableStateOf(false) }
+    Text(
+        text,
+        modifier = Modifier.fillMaxWidth().clickable(enabled = overflows || expanded) { expanded = !expanded },
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = if (expanded) Int.MAX_VALUE else 4,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { if (!expanded) overflows = it.hasVisualOverflow },
+    )
 }
 
 /** The album in bold, smaller than the title, with its date in brackets after it; the name opens the album. */

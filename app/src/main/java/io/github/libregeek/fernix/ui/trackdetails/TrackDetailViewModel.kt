@@ -47,6 +47,8 @@ data class TrackDetailState(
     val audio: AudioProperties? = null,
     /** Every tag, each key with all its values in stored order. */
     val tags: List<TagLine> = emptyList(),
+    /** The COMMENT values read from the file in full (the database keeps none over 512 characters); empty when unread. */
+    val comments: List<String> = emptyList(),
     /** The delimiters from Settings; a value holding one gets a split button. */
     val delimiters: List<String> = emptyList(),
     /** A split waiting for the user's confirmation, or being applied. */
@@ -123,6 +125,15 @@ class TrackDetailViewModel(
             val track = withContext(Dispatchers.IO) { db.trackDao().byId(trackId) } ?: return@launch
             val audio = withContext(Dispatchers.IO) { openFile(track.mediaStoreId)?.let(TagReader::readAudioProperties) }
             _state.update { it.copy(audio = audio) }
+        }
+        viewModelScope.launch {
+            val track = withContext(Dispatchers.IO) { db.trackDao().byId(trackId) } ?: return@launch
+            val comments = withContext(Dispatchers.IO) {
+                openFile(track.mediaStoreId)?.let(TagReader::readProperties)
+                    ?.filterKeys { it.trim().uppercase() == "COMMENT" }?.values?.flatten().orEmpty()
+                    .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            }
+            _state.update { it.copy(comments = comments) }
         }
     }
 

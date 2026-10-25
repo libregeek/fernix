@@ -66,6 +66,7 @@
         <item quantity="other">It applies to the %d tracks in your library with this value. It lasts until a file changes and is read again.</item>
     </plurals>
     <string name="track_details">Track details</string>
+    <string name="details_comment">Comment</string>
     <string name="details_other_tags">Other tags</string>
     <string name="details_composer">Composer</string>
     <string name="details_lyricist">Lyricist</string>
