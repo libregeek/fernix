@@ -194,7 +194,7 @@ class PlaybackController(context: Context) {
                 index = i,
                 trackId = MediaItems.trackId(item.mediaId),
                 title = item.mediaMetadata.title?.toString().orEmpty(),
-                artist = item.mediaMetadata.artist?.toString().orEmpty(),
+                artist = MediaItems.artistOf(item.mediaMetadata),
             )
         }
     }
@@ -207,7 +207,7 @@ class PlaybackController(context: Context) {
             isPlaying = player.isPlaying,
             trackId = item?.mediaId?.let(MediaItems::trackId),
             title = meta?.title?.toString().orEmpty(),
-            artist = meta?.artist?.toString().orEmpty(),
+            artist = meta?.let(MediaItems::artistOf).orEmpty(),
             album = meta?.albumTitle?.toString().orEmpty(),
             durationMs = player.duration.takeIf { it != androidx.media3.common.C.TIME_UNSET } ?: 0,
             queueSize = player.mediaItemCount,

@@ -23,8 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.TrackEntity
-import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.playback.PlaybackUiState
+import io.github.libregeek.fernix.tags.Credits
 import io.github.libregeek.fernix.ui.common.Thumbnail
 import io.github.libregeek.fernix.ui.common.trackThumbnail
 import io.github.libregeek.fernix.ui.tracks.trackAlbumLine
@@ -46,7 +46,7 @@ fun MiniPlayer(
     if (state.queueSize == 0) return
     val title = track?.title?.takeIf { it.isNotEmpty() } ?: state.title
     val album = track?.let { trackAlbumLine(it.album, it.date) }
-    val artists = track?.let { MediaItems.display(it.artist) } ?: state.artist.takeIf { it.isNotEmpty() }
+    val artists = track?.let { Credits.line(Credits.people(it.composer, it.lyricist, it.artist)) } ?: state.artist.takeIf { it.isNotEmpty() }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(
             modifier = Modifier

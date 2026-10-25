@@ -330,6 +330,7 @@ A person's image is an embedded picture whose type is a role: Lead artist (7), A
 - Equalizer: `android.media.audiofx.Equalizer` on ExoPlayer's audio session id.
 - **Play history:** the service itself records plays (the UI may not be running). When an item finishes on its own (a `Player.Listener` transition with reason `AUTO`, `STATE_ENDED` on the last item, or a `REPEAT` transition while repeat-one is on; `PlayRecorder`) it writes `lastPlayedAt` and `playCount + 1` for that `tracks.id` on `Dispatchers.IO` (§5 *Default playlists*). It only listens to player events and does not touch the audio path.
 - The play queue is not capped: "Play" on any list queues all of its tracks. Queue items carry only the track id, content URI and the title/artist/album shown in the notification; anything else is loaded from the database when needed.
+- **Lock screen and notification:** the title is the title; the second line is `Album · composers; lyricists; artists`, in that order, a name that repeats kept once (ignoring case), at most **6 people**. The system shows only title and artist, so the line is put in the `artist` field of the current item: `LockScreenCredits` reads the track's row when an item becomes current and replaces the item with the same item (same source, same position, no gap). The plain artist stays in the item's extras (`fernix.artist`) for the queue and the mini player's fallback. The same people rule (`Credits`) gives the **mini player** its third line, with no limit; its first two lines are the title and the album with its date.
 
 ---
 

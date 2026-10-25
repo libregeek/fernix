@@ -34,6 +34,7 @@ class PlaybackService : MediaSessionService() {
         val container = (application as FernixApp).container
         PlayRecorder(container::recordPlay).attach(player)
         SkipOnError(player, container::recordPlayFailure).attach()
+        LockScreenCredits(player, container.database.trackDao()).attach()
         val engine = EqualizerEngine(audioSessionId, container.settings)
         equalizer = engine
         session = MediaSession.Builder(this, player)
