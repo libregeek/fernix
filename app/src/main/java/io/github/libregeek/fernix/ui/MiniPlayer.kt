@@ -2,11 +2,11 @@
 package io.github.libregeek.fernix.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
@@ -24,10 +24,11 @@ import androidx.compose.ui.unit.dp
 import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.TrackEntity
 import io.github.libregeek.fernix.playback.PlaybackUiState
+import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.tags.Credits
+import io.github.libregeek.fernix.tags.TagValues
 import io.github.libregeek.fernix.ui.common.Thumbnail
 import io.github.libregeek.fernix.ui.common.trackThumbnail
-import io.github.libregeek.fernix.ui.tracks.trackAlbumLine
 
 /**
  * Persistent bar above the bottom navigation (spec/architecture.md §9). Shown while the queue is
@@ -45,47 +46,45 @@ fun MiniPlayer(
 ) {
     if (state.queueSize == 0) return
     val title = track?.title?.takeIf { it.isNotEmpty() } ?: state.title
-    val album = track?.let { trackAlbumLine(it.album, it.date) }
+    val album = track?.let { MediaItems.display(it.album) }
+    val date = track?.let { TagValues.split(it.date).firstOrNull() }
     val artists = track?.let { Credits.line(Credits.people(it.composer, it.lyricist, it.artist)) } ?: state.artist.takeIf { it.isNotEmpty() }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 72.dp)
-                .clickable(onClick = onOpen)
-                .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // The playing track's art, or the app logo when it has none, as in the track rows.
-            if (track != null) {
-                Thumbnail(trackThumbnail(track.albumId, track.mediaStoreId))
-                Spacer(Modifier.width(12.dp))
+        Column(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The playing track's art, or the app logo when it has none, as in the track rows.
+                if (track != null) {
+                    Thumbnail(trackThumbnail(track.albumId, track.mediaStoreId))
+                    Spacer(Modifier.width(12.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    album?.let { SmallLine(it) }
+                    date?.let { SmallLine(it) }
+                }
+                IconButton(onClick = onPlayPause) {
+                    Icon(
+                        painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
+                        contentDescription = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
+                    )
+                }
+                IconButton(onClick = onNext) {
+                    Icon(painterResource(R.drawable.ic_skip_next), stringResource(R.string.next))
+                }
             }
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                album?.let { SmallLine(it) }
-                artists?.let { SmallLine(it) }
-            }
-            IconButton(onClick = onPlayPause) {
-                Icon(
-                    painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
-                    contentDescription = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
-                )
-            }
-            IconButton(onClick = onNext) {
-                Icon(painterResource(R.drawable.ic_skip_next), stringResource(R.string.next))
-            }
+            // The people start below the art and run the full width.
+            artists?.let { Box(Modifier.padding(end = 12.dp, top = 2.dp)) { SmallLine(it, maxLines = 2) } }
         }
     }
 }
 
 @Composable
-private fun SmallLine(text: String) {
+private fun SmallLine(text: String, maxLines: Int = 1) {
     Text(
         text,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
     )
 }
