@@ -4,9 +4,11 @@ package io.github.libregeek.fernix.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +25,8 @@ import io.github.libregeek.fernix.R
 import io.github.libregeek.fernix.data.db.TrackEntity
 import io.github.libregeek.fernix.playback.MediaItems
 import io.github.libregeek.fernix.playback.PlaybackUiState
+import io.github.libregeek.fernix.ui.common.Thumbnail
+import io.github.libregeek.fernix.ui.common.trackThumbnail
 import io.github.libregeek.fernix.ui.tracks.trackAlbumLine
 
 /**
@@ -52,6 +56,11 @@ fun MiniPlayer(
                 .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // The playing track's art, or the app logo when it has none, as in the track rows.
+            if (track != null) {
+                Thumbnail(trackThumbnail(track.albumId, track.mediaStoreId))
+                Spacer(Modifier.width(12.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 album?.let { SmallLine(it) }

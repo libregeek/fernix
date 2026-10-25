@@ -108,9 +108,9 @@ fun TrackDetailScreen(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                painterResource(R.drawable.ic_album),
+                painterResource(R.drawable.ic_launcher_monochrome),
                 null,
-                modifier = Modifier.size(96.dp),
+                modifier = Modifier.fillMaxSize(),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             AsyncImage(

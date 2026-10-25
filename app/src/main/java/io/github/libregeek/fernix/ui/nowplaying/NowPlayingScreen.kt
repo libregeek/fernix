@@ -124,9 +124,9 @@ fun NowPlayingScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        painterResource(R.drawable.ic_album),
+                        painterResource(R.drawable.ic_launcher_monochrome),
                         contentDescription = null,
-                        modifier = Modifier.size(72.dp),
+                        modifier = Modifier.fillMaxSize(),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     // Over the placeholder: nothing is drawn while loading or when the file has no picture.

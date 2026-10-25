@@ -31,8 +31,9 @@ fun Thumbnail(model: Any, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            painterResource(R.drawable.ic_album),
+            painterResource(R.drawable.ic_launcher_monochrome),
             contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         AsyncImage(

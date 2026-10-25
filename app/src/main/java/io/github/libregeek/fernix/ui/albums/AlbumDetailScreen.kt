@@ -86,7 +86,7 @@ fun AlbumDetailScreen(
                     Modifier.size(72.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(painterResource(R.drawable.ic_album), null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(painterResource(R.drawable.ic_launcher_monochrome), null, Modifier.fillMaxSize(), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     AsyncImage(
                         model = AlbumArt(album.id),
                         contentDescription = null,
