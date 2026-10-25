@@ -162,7 +162,7 @@ The Search screen becomes **Tracks** [§9.3]; All Songs leaves the playlists [§
 - [x] Track row: title; then album with its date in brackets and the artists, both smaller (`TrackRow` gains `date`)
 - [x] Reset moved to the bottom of the container and made an icon (add-filter icon on its left), so the search box has the full width; the search box is a slim 40 dp pill (`CompactSearchField`)
 - [x] The three result actions form one tonal capsule; **Add to playlist** is reworked as a bottom sheet (`AddToPlaylistSheet`: highlighted New playlist row with an inline name field, Favourites and playlists as rounded tiles with counts, a toast on success) instead of a plain dialog
-- [ ] The same icon actions on the album and playlist detail screens — album details has them now (`ListActions`, checked 2026-10-25); the playlist detail screen still has text buttons — only if wanted
+- [x] The same icon actions on the album and playlist detail screens — album details has them (`ListActions`, checked 2026-10-25); playlist details has Play and Shuffle as icons in the same capsule (2026-10-25)
 
 ## Phase 6 — Now Playing & Queue
 
@@ -214,3 +214,14 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 - [x] Sort the Tracks list by up to 4 levels (Title, Album, Year, Track, Duration, Date added), each ascending or descending, unknown values always last, remembered between launches; a **Sort** button in the actions capsule opens a bottom sheet (presets, per-level field and direction, move up, remove, Apply, Reset); Play / Add to queue / Add to playlist follow the order (spec §5 *Sorting*, §9.3). Tests: `TrackSortTest`, `TrackQueryBuilderTest` (SQL), `SortPagingTest` (8 sorts paged in 7-row pages against an independent comparator), `TracksViewModelTest` (setSort, remembered). `ScaleTest` at 1,000,000 tracks on the API 36 emulator (no index serves a custom sort; each page scans the library): year/album/track first page about 200 ms, deep page about 300-400 ms; year descending / album / track descending the same; recently added 4-6 ms first, 60-75 ms deep; the default title sort is unchanged (15 ms first, 4 ms deep)
 - [ ] Not done: reordering a sort level by dragging (a "move up" button is used instead, which also fits the 320 dp width); sort on Person details, playlists and Albums
 
+## Open items (2026-10-25, from the 16,094-file import on a Redmi 9)
+
+- [ ] **Keep a scan going when the app is in the background.** The scan runs in a plain coroutine (`AppContainer.startScan`), so switching apps lets Android (MIUI especially) freeze or kill the process; each 500-track batch is committed, so the next scan resumes, but the first big scan needs the app in front. Needs a foreground service (`dataSync`), which means a new manifest permission: ask the maintainer first (CLAUDE.md rule 2) and update spec §3 and §6. Until then: battery set to "No restrictions", keep the app open for the first scan.
+- [ ] **Re-read tags for tracks that were read as empty.** Only a failed read gets `dateModified = 0` and is retried; a file TagLib accepts but returns no tags for keeps its real date and is never read again, because the diff compares only size, date, name and folder. Add a "Re-read all tags" action in Settings (and decide whether a changed TagLib or parser version should trigger it).
+- [ ] **Design choices to revisit with the maintainer:**
+  - Track details *Added* is MediaStore's `DATE_ADDED`, not the day Fernix first saw the file (that would need a new column and a migration).
+  - The Tracks count line is hidden while a search or filter is active (a filtered count needs an extra query per change).
+  - An install that had "All external storage" cannot browse its library until it picks folders (a "Not now" button would allow it).
+  - The playlist delete, scope-removal and split confirmations are still centred dialogs; name prompts are bottom sheets.
+  - The album line no longer opens the album on Tracks and Person details rows.
+- [ ] Instrumented tests for the 2026-10-25 changes (TagLib fallback for MP3s with a long gap before the first frame, ID3v1/v2.2/v2.3 reads, the folder-only scope settings): all 185 pass on the API 36 emulator (`ScaleTest` skips without a size; the runner reports it as one failure) — still to run on API 29 (`fernix-api29`), and to try a 16K-track import on a real device.
