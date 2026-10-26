@@ -4,7 +4,7 @@ package io.github.libregeek.fernix.ui.albums
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.libregeek.fernix.data.db.AlbumEntity
+import io.github.libregeek.fernix.data.db.AlbumRow
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import io.github.libregeek.fernix.data.db.TagDao
 import io.github.libregeek.fernix.data.db.PAGE_SIZE
@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 
 data class AlbumsState(
     val loading: Boolean = true,
-    val albums: List<AlbumEntity> = emptyList(),
+    val albums: List<AlbumRow> = emptyList(),
     val empty: Boolean = false,
     /** What is typed in the search; the list is the albums whose name contains it. */
     val query: String = "",
@@ -81,15 +81,15 @@ class AlbumsViewModel(
         }
     }
 
-    fun play(album: AlbumEntity) {
+    fun play(album: AlbumRow) {
         viewModelScope.launch { tracksOf(album).let { if (it.isNotEmpty()) playback.play(it) } }
     }
 
-    fun enqueue(album: AlbumEntity) {
+    fun enqueue(album: AlbumRow) {
         viewModelScope.launch { playback.enqueue(tracksOf(album)) }
     }
 
-    suspend fun tracksOf(album: AlbumEntity): List<TrackRow> =
+    suspend fun tracksOf(album: AlbumRow): List<TrackRow> =
         withContext(Dispatchers.IO) { db.trackDao().albumTracks(album.id) }
 
     private companion object {

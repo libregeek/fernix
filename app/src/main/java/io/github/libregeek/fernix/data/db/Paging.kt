@@ -57,6 +57,9 @@ data class RoleRow(val trackId: Long, val key: String)
 /** A people tag key and the number of tracks a person has under it. */
 data class RoleCount(val key: String, val trackCount: Int, val keyId: Long = 0)
 
+/** An album as the Albums list shows it, with the number of its tracks. */
+data class AlbumRow(val id: Long, val album: String, val year: Int, val trackCount: Int)
+
 data class PlaylistRow(val id: Long, val name: String, val trackCount: Int)
 
 /** A playlist entry: its [position] (the key for removing it) and the track. */

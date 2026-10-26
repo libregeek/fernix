@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -86,10 +87,10 @@ fun AlbumsScreen(
                         modifier = Modifier.clickable { onOpenAlbum(album.id) },
                         leadingContent = { Thumbnail(AlbumThumbnail(album.id)) },
                         headlineContent = { Text(album.album, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = if (album.year != 0) {
-                            { Text(album.year.toString()) }
-                        } else {
-                            null
+                        // The year (when known) and the number of tracks.
+                        supportingContent = {
+                            val tracks = pluralStringResource(R.plurals.track_count, album.trackCount, album.trackCount)
+                            Text(if (album.year != 0) "${album.year} · $tracks" else tracks)
                         },
                         trailingContent = {
                             RowMenu(

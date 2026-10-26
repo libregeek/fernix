@@ -49,10 +49,11 @@ interface AlbumDao {
      * [TagDao.likeContains]; `%%` is every album). Start with `afterAlbum = ""`, `afterYear = -1`.
      */
     @Query(
-        "SELECT * FROM albums WHERE (album, year) > (:afterAlbum, :afterYear) AND album LIKE :likePattern ESCAPE '\\' " +
-            "ORDER BY album, year LIMIT :limit",
+        "SELECT a.id, a.album, a.year, (SELECT COUNT(*) FROM tracks t WHERE t.albumId = a.id) AS trackCount " +
+            "FROM albums a WHERE (a.album, a.year) > (:afterAlbum, :afterYear) AND a.album LIKE :likePattern ESCAPE '\\' " +
+            "ORDER BY a.album, a.year LIMIT :limit",
     )
-    suspend fun page(afterAlbum: String, afterYear: Int, likePattern: String, limit: Int): List<AlbumEntity>
+    suspend fun page(afterAlbum: String, afterYear: Int, likePattern: String, limit: Int): List<AlbumRow>
 
     @Query("SELECT * FROM albums WHERE id = :id")
     suspend fun byId(id: Long): AlbumEntity?
