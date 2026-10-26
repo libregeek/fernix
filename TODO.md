@@ -227,4 +227,13 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 - [ ] Instrumented tests for the 2026-10-25 changes (TagLib fallback for MP3s with a long gap before the first frame, ID3v1/v2.2/v2.3 reads, the folder-only scope settings): all 185 pass on the API 36 emulator (`ScaleTest` skips without a size; the runner reports it as one failure) — still to run on API 29 (`fernix-api29`), and to try a 16K-track import on a real device.
 
 ## Wishlist
+
+- [] Delay in loading the track when the user taps on a track from the Tracks screen or when the apps starts fresh
 - [] Album details screen - tapping on the role shall filter the tracks
+- [] Improve performance of `re-read all tags` feature. Give a warning to the user and confirm with the user if the library is more than 1000 files
+- [] Persistent Queue. Start from a queue if there is already one available
+- [] Shuffle & Play option on Tracks screen. This will start a new queue and reset the current queue 
+- [] The now playing screen does not show whether shuffle mode is enabled
+- [] Do a scan when the app starts up and update the db, if a folder is configured.
+- [] By default the app shall open the queue if it exists. Otherwise start with the tracks screen 
+- [] The track info on the queue shall be same as that of the track list on the track screen
