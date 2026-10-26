@@ -38,7 +38,8 @@ class TrackSearch(private val db: FernixDatabase) {
     ): List<TrackResult> {
         val peopleKeys = peopleKeyIds ?: db.tagDao()
             .peopleKeyIds(PeopleTags.KEYS.toList())
-            .also { peopleKeyIds = it }
+            // An empty answer (the library has no tags yet) is not kept, or every person filter would match nothing.
+            .also { if (it.isNotEmpty()) peopleKeyIds = it }
 
         val built = TrackQueryBuilder.build(filter, peopleKeys, after, limit, sort)
         val rows = db.trackDao().rawPage(SimpleSQLiteQuery(built.sql, built.args.toTypedArray()))

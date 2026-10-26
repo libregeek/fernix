@@ -152,6 +152,8 @@ class AppContainer(context: Context) {
             val state = scanner.state.value
             if (state is ScanState.Finished) {
                 settings.scanCompleted = true
+                // A scan may have added people tag keys.
+                trackSearch.invalidatePeopleKeys()
                 // A scan that added, changed or removed files may have changed art: start the thumbnails afresh.
                 if (state.processed > 0) {
                     thumbnails.clear()
