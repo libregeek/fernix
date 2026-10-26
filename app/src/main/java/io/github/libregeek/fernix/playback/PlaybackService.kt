@@ -22,6 +22,7 @@ class PlaybackService : MediaSessionService() {
 
     private var session: MediaSession? = null
     private var equalizer: EqualizerEngine? = null
+    private var savedQueue: SavedQueue? = null
 
     // Player.setAudioSessionId and the session callback are marked unstable by Media3.
     @OptIn(markerClass = [UnstableApi::class])
@@ -35,6 +36,7 @@ class PlaybackService : MediaSessionService() {
         PlayRecorder(container::recordPlay).attach(player)
         SkipOnError(player, container::recordPlayFailure).attach()
         LockScreenCredits(player, container.database.trackDao()).attach()
+        savedQueue = SavedQueue(player, container.database.queueDao(), container.settings).also { it.start() }
         val engine = EqualizerEngine(audioSessionId, container.settings)
         equalizer = engine
         session = MediaSession.Builder(this, player)
@@ -56,10 +58,16 @@ class PlaybackService : MediaSessionService() {
     /** Stop when the user swipes the app away and nothing is playing. */
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = session?.player
-        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) stopSelf()
+        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
+            savedQueue?.release()
+            savedQueue = null
+            stopSelf()
+        }
     }
 
     override fun onDestroy() {
+        savedQueue?.release()
+        savedQueue = null
         equalizer?.release()
         equalizer = null
         session?.run {

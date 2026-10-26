@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import io.github.libregeek.fernix.ui.common.CompactSearchField
 import io.github.libregeek.fernix.ui.common.ListActions
+import io.github.libregeek.fernix.ui.common.TrackListItem
 import io.github.libregeek.fernix.tags.TagValues
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.FilledIconButton
@@ -165,6 +166,7 @@ fun TracksScreen(
                         onPlay = vm::playAll,
                         onEnqueue = vm::enqueueAll,
                         onAddToPlaylist = { addTracks = vm::allTracks },
+                        onShuffle = vm::shuffleAll,
                         onSort = vm::openSort,
                         sortActive = !state.sort.isDefault,
                     )
@@ -291,33 +293,12 @@ private fun ResultRow(
     onAddToPlaylist: () -> Unit,
     onDetails: () -> Unit,
 ) {
-    val track = result.track
-    val album = trackAlbumLine(track.album, track.date)
-    val artists = MediaItems.display(track.artist)
-    val gone = track.isUnavailable()
-    ListItem(
-        modifier = Modifier.dimmedIf(gone).clickable(onClick = onPlay),
-        overlineContent = unavailableOverline(gone),
-        leadingContent = { Thumbnail(trackThumbnail(track.albumId, track.mediaStoreId)) },
-        headlineContent = { Text(track.title.ifEmpty { "—" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = if (album == null && artists == null && result.roles.isEmpty()) {
-            null
-        } else {
-            {
-                Column {
-                    album?.let { SmallLine(it) }
-                    artists?.let { SmallLine(it) }
-                    if (result.roles.isNotEmpty()) SmallLine(result.roles.joinToString(", "), MaterialTheme.colorScheme.tertiary)
-                }
-            }
-        },
+    TrackListItem(
+        track = result.track,
+        modifier = Modifier.clickable(onClick = onPlay),
+        roles = result.roles,
         trailingContent = { RowMenu(onPlay = onPlay, onEnqueue = onEnqueue, onAddToPlaylist = onAddToPlaylist, onDetails = onDetails) },
     )
-}
-
-@Composable
-private fun SmallLine(text: String, color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 /** `Album (1996)`; the album alone, or just `(1996)`, when the other is missing; null when both are. */

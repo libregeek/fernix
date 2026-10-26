@@ -6,6 +6,8 @@ import io.github.libregeek.fernix.data.ProblemKind
 import io.github.libregeek.fernix.data.ProblemLog
 import io.github.libregeek.fernix.data.db.FernixDatabase
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -72,12 +74,12 @@ class LibraryScanner(
     private suspend fun run(scope: ScanScope): Int {
         val mounted = media.mountedVolumes()
         val writer = LibraryWriter(db, FolderResolver(db.folderDao()))
-        val pending = ArrayList<LibraryOp>(batchSize)
+        val pending = ArrayList<DiffEvent>(batchSize)
         var processed = 0
 
         suspend fun flush() {
             if (pending.isEmpty()) return
-            writer.apply(pending)
+            writer.apply(buildOps(pending))
             processed += pending.size
             pending.clear()
             _state.value = ScanState.Running(processed)
@@ -89,12 +91,7 @@ class LibraryScanner(
             StoredRows(db.trackDao().storedCursor()).use { storedRows ->
                 counts = ScanDiff.walk(mediaRows, storedRows, scope, mounted) { event ->
                     coroutineContext.ensureActive()
-                    pending += when (event) {
-                        is DiffEvent.New -> upsert(event.media)
-                        is DiffEvent.Changed -> upsert(event.media)
-                        is DiffEvent.Vanished -> LibraryOp.Remove(event.mediaStoreId)
-                        is DiffEvent.DateAdded -> LibraryOp.SetDateAdded(event.mediaStoreId, event.dateAdded)
-                    }
+                    pending += event
                     if (pending.size >= batchSize) flush()
                 }
             }
@@ -115,9 +112,32 @@ class LibraryScanner(
             "${counts.unchanged} unchanged, ${counts.vanished} removed, $unreadable unreadable; ${millis} ms")
     }
 
-    /** Reads the file's tags; a file that cannot be read is counted and stored untagged (see [LibraryWriter]). */
-    private fun upsert(media: MediaRow): LibraryOp.Upsert {
-        val raw = tags.read(media.mediaStoreId)
+    /**
+     * The writes for one batch of diff events. The tags of the batch's files are read several at a time (each
+     * file is opened and parsed on its own, so this changes how long the scan takes and nothing it stores);
+     * the writes come out in the order of the events.
+     */
+    private suspend fun buildOps(events: List<DiffEvent>): List<LibraryOp> = coroutineScope {
+        val readers = Dispatchers.IO.limitedParallelism(PARALLEL_READS)
+        val reads = events.map { event ->
+            when (event) {
+                is DiffEvent.New -> async(readers) { tags.read(event.media.mediaStoreId) }
+                is DiffEvent.Changed -> async(readers) { tags.read(event.media.mediaStoreId) }
+                else -> null
+            }
+        }
+        events.mapIndexed { i, event ->
+            when (event) {
+                is DiffEvent.New -> upsert(event.media, reads[i]!!.await())
+                is DiffEvent.Changed -> upsert(event.media, reads[i]!!.await())
+                is DiffEvent.Vanished -> LibraryOp.Remove(event.mediaStoreId)
+                is DiffEvent.DateAdded -> LibraryOp.SetDateAdded(event.mediaStoreId, event.dateAdded)
+            }
+        }
+    }
+
+    /** A file whose tags could not be read ([raw] is null) is counted and stored untagged (see [LibraryWriter]). */
+    private fun upsert(media: MediaRow, raw: Map<String, List<String>>?): LibraryOp.Upsert {
         if (raw == null) {
             unreadable++
             problems?.add(ProblemKind.Index, media.displayName, media.folderPath, REASON_TAGS_UNREADABLE)
@@ -135,6 +155,9 @@ class LibraryScanner(
 
     companion object {
         const val BATCH_SIZE = 500
+
+        /** Files read at the same time: enough to hide the storage latency, few enough to leave the phone usable. */
+        private val PARALLEL_READS = (Runtime.getRuntime().availableProcessors() - 1).coerceIn(2, 4)
         private const val LOG_TAG = "FernixScan"
 
         /** The reason logged for a file whose tags could not be read. */

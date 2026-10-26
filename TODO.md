@@ -228,12 +228,12 @@ Reworked on 2026-10-24: one value at a time from Track details, with delimiters 
 
 ## Wishlist
 
-- [] Delay in loading the track when the user taps on a track from the Tracks screen or when the apps starts fresh
-- [] Album details screen - tapping on the role shall filter the tracks
-- [] Improve performance of `re-read all tags` feature. Give a warning to the user and confirm with the user if the library is more than 1000 files
-- [] Persistent Queue. Start from a queue if there is already one available
-- [] Shuffle & Play option on Tracks screen. This will start a new queue and reset the current queue 
-- [] The now playing screen does not show whether shuffle mode is enabled
-- [] Do a scan when the app starts up and update the db, if a folder is configured.
-- [] By default the app shall open the queue if it exists. Otherwise start with the tracks screen 
-- [] The track info on the queue shall be same as that of the track list on the track screen
+- [ ] Delay in loading the track when the user taps on a track from the Tracks screen or when the apps starts fresh — implemented 2026-10-26, awaiting approval
+- [ ] Person details screen - tapping on the role shall filter the tracks — implemented 2026-10-26, awaiting approval
+- [ ] Improve performance of `re-read all tags` feature. Give a warning to the user and confirm with the user if the library is more than 1000 files — implemented 2026-10-26, awaiting approval
+- [ ] Persistent Queue. Start from a queue if there is already one available — implemented 2026-10-26, awaiting approval
+- [ ] Shuffle & Play option on Tracks screen. This will start a new queue and reset the current queue  — implemented 2026-10-26, awaiting approval
+- [ ] The now playing screen does not show whether shuffle mode is enabled — implemented 2026-10-26, awaiting approval
+- [ ] Do a scan when the app starts up and update the db, if a folder is configured. — implemented 2026-10-26, awaiting approval
+- [ ] By default the app shall open the queue if it exists. Otherwise start with the tracks screen  — implemented 2026-10-26, awaiting approval
+- [ ] The track info on the queue shall be same as that of the track list on the track screen — implemented 2026-10-26, awaiting approval

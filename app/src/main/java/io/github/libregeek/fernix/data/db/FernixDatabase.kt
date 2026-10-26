@@ -19,8 +19,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PersonEntity::class,
         PlaylistEntity::class,
         PlaylistEntryEntity::class,
+        QueueItemEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class FernixDatabase : RoomDatabase() {
@@ -30,6 +31,7 @@ abstract class FernixDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun playlistDao(): PlaylistDao
     abstract fun maintenanceDao(): MaintenanceDao
+    abstract fun queueDao(): QueueDao
 
     companion object {
         const val FILE_NAME = "fernix.db"
@@ -73,6 +75,15 @@ abstract class FernixDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DROP TABLE IF EXISTS split_rule_tracks")
                 db.execSQL("DROP TABLE IF EXISTS split_rules")
+            }
+        }
+
+        /** Version 4: the saved play queue (spec/architecture.md §8 *Saved queue*). */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS queue_items (position INTEGER NOT NULL, trackId INTEGER NOT NULL, PRIMARY KEY(position))",
+                )
             }
         }
 

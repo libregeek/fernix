@@ -22,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +55,8 @@ fun FolderChooserScreen(
         factory = viewModelFactory { initializer { FolderChooserViewModel(media, initialSelection, createSavedStateHandle()) } },
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    // The ViewModel outlives the screen: read the folders again at each opening, for music added since.
+    LaunchedEffect(Unit) { vm.reload() }
 
     Surface(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {

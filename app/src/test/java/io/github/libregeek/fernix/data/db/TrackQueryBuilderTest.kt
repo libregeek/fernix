@@ -99,6 +99,20 @@ class TrackQueryBuilderTest {
     }
 
     @Test
+    fun personRole_narrowsThePeopleKeysToThatOne() {
+        val q = TrackQueryBuilder.build(TrackFilter(personValueId = 4, personRoleKeyId = 8), listOf(7, 8, 9))
+        assertTrue(q.sql.contains("keyId IN (?)"))
+        assertEquals(listOf<Any>(4L, 8L), q.args.filter { it is Long }.takeLast(2))
+        assertEquals(q.sql.count { it == '?' }, q.args.size)
+    }
+
+    @Test
+    fun personRole_thatIsNotAPeopleKey_matchesNothing() {
+        val q = TrackQueryBuilder.build(TrackFilter(personValueId = 4, personRoleKeyId = 3), listOf(7, 8))
+        assertTrue(q.sql.contains("SELECT trackId FROM track_tags WHERE 0"))
+    }
+
+    @Test
     fun blankText_addsNoFtsSubquery() {
         val q = TrackQueryBuilder.build(TrackFilter(text = "  "), emptyList())
         assertFalse(q.sql.contains("tracks_fts"))

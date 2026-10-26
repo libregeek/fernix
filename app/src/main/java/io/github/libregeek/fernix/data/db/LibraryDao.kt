@@ -166,7 +166,7 @@ interface TagDao {
 
     /** The people tag keys [personId] appears under, with the number of tracks under each. */
     @Query(
-        "SELECT k.`key` AS `key`, COUNT(DISTINCT tt.trackId) AS trackCount FROM track_tags tt " +
+        "SELECT k.`key` AS `key`, COUNT(DISTINCT tt.trackId) AS trackCount, k.id AS keyId FROM track_tags tt " +
             "JOIN tag_keys k ON k.id = tt.keyId " +
             "WHERE tt.valueId = :personId AND tt.keyId IN (:peopleKeyIds) " +
             "GROUP BY k.id ORDER BY k.`key`",
@@ -350,3 +350,32 @@ interface MaintenanceDao {
     @Query("DELETE FROM tag_values WHERE id NOT IN (SELECT valueId FROM track_tags)")
     suspend fun deleteUnusedTagValues(): Int
 }
+
+/** The saved play queue (spec/architecture.md §8 *Saved queue*). */
+@Dao
+interface QueueDao {
+
+    @Query("DELETE FROM queue_items")
+    suspend fun clear()
+
+    @Insert
+    suspend fun insertAll(items: List<QueueItemEntity>)
+
+    /** Replaces the saved queue with [trackIds] in one transaction. */
+    @Transaction
+    suspend fun replace(trackIds: List<Long>) {
+        clear()
+        trackIds.chunked(INSERT_CHUNK).forEachIndexed { n, chunk ->
+            insertAll(chunk.mapIndexed { i, id -> QueueItemEntity(n * INSERT_CHUNK + i, id) })
+        }
+    }
+
+    /** The saved queue in play order; a track the library no longer has is not in it. */
+    @Query(
+        "SELECT t.id, t.mediaStoreId, t.title, t.album, t.artist, t.durationMs, t.albumId, t.date, t.folderId " +
+            "FROM queue_items q JOIN tracks t ON t.id = q.trackId ORDER BY q.position",
+    )
+    suspend fun load(): List<TrackRow>
+}
+
+private const val INSERT_CHUNK = 500

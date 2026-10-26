@@ -45,11 +45,24 @@ class FolderChooserViewModel(
     private val _state = MutableStateFlow(FolderChooserState(selected = selected))
     val state: StateFlow<FolderChooserState> = _state
 
+    private var loaded = false
+
     init {
+        reload()
+    }
+
+    /**
+     * Reads the folders again. The screen calls it each time it opens, since this ViewModel outlives the
+     * screen and music may have been added to the phone since the list was first read. The ticks and the
+     * expanded folders are kept; a refresh shows no spinner over a list that is already there.
+     */
+    fun reload() {
         viewModelScope.launch {
-            tree = withContext(Dispatchers.IO) { FolderTree(media.folders(media.mountedVolumes())) }
+            val fresh = withContext(Dispatchers.IO) { FolderTree(media.folders(media.mountedVolumes())) }
+            tree = fresh
             // With a single volume, start one level down (spec §5, folders).
-            if (tree.roots.size == 1) expanded += tree.roots.single().path
+            if (!loaded && tree.roots.size == 1) expanded += tree.roots.single().path
+            loaded = tree.roots.isNotEmpty()
             publish(loading = false)
         }
     }

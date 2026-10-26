@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,14 +41,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.libregeek.fernix.R
+import io.github.libregeek.fernix.data.db.FernixDatabase
+import io.github.libregeek.fernix.data.db.TrackRow
+import io.github.libregeek.fernix.ui.common.TrackListItem
 import io.github.libregeek.fernix.playback.PlaybackController
 import kotlin.math.roundToInt
 
-private val ROW_HEIGHT = 64.dp
-
 @Composable
-fun QueueScreen(playback: PlaybackController, onBack: () -> Unit, modifier: Modifier = Modifier) {
-    val vm: QueueViewModel = viewModel(factory = viewModelFactory { initializer { QueueViewModel(playback) } })
+fun QueueScreen(db: FernixDatabase, playback: PlaybackController, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val vm: QueueViewModel = viewModel(factory = viewModelFactory { initializer { QueueViewModel(db, playback) } })
     val state by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
@@ -82,7 +83,10 @@ fun QueueScreen(playback: PlaybackController, onBack: () -> Unit, modifier: Modi
             }
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(state.items, key = { index, _ -> index }) { index, item ->
+                    val trackId = item.trackId
+                    val track by produceState(trackId?.let(vm::cachedRow), trackId) { if (trackId != null) value = vm.row(trackId) }
                     QueueRow(
+                        track = track,
                         title = item.title.ifEmpty { "—" },
                         artist = item.artist,
                         current = index == state.currentIndex,
@@ -102,6 +106,7 @@ fun QueueScreen(playback: PlaybackController, onBack: () -> Unit, modifier: Modi
  */
 @Composable
 private fun QueueRow(
+    track: TrackRow?,
     title: String,
     artist: String,
     current: Boolean,
@@ -109,13 +114,14 @@ private fun QueueRow(
     onRemove: () -> Unit,
     onMoved: (Int) -> Unit,
 ) {
-    val rowPx = with(LocalDensity.current) { ROW_HEIGHT.toPx() }
+    // The row is as tall as a row of the Tracks list (three lines and the art), so measure it for the drag.
+    var rowPx by remember { mutableFloatStateOf(1f) }
     var dragged by remember { mutableFloatStateOf(0f) }
     var dragging by remember { mutableIntStateOf(0) }
     Row(
         Modifier
             .fillMaxWidth()
-            .height(ROW_HEIGHT)
+            .onSizeChanged { rowPx = it.height.toFloat().coerceAtLeast(1f) }
             .zIndex(if (dragging > 0) 1f else 0f)
             .graphicsLayer { translationY = dragged }
             .background(
@@ -123,20 +129,25 @@ private fun QueueRow(
                 else if (current) MaterialTheme.colorScheme.primaryContainer
                 else androidx.compose.ui.graphics.Color.Transparent,
             )
-            .clickable(onClick = onClick)
-            .padding(start = 16.dp),
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (artist.isNotEmpty()) {
-                Text(
-                    artist,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        if (track != null) {
+            // The same row as the Tracks list; its menu is replaced by the queue's remove and drag buttons.
+            TrackListItem(track, Modifier.weight(1f))
+        } else {
+            // Until the row is read (or if the library no longer has the track): what the queue item itself carries.
+            Column(Modifier.weight(1f).padding(start = 16.dp)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (artist.isNotEmpty()) {
+                    Text(
+                        artist,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
         IconButton(onClick = onRemove) {

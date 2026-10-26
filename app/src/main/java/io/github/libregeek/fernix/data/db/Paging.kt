@@ -55,7 +55,7 @@ data class PlayingTag(val key: String, val valueId: Long, val value: String, val
 data class RoleRow(val trackId: Long, val key: String)
 
 /** A people tag key and the number of tracks a person has under it. */
-data class RoleCount(val key: String, val trackCount: Int)
+data class RoleCount(val key: String, val trackCount: Int, val keyId: Long = 0)
 
 data class PlaylistRow(val id: Long, val name: String, val trackCount: Int)
 

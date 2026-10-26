@@ -29,6 +29,8 @@ fun ListActions(
     modifier: Modifier = Modifier,
     /** A fourth button, **Sort**, when given; [sortActive] fills it while the order is not the default. */
     onSort: (() -> Unit)? = null,
+    /** A **Shuffle** button, before Sort, when given: replaces the queue with the list, shuffled. */
+    onShuffle: (() -> Unit)? = null,
     sortActive: Boolean = false,
 ) {
     Surface(
@@ -40,6 +42,11 @@ fun ListActions(
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPlay) {
                 Icon(painterResource(R.drawable.ic_play), stringResource(R.string.play))
+            }
+            if (onShuffle != null) {
+                IconButton(onClick = onShuffle) {
+                    Icon(painterResource(R.drawable.ic_shuffle), stringResource(R.string.shuffle))
+                }
             }
             IconButton(onClick = onEnqueue) {
                 Icon(painterResource(R.drawable.ic_queue_add), stringResource(R.string.add_to_queue))

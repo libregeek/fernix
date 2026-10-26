@@ -35,6 +35,10 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE id = :id")
     suspend fun byId(id: Long): TrackEntity?
 
+    /** One track as a list row, e.g. for the Queue. */
+    @Query("SELECT id, mediaStoreId, title, album, artist, durationMs, albumId, date, folderId FROM tracks WHERE id = :id")
+    suspend fun rowById(id: Long): TrackRow?
+
     /** One track as a `Flow`, e.g. the playing one; null once it is deleted. */
     @Query("SELECT * FROM tracks WHERE id = :id")
     fun observe(id: Long): Flow<TrackEntity?>

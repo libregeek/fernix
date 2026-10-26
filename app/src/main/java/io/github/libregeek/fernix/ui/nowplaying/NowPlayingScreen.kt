@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -212,6 +213,17 @@ private fun NowPlayingHeader(onBack: () -> Unit, onEqualizer: () -> Unit, onDeta
     }
 }
 
+/** A toggle button that is on: its icon in the main colour on a tonal disc, so it is clear at a glance. */
+@Composable
+private fun toggleColors(on: Boolean) = if (on) {
+    IconButtonDefaults.iconButtonColors(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.primary,
+    )
+} else {
+    IconButtonDefaults.iconButtonColors()
+}
+
 /** Shuffle, previous, play/pause, next and repeat: small buttons, the play button a little larger. */
 @Composable
 private fun PlaybackControls(playback: PlaybackController, player: PlaybackUiState) {
@@ -220,7 +232,7 @@ private fun PlaybackControls(playback: PlaybackController, player: PlaybackUiSta
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = { playback.setShuffle(!player.shuffle) }, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = { playback.setShuffle(!player.shuffle) }, modifier = Modifier.size(48.dp), colors = toggleColors(player.shuffle)) {
             Icon(
                 painterResource(R.drawable.ic_shuffle),
                 stringResource(R.string.shuffle),
@@ -241,7 +253,11 @@ private fun PlaybackControls(playback: PlaybackController, player: PlaybackUiSta
         IconButton(onClick = playback::next, modifier = Modifier.size(48.dp)) {
             Icon(painterResource(R.drawable.ic_skip_next), stringResource(R.string.next), Modifier.size(24.dp))
         }
-        IconButton(onClick = { playback.setRepeatMode(nextRepeatMode(player.repeatMode)) }, modifier = Modifier.size(48.dp)) {
+        IconButton(
+            onClick = { playback.setRepeatMode(nextRepeatMode(player.repeatMode)) },
+            modifier = Modifier.size(48.dp),
+            colors = toggleColors(player.repeatMode != Player.REPEAT_MODE_OFF),
+        ) {
             Icon(
                 painterResource(if (player.repeatMode == Player.REPEAT_MODE_ONE) R.drawable.ic_repeat_one else R.drawable.ic_repeat),
                 stringResource(

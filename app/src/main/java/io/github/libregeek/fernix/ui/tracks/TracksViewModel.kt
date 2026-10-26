@@ -294,10 +294,13 @@ class TracksViewModel(
 
     /** Plays every result of the current filter, starting at [track]. */
     fun playFrom(track: TrackRow) {
-        viewModelScope.launch {
-            val all = allTracks()
-            playback.play(all, all.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
-        }
+        // The tapped track starts at once; the rest of the list (a query over the whole library) joins the queue after.
+        playback.playNow(track)
+        viewModelScope.launch { playback.fillAround(track, allTracks()) }
+    }
+
+    fun shuffleAll() {
+        viewModelScope.launch { playback.playShuffled(allTracks()) }
     }
 
     fun playAll() {

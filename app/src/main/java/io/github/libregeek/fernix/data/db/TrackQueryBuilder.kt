@@ -13,6 +13,8 @@ data class TrackFilter(
     val tags: List<TagCondition> = emptyList(),
     /** `tag_values.id` of a person; matches the person in any role. */
     val personValueId: Long? = null,
+    /** With [personValueId]: only the tracks where the person has this role (`tag_keys.id`); null is any role. */
+    val personRoleKeyId: Long? = null,
     /** Only tracks that have never played through (`lastPlayedAt IS NULL`). */
     val neverPlayed: Boolean = false,
 )
@@ -50,13 +52,15 @@ object TrackQueryBuilder {
             subArgs.addAll(valueIds)
         }
         filter.personValueId?.let { person ->
-            if (peopleKeyIds.isEmpty()) {
+            // A chosen role narrows the people keys to that one (and only if it is a people key).
+            val keys = filter.personRoleKeyId?.let { role -> peopleKeyIds.filter { it == role } } ?: peopleKeyIds
+            if (keys.isEmpty()) {
                 subqueries += "SELECT trackId FROM track_tags WHERE 0"
             } else {
-                val marks = peopleKeyIds.joinToString(",") { "?" }
+                val marks = keys.joinToString(",") { "?" }
                 subqueries += "SELECT trackId FROM track_tags WHERE valueId = ? AND keyId IN ($marks)"
                 subArgs += person
-                subArgs.addAll(peopleKeyIds)
+                subArgs.addAll(keys)
             }
         }
 

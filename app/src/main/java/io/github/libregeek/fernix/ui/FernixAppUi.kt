@@ -71,6 +71,7 @@ import io.github.libregeek.fernix.ui.tracks.TracksScreen
 import io.github.libregeek.fernix.data.scan.ScanState
 import io.github.libregeek.fernix.playback.PlaybackUiState
 import io.github.libregeek.fernix.ui.common.LibraryTopBar
+import io.github.libregeek.fernix.ui.nav.BackEntry
 import io.github.libregeek.fernix.ui.nav.BackStack
 import io.github.libregeek.fernix.ui.nav.Screen
 
@@ -122,7 +123,10 @@ fun FernixAppUi(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val backStack = rememberSaveable(saver = BackStack.Saver) { BackStack() }
+    val backStack = rememberSaveable(saver = BackStack.Saver) {
+        // A fresh start with a saved queue opens on the Queue, at the track that was playing (spec §8 *Saved queue*).
+        if (container.settings.savedQueue.size > 0) BackStack(listOf(BackEntry(Screen.Tracks), BackEntry(Screen.Queue))) else BackStack()
+    }
     val current = backStack.current
     val openTrack: (Long) -> Unit = { backStack.push(Screen.TrackDetail, it) }
     val openSettings = { backStack.push(Screen.Settings) }
@@ -238,6 +242,7 @@ fun FernixAppUi(
             }
             if (current == Screen.Queue) {
                 QueueScreen(
+                    container.database,
                     container.playback,
                     onBack = { backStack.pop() },
                     modifier = Modifier.padding(padding),

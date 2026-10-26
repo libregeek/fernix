@@ -50,6 +50,10 @@
     <string name="reread_tags">Re-read all tags</string>
     <string name="reread_title">Read all tags again?</string>
     <string name="reread_note">Fernix reads every file in your folders again, which takes about as long as the first scan. Tags you split on Track details come back whole. Playlists and play history are kept, and your music files are not touched.</string>
+    <plurals name="reread_note_large">
+        <item quantity="one">Your library has %d track. Fernix reads every file again, which can take many minutes on a large library and uses battery. Keep the app open, and the phone charging if you can. Tags you split on Track details come back whole. Playlists and play history are kept, and your music files are not touched.</item>
+        <item quantity="other">Your library has %d tracks. Fernix reads every file again, which can take many minutes on a large library and uses battery. Keep the app open, and the phone charging if you can. Tags you split on Track details come back whole. Playlists and play history are kept, and your music files are not touched.</item>
+    </plurals>
     <string name="reread_confirm">Read again</string>
     <string name="settings_np_tags">Now Playing tags</string>
     <string name="settings_np_tags_detail">The three tags shown under the title on Now Playing.</string>

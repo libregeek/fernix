@@ -19,6 +19,8 @@ data class SettingsState(
     val keyChoices: List<String> = emptyList(),
     /** The split delimiters, in the order added. */
     val delimiters: List<String> = emptyList(),
+    /** Tracks in the library, for the warning before *Re-read all tags*. */
+    val trackCount: Int = 0,
 )
 
 /** Settings (spec/architecture.md §9): the Now Playing tag slots here; rescan, folders and split rules have their own parts. */
@@ -31,6 +33,7 @@ class SettingsViewModel(
     val state: StateFlow<SettingsState> = _state
 
     init {
+        viewModelScope.launch { db.trackDao().observeCount().collect { n -> _state.update { it.copy(trackCount = n) } } }
         viewModelScope.launch {
             val keys = withContext(Dispatchers.IO) { db.tagDao().allKeys() }
                 .map { it.key }

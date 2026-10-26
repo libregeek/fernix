@@ -215,3 +215,11 @@ data class PlaylistEntryEntity(
     val position: Int,
     val trackId: Long,
 )
+
+/** The play queue as last saved, so it survives the app and the device being restarted (spec/architecture.md §8 *Saved queue*). */
+@Entity(tableName = "queue_items")
+data class QueueItemEntity(
+    @PrimaryKey val position: Int,
+    /** No foreign key: the queue may hold a track the library lost since; reading it joins `tracks`, which drops those. */
+    val trackId: Long,
+)

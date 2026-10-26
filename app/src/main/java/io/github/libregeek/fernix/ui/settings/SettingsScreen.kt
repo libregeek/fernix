@@ -65,15 +65,22 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { initializer { SettingsViewModel(db, settings) } })
-    val state by vm.state.collectAsStateWithLifecycle()
     var picking by rememberSaveable { mutableStateOf<Int?>(null) }
     var confirmReread by rememberSaveable { mutableStateOf(false) }
+    val state by vm.state.collectAsStateWithLifecycle()
 
     if (confirmReread) {
         AlertDialog(
             onDismissRequest = { confirmReread = false },
             title = { Text(stringResource(R.string.reread_title)) },
-            text = { Text(stringResource(R.string.reread_note)) },
+            text = {
+                // A big library takes a long time: say how long it might take before it starts.
+                if (state.trackCount > REREAD_WARN_TRACKS) {
+                    Text(pluralStringResource(R.plurals.reread_note_large, state.trackCount, state.trackCount))
+                } else {
+                    Text(stringResource(R.string.reread_note))
+                }
+            },
             confirmButton = {
                 TextButton(onClick = { confirmReread = false; onRereadTags() }) { Text(stringResource(R.string.reread_confirm)) }
             },
@@ -221,3 +228,6 @@ private fun Section(title: String, content: @Composable () -> Unit) {
         content()
     }
 }
+
+/** A library with more tracks than this gets the long warning before *Re-read all tags*. */
+private const val REREAD_WARN_TRACKS = 1000

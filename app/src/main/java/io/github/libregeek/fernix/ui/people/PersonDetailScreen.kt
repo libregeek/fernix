@@ -108,7 +108,14 @@ fun PersonDetailScreen(
                             Text(stringResource(R.string.person_roles), style = MaterialTheme.typography.labelMedium)
                             // Each role as a small outlined pill, with the number of tracks in it.
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                state.roles.forEach { role -> RolePill("${role.key} · ${role.trackCount}") }
+                                state.roles.forEach { role ->
+                                    // Tap a role to list only the tracks where the person has it; tap again for all.
+                                    RolePill(
+                                        "${role.key} · ${role.trackCount}",
+                                        Modifier.clickable { vm.toggleRole(role.keyId) },
+                                        selected = state.role == role.keyId,
+                                    )
+                                }
                             }
                         }
                     }

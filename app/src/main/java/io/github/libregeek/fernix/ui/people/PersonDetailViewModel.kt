@@ -26,6 +26,8 @@ data class PersonDetailState(
     val name: String? = null,
     val roles: List<RoleCount> = emptyList(),
     val tracks: List<TrackResult> = emptyList(),
+    /** `tag_keys.id` of the role the list is narrowed to, or null for every role. */
+    val role: Long? = null,
 )
 
 /** A person's roles and every track they contributed to, in any role (spec/architecture.md §9). */
@@ -39,7 +41,8 @@ class PersonDetailViewModel(
     private val _state = MutableStateFlow(PersonDetailState())
     val state: StateFlow<PersonDetailState> = _state
 
-    private val filter = TrackFilter(personValueId = personId)
+    private val filter get() = TrackFilter(personValueId = personId, personRoleKeyId = _state.value.role)
+    private var generation = 0
     private var done = false
     private var busy = false
 
@@ -59,12 +62,25 @@ class PersonDetailViewModel(
         busy = true
         val last = _state.value.tracks.lastOrNull()?.track
         val cursor = last?.let { TrackCursor(it.title, it.id) } ?: TrackCursor.START
+        val gen = generation
+        val filter = filter
         viewModelScope.launch {
             val page = withContext(Dispatchers.IO) { search.page(filter, cursor) }
+            // A page of the role that was chosen before this one is dropped.
+            if (gen != generation) return@launch
             if (page.size < PAGE_SIZE) done = true
             busy = false
             _state.update { it.copy(loading = false, tracks = it.tracks + page) }
         }
+    }
+
+    /** Narrows the tracks to those where the person has [keyId] as a role; the role already chosen goes back to all. */
+    fun toggleRole(keyId: Long) {
+        generation++
+        done = false
+        busy = false
+        _state.update { it.copy(role = if (it.role == keyId) null else keyId, tracks = emptyList(), loading = true) }
+        loadMore()
     }
 
     /** Plays every track of the person, starting at [track]. */

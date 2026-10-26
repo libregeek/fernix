@@ -18,18 +18,18 @@ import androidx.compose.ui.unit.sp
  * reduced font, 11 sp (spec/architecture.md §9.7, person details).
  */
 @Composable
-fun RolePill(text: String, modifier: Modifier = Modifier) {
+fun RolePill(text: String, modifier: Modifier = Modifier, selected: Boolean = false) {
     Surface(
         modifier = modifier,
         shape = CircleShape,
-        color = Color.Transparent,
+        color = if (selected) MaterialTheme.colorScheme.tertiaryContainer else Color.Transparent,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f)),
     ) {
         Text(
             text,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (selected) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
         )
     }

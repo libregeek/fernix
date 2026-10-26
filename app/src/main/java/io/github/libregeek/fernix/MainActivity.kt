@@ -53,8 +53,12 @@ class MainActivity : ComponentActivity() {
                     if (scope == null) {
                         ScanScopeScreen(container.database, container.mediaSource, onChosen = { container.changeScope(it); scope = it })
                     } else {
-                        // First launch after the scope is chosen, or resuming an interrupted scan.
-                        LaunchedEffect(scope) { if (!container.settings.scanCompleted) container.startScan() }
+                        // Every start scans the chosen folders, so changes made while the app was closed show up (and an
+                        // interrupted scan resumes); no folder chosen, nothing to scan.
+                        LaunchedEffect(scope) { if (scope?.folders?.isNotEmpty() == true) container.startScan() }
+                        // Connect to the playback service now: the saved queue is put back there, and the first tap
+                        // on a track then does not wait for the service to start.
+                        LaunchedEffect(Unit) { container.playback.connect() }
                         val scanState by container.scanner.state.collectAsStateWithLifecycle()
                         val playback by container.playback.state.collectAsStateWithLifecycle()
                         NotificationPermissionEffect(container.settings, playback.isPlaying)

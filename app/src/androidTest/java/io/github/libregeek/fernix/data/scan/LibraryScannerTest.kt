@@ -40,6 +40,8 @@ class LibraryScannerTest {
         val tags = HashMap<Long, Map<String, List<String>>>()
         var reads = 0
         var failAfter = Int.MAX_VALUE
+        // The scanner reads several files at a time.
+        @Synchronized
         override fun read(mediaStoreId: Long): Map<String, List<String>>? {
             if (reads++ >= failAfter) throw IllegalStateException("boom")
             return tags[mediaStoreId]

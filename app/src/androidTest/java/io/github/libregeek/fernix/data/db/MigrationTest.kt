@@ -73,7 +73,7 @@ class MigrationTest {
     )
 
     private fun open() = Room.databaseBuilder(context, FernixDatabase::class.java, file.name)
-        .addMigrations(FernixDatabase.MIGRATION_1_2, FernixDatabase.MIGRATION_2_3)
+        .addMigrations(FernixDatabase.MIGRATION_1_2, FernixDatabase.MIGRATION_2_3, FernixDatabase.MIGRATION_3_4)
         .allowMainThreadQueries()
         .build()
 

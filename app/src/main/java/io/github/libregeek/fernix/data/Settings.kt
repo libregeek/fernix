@@ -121,6 +121,30 @@ class Settings(context: Context) {
             prefs.edit { putBoolean(KEY_SCAN_COMPLETED, value) }
         }
 
+    /**
+     * Where the saved queue was (spec/architecture.md §8 *Saved queue*); the queue itself is in the database.
+     * [SavedQueueState.size] 0 means there is none.
+     */
+    var savedQueue: SavedQueueState
+        get() = SavedQueueState(
+            size = prefs.getInt(KEY_QUEUE_SIZE, 0),
+            index = prefs.getInt(KEY_QUEUE_INDEX, 0),
+            trackId = prefs.getLong(KEY_QUEUE_TRACK, 0),
+            positionMs = prefs.getLong(KEY_QUEUE_POSITION, 0),
+            shuffle = prefs.getBoolean(KEY_QUEUE_SHUFFLE, false),
+            repeatMode = prefs.getInt(KEY_QUEUE_REPEAT, 0),
+        )
+        set(value) {
+            prefs.edit {
+                putInt(KEY_QUEUE_SIZE, value.size)
+                putInt(KEY_QUEUE_INDEX, value.index)
+                putLong(KEY_QUEUE_TRACK, value.trackId)
+                putLong(KEY_QUEUE_POSITION, value.positionMs)
+                putBoolean(KEY_QUEUE_SHUFFLE, value.shuffle)
+                putInt(KEY_QUEUE_REPEAT, value.repeatMode)
+            }
+        }
+
     private fun List<String>.padEnd(size: Int): List<String> =
         take(size) + List((size - this.size).coerceAtLeast(0)) { "" }
 
@@ -145,8 +169,25 @@ class Settings(context: Context) {
         /** Written before folders were the only choice (`all` or `selected`); dropped when a scope is saved. */
         private const val KEY_LEGACY_SCOPE = "scan_scope"
         private const val KEY_SCAN_FOLDERS = "scan_folders"
+        private const val KEY_QUEUE_SIZE = "queue_size"
+        private const val KEY_QUEUE_INDEX = "queue_index"
+        private const val KEY_QUEUE_TRACK = "queue_track_id"
+        private const val KEY_QUEUE_POSITION = "queue_position_ms"
+        private const val KEY_QUEUE_SHUFFLE = "queue_shuffle"
+        private const val KEY_QUEUE_REPEAT = "queue_repeat"
     }
 }
+
+/** Which item of the saved queue was current, how far into it, and the shuffle and repeat modes. */
+data class SavedQueueState(
+    val size: Int = 0,
+    val index: Int = 0,
+    /** `tracks.id` of the current item, to find it again if tracks were removed from the queue's start. */
+    val trackId: Long = 0,
+    val positionMs: Long = 0,
+    val shuffle: Boolean = false,
+    val repeatMode: Int = 0,
+)
 
 /** The app's theme: Fernix (the light green one with a colourful gradient, the default), Dark, or System (stock Material colours, light or dark as the phone is). */
 enum class ThemeMode { Fernix, Dark, System }

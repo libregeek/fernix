@@ -44,7 +44,7 @@ data class QueueItem(val index: Int, val trackId: Long?, val title: String, val 
 
 /**
  * UI-side handle on the playback service (spec/architecture.md §8): wraps a [MediaController] and
- * exposes playback state as a [StateFlow]. The service is started on first use, not at app start.
+ * exposes playback state as a [StateFlow]. The service is started when the app starts, so the saved queue is put back and the first tap does not wait for it.
  * Commands given before the connection is up are queued and run once it is.
  *
  * Main thread only, like the controller it wraps.
@@ -137,6 +137,31 @@ class PlaybackController(
         val first = start?.let { s -> playable.indexOfFirst { it.id == s.id } }?.coerceAtLeast(0) ?: 0
         playItems(playable.map(MediaItems::of), first, shuffle)
         if (playable.isNotEmpty()) _started.tryEmit(Unit)
+    }
+
+    /**
+     * Starts [track] at once as a one-track queue, so a tap is heard without waiting for the rest of the list
+     * to load; [fillAround] then puts the others in around it. Same refusal rules as [play].
+     */
+    fun playNow(track: TrackRow) = play(listOf(track))
+
+    /**
+     * Completes the queue begun by [playNow]: puts the tracks of [all] before and after [anchor] around it,
+     * without interrupting it. Does nothing if the queue has changed since (another play, a clear, an add).
+     */
+    fun fillAround(anchor: TrackRow, all: List<TrackRow>) = run { c ->
+        if (c.mediaItemCount != 1 || c.getMediaItemAt(0).mediaId != MediaItems.mediaId(anchor.id)) return@run
+        val at = all.indexOfFirst { it.id == anchor.id }
+        if (at < 0) return@run
+        val before = all.subList(0, at).filter(isAvailable).map(MediaItems::of)
+        val after = all.subList(at + 1, all.size).filter(isAvailable).map(MediaItems::of)
+        if (after.isNotEmpty()) c.addMediaItems(after)
+        if (before.isNotEmpty()) c.addMediaItems(0, before)
+    }
+
+    /** Replaces the queue with [tracks] in list order, shuffle mode on, starting at a random track. */
+    fun playShuffled(tracks: List<TrackRow>) {
+        if (tracks.isNotEmpty()) play(tracks, tracks.indices.random(), shuffle = true)
     }
 
     private fun reportUnavailable() {
